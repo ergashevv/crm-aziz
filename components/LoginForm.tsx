@@ -33,8 +33,8 @@ export default function LoginForm({ lang }: { lang: string }) {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50">
-      <Card className="w-[400px]">
+    <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
+      <Card className="w-full max-w-[400px]">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">{dict.login_title || "Adminka"}</CardTitle>
           <CardDescription>{dict.login_description || "Enter your credentials to access the operator dashboard"}</CardDescription>

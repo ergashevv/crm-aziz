@@ -51,7 +51,7 @@ export default async function FuelPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{dict.fuel_logs}</h1>
           <p className="text-muted-foreground mt-2">{dict.monitor_fuel}</p>

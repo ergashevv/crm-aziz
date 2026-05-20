@@ -9,6 +9,7 @@ import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import { TableRowLink } from '@/components/TableRowLink';
 import { LayoutDashboard, Users, Truck, TrendingDown, DollarSign } from 'lucide-react';
+import { DashboardCharts } from '@/components/DashboardCharts';
 
 function getStatusBadge(status: string, dict: any) {
   switch (status) {
@@ -58,6 +59,7 @@ export default async function DashboardPage() {
   }
 
   for (const w of allWarehouseIncome) {
+     if (w.source === 'client_payment') continue;
      const wDate = new Date(w.recordedAt);
      if (wDate >= today) todaysRevenue += w.amountRub;
      if (wDate >= thisMonth) monthlyRevenue += w.amountRub;
@@ -75,6 +77,61 @@ export default async function DashboardPage() {
   const totalDriversCount = allDrivers.length;
 
   const recentOrders = allOrders.slice(0, 5);
+
+  // Generate last 7 days list for charts
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }).reverse();
+
+  const chartFinanceData = last7Days.map(date => {
+    const dateStr = format(date, 'dd.MM');
+    let income = 0;
+    let expenses = 0;
+
+    allOrders.forEach(order => {
+      const orderDate = new Date(order.createdAt);
+      orderDate.setHours(0, 0, 0, 0);
+      if (orderDate.getTime() === date.getTime() && order.paymentStatus === 'entered') {
+        income += order.paymentAmount;
+      }
+    });
+
+    allWarehouseIncome.forEach(w => {
+      if (w.source === 'client_payment') return;
+      const wDate = new Date(w.recordedAt);
+      wDate.setHours(0, 0, 0, 0);
+      if (wDate.getTime() === date.getTime()) {
+        income += w.amountRub;
+      }
+    });
+
+    allExpenses.forEach(e => {
+      const eDate = new Date(e.recordedAt);
+      eDate.setHours(0, 0, 0, 0);
+      if (eDate.getTime() === date.getTime()) {
+        expenses += e.amountRub;
+      }
+    });
+
+    return { date: dateStr, income, expenses };
+  });
+
+  // monthly expenses breakdown for chart
+  const expensesMap: Record<string, number> = {};
+  allExpenses.forEach(e => {
+    const eDate = new Date(e.recordedAt);
+    if (eDate >= thisMonth) {
+      expensesMap[e.category] = (expensesMap[e.category] || 0) + e.amountRub;
+    }
+  });
+
+  const chartExpensesByCategory = Object.entries(expensesMap).map(([name, value]) => ({
+    name,
+    value
+  })).sort((a, b) => b.value - a.value);
 
   return (
     <div className="space-y-8">
@@ -203,6 +260,12 @@ export default async function DashboardPage() {
           </Card>
         </Link>
       </div>
+
+      <DashboardCharts 
+        financeData={chartFinanceData} 
+        expensesByCategory={chartExpensesByCategory} 
+        dict={dict} 
+      />
       
       <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden">
         <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100">

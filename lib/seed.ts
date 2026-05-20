@@ -30,77 +30,83 @@ async function seed() {
   }));
   const insertedClients = await db.insert(clients).values(clientData).returning();
 
-  // 4. Insert Orders
+  // 4. Generate Daily Data for the Last 30 Days
   const statuses = ['new', 'assigned', 'in_progress', 'container_placed', 'picked_up', 'completed'] as const;
   const durations = ['1_day', '1_week', '1_month'] as const;
   const payTypes = ['cash', 'card', 'online'] as const;
-  
-  const orderData = Array.from({ length: 20 }).map((_, i) => {
-    const client = insertedClients[i % insertedClients.length];
-    const driver = insertedDrivers[i % insertedDrivers.length];
-    const status = statuses[i % statuses.length];
-    const date = new Date();
-    date.setDate(date.getDate() - (20 - i));
-
-    return {
-      clientId: client.id,
-      driverId: driver.id,
-      address: client.address,
-      scheduledAt: date,
-      containerSizeM3: 8,
-      rentalDuration: durations[i % durations.length],
-      status: status,
-      paymentAmount: 1500000 + (i * 50000), // higher income
-      paymentType: payTypes[i % payTypes.length],
-      paymentStatus: (i % 4 !== 0 ? 'entered' : 'pending') as 'entered' | 'pending',
-      referralName: i % 3 === 0 ? 'Agent / Агент' : null,
-      referralPercent: i % 3 === 0 ? 10 : null,
-    };
-  });
-  await db.insert(orders).values(orderData);
-
-  // 4.5 Insert Fuel Logs
-  const fuelData = Array.from({ length: 15 }).map((_, i) => {
-    const driver = insertedDrivers[i % insertedDrivers.length];
-    const date = new Date();
-    date.setDate(date.getDate() - (15 - i));
-    const liters = Math.floor(20 + Math.random() * 50); // 20-70 liters
-    return {
-      driverId: driver.id,
-      stationName: `Zapravka ${i % 3 + 1}`,
-      liters: liters,
-      priceRub: liters * 100, // example price
-      vehicle: driver.vehiclePlate,
-      loggedAt: date,
-    };
-  });
-  await db.insert(fuelLogs).values(fuelData);
-
-  // 5. Insert Expenses
   const expCategories = ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'driver_salary', 'other'] as const;
-  const expenseData = Array.from({ length: 30 }).map((_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (30 - i));
-    return {
-      category: expCategories[i % expCategories.length],
-      amountRub: Math.floor(10000 + (Math.random() * 40000)), // lower expenses
-      note: `Xarajat / Расход ${i}`,
-      recordedAt: date,
-    };
-  });
-  await db.insert(expenses).values(expenseData);
 
-  // 6. Insert Warehouse Income
-  const warehouseData = Array.from({ length: 15 }).map((_, i) => {
+  const orderData = [];
+  const fuelData = [];
+  const expenseData = [];
+  const warehouseData = [];
+
+  for (let d = 0; d <= 180; d++) {
     const date = new Date();
-    date.setDate(date.getDate() - (15 - i));
-    return {
-      source: (i % 2 === 0 ? 'client_payment' : 'external_vehicle_rental') as 'client_payment' | 'external_vehicle_rental',
-      amountRub: Math.floor(200000 + (Math.random() * 300000)),
-      note: `Kirim / Доход ${i}`,
+    date.setDate(date.getDate() - (180 - d));
+
+    // Create 1-2 orders for each day
+    const numOrders = Math.floor(Math.random() * 2) + 1;
+    for (let o = 0; o < numOrders; o++) {
+      const index = d * 2 + o;
+      const client = insertedClients[index % insertedClients.length];
+      const driver = insertedDrivers[index % insertedDrivers.length];
+      const status = d === 180 ? (o === 0 ? 'completed' : 'new') : statuses[index % statuses.length];
+      const paymentStatus = (d === 180 ? (o === 0 ? 'entered' : 'pending') : (index % 4 !== 0 ? 'entered' : 'pending')) as 'pending' | 'entered';
+
+      orderData.push({
+        clientId: client.id,
+        driverId: driver.id,
+        address: client.address,
+        scheduledAt: date,
+        createdAt: date,
+        containerSizeM3: 8,
+        rentalDuration: durations[index % durations.length],
+        status: status,
+        paymentAmount: 150000 + (Math.floor(Math.random() * 10) * 10000), // realistic payments in RUB
+        paymentType: payTypes[index % payTypes.length],
+        paymentStatus: paymentStatus,
+        referralName: index % 5 === 0 ? 'Agent / Агент' : null,
+        referralPercent: index % 5 === 0 ? 10 : null,
+      });
+    }
+
+    // Create 1 expense for each day
+    expenseData.push({
+      category: expCategories[d % expCategories.length],
+      amountRub: Math.floor(10000 + (Math.random() * 20000)),
+      note: `Xarajat / Расход kun-${d}`,
       recordedAt: date,
-    };
-  });
+    });
+
+    // Create fuel logs every other day
+    if (d % 2 === 0) {
+      const driver = insertedDrivers[d % insertedDrivers.length];
+      const liters = Math.floor(30 + Math.random() * 40);
+      fuelData.push({
+        driverId: driver.id,
+        stationName: `Zapravka ${d % 3 + 1}`,
+        liters: liters,
+        priceRub: liters * 100,
+        vehicle: driver.vehiclePlate,
+        loggedAt: date,
+      });
+    }
+
+    // Create warehouse income every other day
+    if (d % 2 === 1) {
+      warehouseData.push({
+        source: (d % 3 === 0 ? 'client_payment' : 'external_vehicle_rental') as 'client_payment' | 'external_vehicle_rental',
+        amountRub: Math.floor(20000 + (Math.random() * 50000)),
+        note: `Omborxona daromadi kun-${d}`,
+        recordedAt: date,
+      });
+    }
+  }
+
+  await db.insert(orders).values(orderData);
+  await db.insert(fuelLogs).values(fuelData);
+  await db.insert(expenses).values(expenseData);
   await db.insert(warehouseIncome).values(warehouseData);
 
   console.log('Seed completed successfully!');

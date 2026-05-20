@@ -8,6 +8,8 @@ import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import { Wallet } from 'lucide-react';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
+import { FinanceCharts } from '@/components/FinanceCharts';
+import { ExportButton } from '@/components/ExportButton';
 
 export default async function FinancePage({
   searchParams,
@@ -37,7 +39,7 @@ export default async function FinancePage({
     if (o.paymentStatus === 'entered') totalIncome += o.paymentAmount;
   });
   allWarehouseIncome.forEach(w => {
-    totalIncome += w.amountRub;
+    if (w.source !== 'client_payment') totalIncome += w.amountRub;
   });
 
   let totalExpenses = 0;
@@ -53,6 +55,65 @@ export default async function FinancePage({
 
   const netProfit = totalIncome - totalExpenses;
 
+  // Generate last 6 months list for charts
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    d.setHours(0,0,0,0);
+    return d;
+  }).reverse();
+
+  const chartMonthlyData = last6Months.map(date => {
+    const monthStr = format(date, 'MMM');
+    let income = 0;
+    let expenses = 0;
+
+    allOrders.forEach(order => {
+      const orderDate = new Date(order.createdAt);
+      if (orderDate.getMonth() === date.getMonth() && orderDate.getFullYear() === date.getFullYear() && order.paymentStatus === 'entered') {
+        income += order.paymentAmount;
+      }
+    });
+
+    allWarehouseIncome.forEach(w => {
+      if (w.source === 'client_payment') return;
+      const wDate = new Date(w.recordedAt);
+      if (wDate.getMonth() === date.getMonth() && wDate.getFullYear() === date.getFullYear()) {
+        income += w.amountRub;
+      }
+    });
+
+    allExpenses.forEach(e => {
+      const eDate = new Date(e.recordedAt);
+      if (eDate.getMonth() === date.getMonth() && eDate.getFullYear() === date.getFullYear()) {
+        expenses += e.amountRub;
+      }
+    });
+
+    return { month: monthStr, income, expenses };
+  });
+
+  const chartExpensesByCategory = Object.entries(expensesByCategory).map(([name, value]) => ({
+    name,
+    value
+  }));
+
+  const exportExpensesData = filteredExpenses.map(e => ({
+    id: `#${e.id}`,
+    category: dict[e.category as keyof typeof dict] || e.category,
+    note: e.note || '-',
+    date: format(new Date(e.recordedAt), 'dd.MM.yyyy'),
+    amount: `${e.amountRub.toLocaleString()} RUB`
+  }));
+
+  const exportColumns = [
+    { key: 'id', label: 'ID' },
+    { key: 'category', label: dict.category },
+    { key: 'note', label: dict.note },
+    { key: 'date', label: dict.date },
+    { key: 'amount', label: dict.amount }
+  ];
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -65,7 +126,16 @@ export default async function FinancePage({
             <p className="text-slate-500 mt-1 font-medium">{dict.track_finance}</p>
           </div>
         </div>
-        <ExpenseForm dict={dict} />
+        <div className="flex gap-3 items-center w-full sm:w-auto justify-end">
+          <ExportButton 
+            data={exportExpensesData} 
+            columns={exportColumns} 
+            filename="expenses_report" 
+            title={lang === 'uz' ? "Xarajatlar Ro'yxati" : "Список расходов"} 
+            dict={dict} 
+          />
+          <ExpenseForm dict={dict} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -107,6 +177,12 @@ export default async function FinancePage({
           </CardContent>
         </Card>
       </div>
+
+      <FinanceCharts 
+        monthlyData={chartMonthlyData} 
+        expensesByCategory={chartExpensesByCategory} 
+        dict={dict} 
+      />
 
       <div className="pt-4">
         <SearchAndFilter 

@@ -120,7 +120,8 @@ export const dictionaries = {
     username: "Имя пользователя",
     password: "Пароль",
     sign_in: "Войти",
-    invalid_credentials: "Неверное имя пользователя или пароль"
+    invalid_credentials: "Неверное имя пользователя или пароль",
+    export: "Экспорт"
   },
   uz: {
     dashboard: "Boshqaruv paneli",
@@ -243,7 +244,8 @@ export const dictionaries = {
     username: "Foydalanuvchi nomi",
     password: "Parol",
     sign_in: "Kirish",
-    invalid_credentials: "Foydalanuvchi nomi yoki parol xato"
+    invalid_credentials: "Foydalanuvchi nomi yoki parol xato",
+    export: "Eksport"
   }
 };
 

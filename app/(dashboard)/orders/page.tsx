@@ -10,6 +10,7 @@ import { TableRowLink } from '@/components/TableRowLink';
 import { ClipboardList } from 'lucide-react';
 import { SearchAndFilter } from '@/components/SearchAndFilter';
 import { OrderForm } from '@/components/forms/OrderForm';
+import { ExportButton } from '@/components/ExportButton';
 
 const getStatusClasses = (status: string) => {
   switch (status) {
@@ -47,6 +48,28 @@ export default async function OrdersPage({
   const clients = await getClients();
   const drivers = await getDrivers();
 
+  const exportOrdersData = allOrders.map(({ order, client, driver }) => ({
+    id: `#${order.id}`,
+    client: client?.name || '-',
+    address: order.address,
+    date: format(new Date(order.scheduledAt), 'dd.MM.yyyy'),
+    driver: driver?.name || '-',
+    status: dict[order.status] || order.status,
+    payment_status: dict[order.paymentStatus] || order.paymentStatus,
+    amount: `${order.paymentAmount.toLocaleString()} RUB`
+  }));
+
+  const exportColumns = [
+    { key: 'id', label: 'ID' },
+    { key: 'client', label: dict.client },
+    { key: 'address', label: dict.address },
+    { key: 'date', label: dict.scheduled_date },
+    { key: 'driver', label: dict.driver },
+    { key: 'status', label: dict.status },
+    { key: 'payment_status', label: dict.payment_status || "To'lov" },
+    { key: 'amount', label: dict.amount }
+  ];
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -59,7 +82,16 @@ export default async function OrdersPage({
             <p className="text-slate-500 mt-1 font-medium">{dict.manage_orders}</p>
           </div>
         </div>
-        <OrderForm dict={dict} clients={clients} drivers={drivers} />
+        <div className="flex gap-3 items-center w-full sm:w-auto justify-end">
+          <ExportButton 
+            data={exportOrdersData} 
+            columns={exportColumns} 
+            filename="orders_report" 
+            title={lang === 'uz' ? "Buyurtmalar Ro'yxati" : "Список заказов"} 
+            dict={dict} 
+          />
+          <OrderForm dict={dict} clients={clients} drivers={drivers} />
+        </div>
       </div>
 
       <SearchAndFilter dict={dict} />

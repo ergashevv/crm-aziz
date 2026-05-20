@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useTransition } from 'react';
+import React, { useTransition, useState, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Search } from 'lucide-react';
 
@@ -23,18 +23,23 @@ export function SearchAndFilter({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [query, setQuery] = useState(searchParams.get('q') || '');
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (e.target.value) {
-      params.set('q', e.target.value);
-    } else {
-      params.delete('q');
-    }
-    startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`);
-    });
-  };
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (query) {
+        params.set('q', query);
+      } else {
+        params.delete('q');
+      }
+      startTransition(() => {
+        router.push(`${pathname}?${params.toString()}`);
+      });
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, pathname, router]);
 
   const handleStatus = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -55,8 +60,8 @@ export function SearchAndFilter({
         <input 
           type="text" 
           placeholder={placeholder || "Поиск..."} 
-          defaultValue={searchParams.get('q') || ''}
-          onChange={handleSearch}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
           className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm font-medium transition-all"
         />
       </div>

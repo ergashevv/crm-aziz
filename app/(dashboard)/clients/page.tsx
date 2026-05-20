@@ -9,6 +9,7 @@ import { getDictionary } from '@/lib/dictionaries';
 import { TableRowLink } from '@/components/TableRowLink';
 import { Users } from 'lucide-react';
 import { ClientForm } from '@/components/forms/ClientForm';
+import { ExportButton } from '@/components/ExportButton';
 
 export default async function ClientsPage({
   searchParams,
@@ -41,6 +42,24 @@ export default async function ClientsPage({
     statsByClient[o.clientId].spent += o.paymentAmount;
   });
 
+  const exportClientsData = filteredClients.map(c => ({
+    id: `#${c.id}`,
+    name: c.name,
+    phone: c.phone,
+    address: c.address,
+    total_orders: statsByClient[c.id]?.count || 0,
+    total_spent: `${(statsByClient[c.id]?.spent || 0).toLocaleString()} RUB`
+  }));
+
+  const exportColumns = [
+    { key: 'id', label: 'ID' },
+    { key: 'name', label: dict.name },
+    { key: 'phone', label: dict.phone },
+    { key: 'address', label: dict.address },
+    { key: 'total_orders', label: dict.total_orders },
+    { key: 'total_spent', label: dict.total_spent }
+  ];
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -53,7 +72,16 @@ export default async function ClientsPage({
             <p className="text-slate-500 mt-1 font-medium">{dict.manage_clients}</p>
           </div>
         </div>
-        <ClientForm dict={dict} />
+        <div className="flex gap-3 items-center w-full sm:w-auto justify-end">
+          <ExportButton 
+            data={exportClientsData} 
+            columns={exportColumns} 
+            filename="clients_report" 
+            title={lang === 'uz' ? "Mijozlar Ro'yxati" : "Список клиентов"} 
+            dict={dict} 
+          />
+          <ClientForm dict={dict} />
+        </div>
       </div>
       
       <SearchAndFilter 

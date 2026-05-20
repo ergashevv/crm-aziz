@@ -10,6 +10,7 @@ import { getDictionary } from '@/lib/dictionaries';
 import { TableRowLink } from '@/components/TableRowLink';
 import { Car } from 'lucide-react';
 import { DriverForm } from '@/components/forms/DriverForm';
+import { ExportButton } from '@/components/ExportButton';
 
 export default async function DriversPage({
   searchParams,
@@ -43,6 +44,24 @@ export default async function DriversPage({
     }
   });
 
+  const exportDriversData = filteredDrivers.map(d => ({
+    id: `#${d.id}`,
+    name: d.name,
+    phone: d.phone,
+    vehicle_plate: d.vehiclePlate,
+    total_orders: statsByDriver[d.id]?.count || 0,
+    joined_date: format(new Date(d.createdAt), 'dd.MM.yyyy')
+  }));
+
+  const exportColumns = [
+    { key: 'id', label: 'ID' },
+    { key: 'name', label: dict.name },
+    { key: 'phone', label: dict.phone },
+    { key: 'vehicle_plate', label: dict.vehicle_plate },
+    { key: 'total_orders', label: dict.total_orders },
+    { key: 'joined_date', label: dict.joined_date || "Sana" }
+  ];
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -55,7 +74,16 @@ export default async function DriversPage({
             <p className="text-slate-500 mt-1 font-medium">{dict.manage_drivers}</p>
           </div>
         </div>
-        <DriverForm dict={dict} />
+        <div className="flex gap-3 items-center w-full sm:w-auto justify-end">
+          <ExportButton 
+            data={exportDriversData} 
+            columns={exportColumns} 
+            filename="drivers_report" 
+            title={lang === 'uz' ? "Haydovchilar Ro'yxati" : "Список водителей"} 
+            dict={dict} 
+          />
+          <DriverForm dict={dict} />
+        </div>
       </div>
       
       <SearchAndFilter 

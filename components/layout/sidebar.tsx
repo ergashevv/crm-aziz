@@ -16,7 +16,13 @@ import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./lang-switcher";
 import { getDictionary } from "@/lib/dictionaries";
 
-export function Sidebar({ lang = 'ru' }: { lang?: string }) {
+export function Sidebar({ 
+  lang = 'ru',
+  isCollapsed = false
+}: { 
+  lang?: string;
+  isCollapsed?: boolean;
+}) {
   const pathname = usePathname();
   const dict = getDictionary(lang);
 
@@ -31,30 +37,34 @@ export function Sidebar({ lang = 'ru' }: { lang?: string }) {
   ];
 
   return (
-    <div className="space-y-4 py-4 flex flex-col h-full bg-[#0B0F19] text-white w-64 fixed left-0 top-0 bottom-0 shadow-2xl z-50">
-      <div className="px-4 py-2 flex-1">
-        <Link href="/dashboard" className="flex items-center pl-2 mb-8 mt-2">
-          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center mr-3 shadow-lg shadow-primary/30">
+    <div className="space-y-4 py-4 flex flex-col h-full bg-[#0B0F19] text-white w-full h-full shadow-2xl z-50 overflow-y-auto overflow-x-hidden">
+      <div className={cn("px-4 py-2 flex-1", isCollapsed && "px-2")}>
+        <Link href="/dashboard" className={cn("flex items-center mb-8 mt-2 pl-2", isCollapsed && "pl-0 justify-center")}>
+          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
             <Warehouse className="h-5 w-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Adminka</h1>
+          {!isCollapsed && <h1 className="text-2xl font-bold tracking-tight ml-3 truncate">Adminka</h1>}
         </Link>
-        <div className="mb-8">
-          <LangSwitcher lang={lang} />
-        </div>
+        {!isCollapsed && (
+          <div className="mb-8">
+            <LangSwitcher lang={lang} />
+          </div>
+        )}
         <div className="space-y-1.5">
           {routes.map((route) => (
             <Link
               key={route.href}
               href={route.href}
+              title={isCollapsed ? route.label : undefined}
               className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer rounded-xl transition-all duration-200",
+                "text-sm group flex p-3 w-full cursor-pointer rounded-xl transition-all duration-200",
+                isCollapsed ? "justify-center" : "justify-start",
                 pathname === route.href ? "text-white bg-primary/20 font-semibold" : "text-slate-400 hover:text-white hover:bg-white/5"
               )}
             >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("h-5 w-5 mr-3 transition-colors", pathname === route.href ? "text-primary" : "text-slate-400 group-hover:text-white")} />
-                {route.label}
+              <div className={cn("flex items-center", isCollapsed ? "justify-center" : "flex-1 min-w-0")}>
+                <route.icon className={cn("h-5 w-5 transition-colors flex-shrink-0", !isCollapsed && "mr-3", pathname === route.href ? "text-primary" : "text-slate-400 group-hover:text-white")} />
+                {!isCollapsed && <span className="truncate">{route.label}</span>}
               </div>
             </Link>
           ))}
@@ -66,11 +76,15 @@ export function Sidebar({ lang = 'ru' }: { lang?: string }) {
             await fetch('/api/auth/logout', { method: 'POST' });
             window.location.href = '/login';
           }}
-          className="text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition text-zinc-400"
+          title={isCollapsed ? dict.logout : undefined}
+          className={cn(
+            "text-sm group flex p-3 w-full font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition text-zinc-400",
+            isCollapsed ? "justify-center" : "justify-start"
+          )}
         >
-          <div className="flex items-center flex-1">
-            <LogOut className="h-5 w-5 mr-3" />
-            {dict.logout}
+          <div className={cn("flex items-center", isCollapsed ? "justify-center" : "flex-1 min-w-0")}>
+            <LogOut className={cn("h-5 w-5 flex-shrink-0", !isCollapsed && "mr-3")} />
+            {!isCollapsed && <span className="truncate">{dict.logout}</span>}
           </div>
         </button>
       </div>

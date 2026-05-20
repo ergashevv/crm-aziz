@@ -1,0 +1,69 @@
+import { pgTable, serial, text, timestamp, integer, boolean, pgEnum, decimal } from "drizzle-orm/pg-core";
+
+export const rentalDurationEnum = pgEnum('rental_duration', ['1_day', '1_week', '1_month']);
+export const orderStatusEnum = pgEnum('status', ['new', 'assigned', 'in_progress', 'container_placed', 'picked_up', 'completed']);
+export const paymentTypeEnum = pgEnum('payment_type', ['cash', 'card', 'online']);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'received', 'entered']);
+export const expenseCategoryEnum = pgEnum('expense_category', ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other']);
+export const incomeSourceEnum = pgEnum('income_source', ['client_payment', 'external_vehicle_rental']);
+
+export const clients = pgTable('clients', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  phone: text('phone').notNull(),
+  address: text('address').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const drivers = pgTable('drivers', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  phone: text('phone').notNull(),
+  vehiclePlate: text('vehicle_plate').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const orders = pgTable('orders', {
+  id: serial('id').primaryKey(),
+  clientId: integer('client_id').references(() => clients.id).notNull(),
+  driverId: integer('driver_id').references(() => drivers.id),
+  operatorNote: text('operator_note'),
+  address: text('address').notNull(),
+  scheduledAt: timestamp('scheduled_at').notNull(),
+  containerSizeM3: integer('container_size_m3').notNull(),
+  rentalDuration: rentalDurationEnum('rental_duration').notNull(),
+  status: orderStatusEnum('status').default('new').notNull(),
+  paymentAmount: integer('payment_amount').notNull(),
+  paymentType: paymentTypeEnum('payment_type').notNull(),
+  paymentStatus: paymentStatusEnum('payment_status').default('pending').notNull(),
+  referralName: text('referral_name'),
+  referralPercent: integer('referral_percent'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const fuelLogs = pgTable('fuel_logs', {
+  id: serial('id').primaryKey(),
+  driverId: integer('driver_id').references(() => drivers.id).notNull(),
+  stationName: text('station_name').notNull(),
+  liters: integer('liters').notNull(),
+  priceRub: integer('price_rub').notNull(),
+  vehicle: text('vehicle').notNull(),
+  loggedAt: timestamp('logged_at').defaultNow().notNull(),
+});
+
+export const expenses = pgTable('expenses', {
+  id: serial('id').primaryKey(),
+  category: expenseCategoryEnum('category').notNull(),
+  amountRub: integer('amount_rub').notNull(),
+  note: text('note'),
+  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
+});
+
+export const warehouseIncome = pgTable('warehouse_income', {
+  id: serial('id').primaryKey(),
+  source: incomeSourceEnum('source').notNull(),
+  amountRub: integer('amount_rub').notNull(),
+  note: text('note'),
+  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
+});

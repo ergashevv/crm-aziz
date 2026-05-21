@@ -9,11 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { createOrder, updateOrder } from '@/app/actions/entities';
 import { Plus, Edit2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function OrderForm({ dict, order, clients, drivers }: { dict: any, order?: any, clients: any[], drivers: any[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const defaultDate = new Date().toISOString().split('T')[0];
 
@@ -61,6 +63,8 @@ export function OrderForm({ dict, order, clients, drivers }: { dict: any, order?
       }
 
       setOpen(false);
+      router.refresh();
+      
       if (!order) {
         setFormData({
           clientId: '', driverId: '', operatorNote: '', address: '',

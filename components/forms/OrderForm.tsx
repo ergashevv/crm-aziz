@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { createOrder, updateOrder } from '@/app/actions/entities';
-import { Plus, Edit2, MapPin, ExternalLink, Phone, User, Package, Clock, CreditCard, Truck, Navigation } from 'lucide-react';
+import { Plus, Edit2, MapPin, ExternalLink, Phone, User, Package, Clock, CreditCard, Truck, Navigation, Map as MapIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { YMaps, Map as YandexMap, Placemark, SearchControl, ZoomControl } from '@pbe/react-yandex-maps';
 
 const formatLocalDate = (dateInput: any) => {
   if (!dateInput) return '';
@@ -53,6 +54,8 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
   const [open, setOpen]     = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState<string | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState<number[] | null>(null);
   const router = useRouter();
 
   const defaultDateTime = formatLocalDate(new Date());
@@ -293,13 +296,19 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
                   <Navigation className="h-3.5 w-3.5 text-blue-500" />
                   Ссылка на карту
                 </span>
-                {form.mapUrl && (
-                  <a href={form.mapUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-blue-500 text-[10px] font-bold hover:text-blue-700 flex items-center gap-0.5"
-                    onClick={e => e.stopPropagation()}>
-                    <ExternalLink className="h-3 w-3" /> Открыть
-                  </a>
-                )}
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={(e) => { e.preventDefault(); setMapOpen(true); }}
+                    className="text-emerald-600 text-[10px] font-bold hover:text-emerald-700 flex items-center gap-1">
+                    <MapIcon className="h-3.5 w-3.5" /> На карте
+                  </button>
+                  {form.mapUrl && (
+                    <a href={form.mapUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-blue-500 text-[10px] font-bold hover:text-blue-700 flex items-center gap-0.5"
+                      onClick={e => e.stopPropagation()}>
+                      <ExternalLink className="h-3 w-3" /> Открыть
+                    </a>
+                  )}
+                </div>
               </Label>
               <Input value={form.mapUrl} onChange={e => set('mapUrl', e.target.value)}
                 placeholder="https://maps.google.com/... или yandex.ru/maps/..."
@@ -456,6 +465,40 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
           </Button>
         </form>
       </DialogContent>
+
+      <Dialog open={mapOpen} onOpenChange={setMapOpen}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden bg-white rounded-3xl border border-slate-200">
+          <DialogHeader className="px-6 py-4 border-b border-slate-100 bg-white/95 z-10 shrink-0">
+            <DialogTitle className="text-lg font-bold">Выберите местоположение</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 relative">
+            <YMaps query={{ apikey: 'd6b97705-cb47-41ab-85a7-d8c7c93cb4a0', lang: 'ru_RU' }}>
+              <YandexMap
+                defaultState={{ center: [41.2995, 69.2401], zoom: 12, controls: [] }}
+                width="100%"
+                height="100%"
+                onClick={(e: any) => {
+                  const coords = e.get('coords');
+                  setSelectedPoint(coords);
+                  set('mapUrl', `https://yandex.ru/maps/?pt=${coords[1]},${coords[0]}&z=18`);
+                }}
+              >
+                <SearchControl options={{ float: 'right' }} />
+                <ZoomControl options={{ position: { top: 10, left: 10 } }} />
+                {selectedPoint && <Placemark geometry={selectedPoint} options={{ preset: 'islands#blueDotIcon' }} />}
+              </YandexMap>
+            </YMaps>
+          </div>
+          <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setMapOpen(false)} className="rounded-xl">
+              Отмена
+            </Button>
+            <Button onClick={() => setMapOpen(false)} className="rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+              Подтвердить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

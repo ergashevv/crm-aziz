@@ -278,6 +278,7 @@ function AppInner() {
   const [activeTab, setActiveTab] = useState<'home' | 'history' | 'calendar'>('home');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [navModalOrder, setNavModalOrder] = useState<Order | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(startOfDay(new Date()));
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
@@ -685,16 +686,52 @@ function AppInner() {
   };
 
   const openNavigation = (order: Order) => {
-    const url = order.mapUrl
-      ? order.mapUrl
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`;
-    Linking.openURL(url).catch(() => {
-      // Fallback to Yandex Maps
-      const yandex = `https://yandex.ru/maps/?text=${encodeURIComponent(order.address)}`;
-      Linking.openURL(yandex).catch(() => {
-        showAlert(t(locale, 'call'), order.address);
-      });
-    });
+    setNavModalOrder(order);
+  };
+
+  const openMapApp = (app: 'yandex' | 'google', order: Order) => {
+    setNavModalOrder(null);
+    let lat: string | null = null;
+    let lon: string | null = null;
+
+    if (order.mapUrl) {
+      // Yandex link format: ?pt=lon,lat
+      const ptMatch = order.mapUrl.match(/pt=([0-9.]+),([0-9.]+)/);
+      if (ptMatch) {
+        lon = ptMatch[1];
+        lat = ptMatch[2];
+      }
+    }
+
+    if (app === 'yandex') {
+      if (lat && lon) {
+        Linking.openURL(`yandexnavi://build_route_on_map?lat_to=${lat}&lon_to=${lon}`).catch(() => {
+          Linking.openURL(`yandexmaps://build_route_on_map?lat_to=${lat}&lon_to=${lon}`).catch(() => {
+            Linking.openURL(`https://yandex.ru/maps/?pt=${lon},${lat}&z=18`);
+          });
+        });
+      } else if (order.mapUrl && order.mapUrl.includes('yandex')) {
+        Linking.openURL(order.mapUrl).catch(() => {
+          Linking.openURL(`yandexnavi://build_route_on_map?text=${encodeURIComponent(order.address)}`);
+        });
+      } else {
+        Linking.openURL(`yandexnavi://build_route_on_map?text=${encodeURIComponent(order.address)}`).catch(() => {
+          Linking.openURL(`https://yandex.ru/maps/?text=${encodeURIComponent(order.address)}`);
+        });
+      }
+    } else if (app === 'google') {
+      if (lat && lon) {
+        Linking.openURL(`google.navigation:q=${lat},${lon}`).catch(() => {
+          Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`);
+        });
+      } else if (order.mapUrl && order.mapUrl.includes('google')) {
+        Linking.openURL(order.mapUrl).catch(() => {
+          Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`);
+        });
+      } else {
+        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`);
+      }
+    }
   };
 
   const calendarDays = useMemo(() => {
@@ -1512,6 +1549,32 @@ function AppInner() {
         locale={locale}
         onOpenSettings={customAlert.openSettings ? () => Linking.openSettings() : undefined}
       />
+
+      <Modal animationType="fade" transparent visible={!!navModalOrder} onRequestClose={() => setNavModalOrder(null)}>
+        <Pressable style={styles.alertOverlay} onPress={() => setNavModalOrder(null)}>
+          <View style={[styles.alertBox, { padding: 0, overflow: 'hidden' }]}>
+            <View style={{ padding: 20, alignItems: 'center', backgroundColor: '#f8fafc', width: '100%', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
+              <Navigation size={32} color="#4f46e5" style={{ marginBottom: 12 }} />
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1e293b' }}>
+                {locale === 'uz' ? 'Xaritani tanlang' : 'Выберите карту'}
+              </Text>
+            </View>
+            <View style={{ width: '100%', padding: 16, gap: 12 }}>
+              <TouchableOpacity style={[styles.alertBtn, { backgroundColor: '#fcd34d', flexDirection: 'row', justifyContent: 'center', gap: 8 }]} onPress={() => navModalOrder && openMapApp('yandex', navModalOrder)}>
+                <MapPin size={20} color="#92400e" />
+                <Text style={[styles.alertBtnText, { color: '#92400e' }]}>Yandex Maps</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.alertBtn, { backgroundColor: '#2563eb', flexDirection: 'row', justifyContent: 'center', gap: 8 }]} onPress={() => navModalOrder && openMapApp('google', navModalOrder)}>
+                <MapPin size={20} color="#fff" />
+                <Text style={styles.alertBtnText}>Google Maps</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.alertBtn, styles.alertBtnSecondary, { marginTop: 4 }]} onPress={() => setNavModalOrder(null)}>
+                <Text style={styles.alertBtnTextSecondary}>{locale === 'uz' ? 'Bekor qilish' : 'Отмена'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }

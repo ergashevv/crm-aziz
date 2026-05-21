@@ -38,8 +38,8 @@ import {
 
 export default function App() {
   // Connection states
-  const [serverIp, setServerIp] = useState('192.168.1.46'); // Developer default, editable in app
-  const [port, setPort] = useState('3000');
+  const [serverIp, setServerIp] = useState('crm-aziz.vercel.app'); // Developer default, editable in app
+  const [port, setPort] = useState('');
 
   // Auth states
   const [username, setUsername] = useState('driver');
@@ -59,7 +59,11 @@ export default function App() {
   const [prevOrderCount, setPrevOrderCount] = useState(0);
 
   const getApiUrl = useCallback(() => {
-    return `http://${serverIp}:${port}/api`;
+    if (serverIp.includes('.vercel.app') || (serverIp.includes('.') && !/^[0-9.]+$/.test(serverIp))) {
+      return `https://${serverIp}/api`;
+    }
+    const portSuffix = port ? `:${port}` : '';
+    return `http://${serverIp}${portSuffix}/api`;
   }, [serverIp, port]);
 
   // Login Function

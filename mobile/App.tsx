@@ -139,8 +139,13 @@ export default function App() {
 
   const requestLocationPermission = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      return status === 'granted';
+      // 1. Request Foreground location permission ("While using the app")
+      const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+      if (fgStatus !== 'granted') return false;
+
+      // 2. Request Background location permission ("Allow all the time / Always allow")
+      const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+      return bgStatus === 'granted' || fgStatus === 'granted';
     } catch (e) {
       console.warn("Failed to request location permission:", e);
       return false;

@@ -20,30 +20,28 @@ export async function updateOrderPayment(orderId: number, paymentStatus: any) {
 
   const previousStatus = order.paymentStatus;
   
-  await db.transaction(async (tx) => {
-    // Update order
-    await tx.update(orders).set({ paymentStatus }).where(eq(orders.id, orderId));
+  // Update order
+  await db.update(orders).set({ paymentStatus }).where(eq(orders.id, orderId));
 
-    // If transitioned to 'entered'
-    if (paymentStatus === 'entered' && previousStatus !== 'entered') {
-      // 1. Add to warehouse income
-      await tx.insert(warehouseIncome).values({
-        source: 'client_payment',
-        amountRub: order.paymentAmount,
-        note: `Оплата за заказ #${order.id}`,
+  // If transitioned to 'entered'
+  if (paymentStatus === 'entered' && previousStatus !== 'entered') {
+    // 1. Add to warehouse income
+    await db.insert(warehouseIncome).values({
+      source: 'client_payment',
+      amountRub: order.paymentAmount,
+      note: `Оплата за заказ #${order.id}`,
+    });
+
+    // 2. Add referral fee to expenses if there's a percentage
+    if (order.referralPercent && order.referralPercent > 0) {
+      const feeAmount = (order.paymentAmount * order.referralPercent) / 100;
+      await db.insert(expenses).values({
+        category: 'referral_fee',
+        amountRub: Math.round(feeAmount),
+        note: `Процент для 3-го лица (${order.referralName || 'Аноним'}) за заказ #${order.id}`,
       });
-
-      // 2. Add referral fee to expenses if there's a percentage
-      if (order.referralPercent && order.referralPercent > 0) {
-        const feeAmount = (order.paymentAmount * order.referralPercent) / 100;
-        await tx.insert(expenses).values({
-          category: 'referral_fee',
-          amountRub: Math.round(feeAmount),
-          note: `Процент для 3-го лица (${order.referralName || 'Аноним'}) за заказ #${order.id}`,
-        });
-      }
     }
-  });
+  }
 
   revalidateTag('warehouse');
   revalidateTag('expenses');

@@ -192,44 +192,42 @@ export async function createOrder(data: any) {
 
     const newPaymentStatus = data.paymentStatus || 'pending';
 
-    await db.transaction(async (tx) => {
-      const [newOrder] = await tx.insert(orders).values({
-        clientId,
-        driverId: data.driverId ? parseInt(data.driverId) : null,
-        operatorNote: data.operatorNote,
-        address: data.address,
-        scheduledAt: parseDate(data.scheduledAt),
-        containerSizeM3,
-        rentalDuration: data.rentalDuration,
-        status: data.status || 'new',
-        paymentAmount,
-        paymentType: data.paymentType,
-        paymentStatus: newPaymentStatus,
-        referralName: data.referralName,
-        referralPercent: data.referralPercent ? parseInt(data.referralPercent) : null,
-      }).returning();
+    const [newOrder] = await db.insert(orders).values({
+      clientId,
+      driverId: data.driverId ? parseInt(data.driverId) : null,
+      operatorNote: data.operatorNote,
+      address: data.address,
+      scheduledAt: parseDate(data.scheduledAt),
+      containerSizeM3,
+      rentalDuration: data.rentalDuration,
+      status: data.status || 'new',
+      paymentAmount,
+      paymentType: data.paymentType,
+      paymentStatus: newPaymentStatus,
+      referralName: data.referralName,
+      referralPercent: data.referralPercent ? parseInt(data.referralPercent) : null,
+    }).returning();
 
-      // If created with 'entered' status directly
-      if (newPaymentStatus === 'entered') {
-        // 1. Add to warehouse income
-        await tx.insert(warehouseIncome).values({
-          source: 'client_payment',
-          amountRub: paymentAmount,
-          note: `Оплата за заказ #${newOrder.id}`,
+    // If created with 'entered' status directly
+    if (newPaymentStatus === 'entered') {
+      // 1. Add to warehouse income
+      await db.insert(warehouseIncome).values({
+        source: 'client_payment',
+        amountRub: paymentAmount,
+        note: `Оплата за заказ #${newOrder.id}`,
+      });
+
+      // 2. Add referral fee to expenses if there's a percentage
+      const referralPercent = data.referralPercent ? parseInt(data.referralPercent) : null;
+      if (referralPercent && referralPercent > 0) {
+        const feeAmount = (paymentAmount * referralPercent) / 100;
+        await db.insert(expenses).values({
+          category: 'referral_fee',
+          amountRub: Math.round(feeAmount),
+          note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${newOrder.id}`,
         });
-
-        // 2. Add referral fee to expenses if there's a percentage
-        const referralPercent = data.referralPercent ? parseInt(data.referralPercent) : null;
-        if (referralPercent && referralPercent > 0) {
-          const feeAmount = (paymentAmount * referralPercent) / 100;
-          await tx.insert(expenses).values({
-            category: 'referral_fee',
-            amountRub: Math.round(feeAmount),
-            note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${newOrder.id}`,
-          });
-        }
       }
-    });
+    }
 
     revalidateTag('orders');
     revalidateTag('warehouse');
@@ -275,44 +273,42 @@ export async function updateOrder(id: number, data: any) {
     const previousStatus = order.paymentStatus;
     const newPaymentStatus = data.paymentStatus;
 
-    await db.transaction(async (tx) => {
-      await tx.update(orders).set({
-        clientId,
-        driverId: data.driverId ? parseInt(data.driverId) : null,
-        operatorNote: data.operatorNote,
-        address: data.address,
-        scheduledAt: parseDate(data.scheduledAt),
-        containerSizeM3,
-        rentalDuration: data.rentalDuration,
-        status: data.status,
-        paymentAmount,
-        paymentType: data.paymentType,
-        paymentStatus: data.paymentStatus,
-        referralName: data.referralName,
-        referralPercent: data.referralPercent ? parseInt(data.referralPercent) : null,
-      }).where(eq(orders.id, id));
+    await db.update(orders).set({
+      clientId,
+      driverId: data.driverId ? parseInt(data.driverId) : null,
+      operatorNote: data.operatorNote,
+      address: data.address,
+      scheduledAt: parseDate(data.scheduledAt),
+      containerSizeM3,
+      rentalDuration: data.rentalDuration,
+      status: data.status,
+      paymentAmount,
+      paymentType: data.paymentType,
+      paymentStatus: data.paymentStatus,
+      referralName: data.referralName,
+      referralPercent: data.referralPercent ? parseInt(data.referralPercent) : null,
+    }).where(eq(orders.id, id));
 
-      // If transitioned to 'entered'
-      if (newPaymentStatus === 'entered' && previousStatus !== 'entered') {
-        // 1. Add to warehouse income
-        await tx.insert(warehouseIncome).values({
-          source: 'client_payment',
-          amountRub: paymentAmount,
-          note: `Оплата за заказ #${id}`,
+    // If transitioned to 'entered'
+    if (newPaymentStatus === 'entered' && previousStatus !== 'entered') {
+      // 1. Add to warehouse income
+      await db.insert(warehouseIncome).values({
+        source: 'client_payment',
+        amountRub: paymentAmount,
+        note: `Оплата за заказ #${id}`,
+      });
+
+      // 2. Add referral fee to expenses if there's a percentage
+      const referralPercent = data.referralPercent ? parseInt(data.referralPercent) : null;
+      if (referralPercent && referralPercent > 0) {
+        const feeAmount = (paymentAmount * referralPercent) / 100;
+        await db.insert(expenses).values({
+          category: 'referral_fee',
+          amountRub: Math.round(feeAmount),
+          note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${id}`,
         });
-
-        // 2. Add referral fee to expenses if there's a percentage
-        const referralPercent = data.referralPercent ? parseInt(data.referralPercent) : null;
-        if (referralPercent && referralPercent > 0) {
-          const feeAmount = (paymentAmount * referralPercent) / 100;
-          await tx.insert(expenses).values({
-            category: 'referral_fee',
-            amountRub: Math.round(feeAmount),
-            note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${id}`,
-          });
-        }
       }
-    });
+    }
 
     revalidateTag('orders');
     revalidateTag('warehouse');

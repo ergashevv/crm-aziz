@@ -114,6 +114,10 @@ const translations = {
     finishCurrentFirst: 'Avval joriy buyurtmani tugating. Keyingi buyurtmada faqat «Qabul qildim» bosiladi.',
     lockedAction: 'Bu buyurtma navbatda',
     calendarDayOrders: 'Kun buyurtmalari',
+    calendarSchedule: 'Kun jadvali',
+    calendarActiveCount: 'Faol',
+    calendarDoneCount: 'Tugallangan',
+    goToToday: 'Bugunga',
     statusBadge: 'Holat',
   },
   ru: {
@@ -229,9 +233,63 @@ const translations = {
     finishCurrentFirst: 'Сначала завершите текущий заказ. В следующем доступно только «Принял заказ».',
     lockedAction: 'Заказ в очереди',
     calendarDayOrders: 'Заказы на день',
+    calendarSchedule: 'Расписание дня',
+    calendarActiveCount: 'Активные',
+    calendarDoneCount: 'Завершены',
+    goToToday: 'Сегодня',
     statusBadge: 'Статус',
   },
 } as const;
+
+const MONTHS: Record<Locale, string[]> = {
+  uz: [
+    'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+    'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr',
+  ],
+  ru: [
+    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+  ],
+};
+
+const WEEKDAYS: Record<Locale, string[]> = {
+  uz: ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'],
+  ru: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
+};
+
+const WEEKDAYS_SHORT: Record<Locale, string[]> = {
+  uz: ['Ya', 'Du', 'Se', 'Cho', 'Pa', 'Ju', 'Sha'],
+  ru: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+};
+
+export function getWeekdayShort(locale: Locale, date: Date): string {
+  return WEEKDAYS_SHORT[locale][date.getDay()] ?? '';
+}
+
+export function getWeekdayLong(locale: Locale, date: Date): string {
+  return WEEKDAYS[locale][date.getDay()] ?? '';
+}
+
+export function formatMonthYear(locale: Locale, date: Date): string {
+  const month = MONTHS[locale][date.getMonth()] ?? '';
+  return `${month.charAt(0).toUpperCase() + month.slice(1)} ${date.getFullYear()}`;
+}
+
+export function formatCalendarDayTitle(locale: Locale, date: Date): string {
+  const day = date.getDate();
+  const month = MONTHS[locale][date.getMonth()] ?? '';
+  const year = date.getFullYear();
+  const weekday = getWeekdayLong(locale, date);
+  return `${weekday}, ${day} ${month} ${year}`;
+}
+
+export function formatTimeOnly(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
 
 export type TranslationKey = keyof typeof translations.uz;
 

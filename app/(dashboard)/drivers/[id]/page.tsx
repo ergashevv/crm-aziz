@@ -84,7 +84,14 @@ export default async function DriverDetailPage({ params }: { params: { id: strin
                     <TableRowLink href={`/orders/${order.id}`} key={order.id}>
                       <TableCell className="font-medium text-slate-500">#{order.id}</TableCell>
                       <TableCell className="truncate max-w-[200px]">{order.address}</TableCell>
-                      <TableCell>{format(new Date(order.scheduledAt), 'dd.MM.yyyy')}</TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-slate-800">
+                          {format(new Date(order.scheduledAt), 'dd.MM.yyyy')}
+                        </div>
+                        <div className="text-xs text-slate-400 font-medium">
+                          {format(new Date(order.scheduledAt), 'HH:mm')}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-semibold">
                           {dict[order.status as keyof typeof dict] || order.status.replace('_', ' ')}

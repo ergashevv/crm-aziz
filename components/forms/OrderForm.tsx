@@ -11,23 +11,43 @@ import { createOrder, updateOrder } from '@/app/actions/entities';
 import { Plus, Edit2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+const formatLocalDate = (dateInput: any) => {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const formatNumberWithSpaces = (val: string | number) => {
+  if (val === undefined || val === null || val === '') return '';
+  const numStr = String(val).replace(/\D/g, '');
+  if (!numStr) return '';
+  return new Intl.NumberFormat('ru-RU').format(parseInt(numStr, 10));
+};
+
 export function OrderForm({ dict, order, clients, drivers }: { dict: any, order?: any, clients: any[], drivers: any[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const defaultDate = new Date().toISOString().split('T')[0];
+  const isUz = dict.new_order?.includes('Yangi');
+  const defaultDateTime = formatLocalDate(new Date());
 
   const [formData, setFormData] = useState(order ? {
     ...order,
-    scheduledAt: new Date(order.scheduledAt).toISOString().split('T')[0],
+    scheduledAt: formatLocalDate(order.scheduledAt),
   } : {
     clientId: '',
     driverId: '',
     operatorNote: '',
     address: '',
-    scheduledAt: defaultDate,
+    scheduledAt: defaultDateTime,
     containerSizeM3: '8',
     rentalDuration: '1_day',
     paymentAmount: '',
@@ -38,10 +58,26 @@ export function OrderForm({ dict, order, clients, drivers }: { dict: any, order?
     referralPercent: ''
   });
 
+  const [displayAmount, setDisplayAmount] = useState(
+    order ? formatNumberWithSpaces(order.paymentAmount) : ''
+  );
+
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
     if (!isOpen) {
       setError(null);
+    }
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (rawValue === '') {
+      setDisplayAmount('');
+      setFormData({ ...formData, paymentAmount: '' });
+    } else {
+      const formatted = formatNumberWithSpaces(rawValue);
+      setDisplayAmount(formatted);
+      setFormData({ ...formData, paymentAmount: rawValue });
     }
   };
 
@@ -68,10 +104,11 @@ export function OrderForm({ dict, order, clients, drivers }: { dict: any, order?
       if (!order) {
         setFormData({
           clientId: '', driverId: '', operatorNote: '', address: '',
-          scheduledAt: defaultDate, containerSizeM3: '8', rentalDuration: '1_day',
+          scheduledAt: defaultDateTime, containerSizeM3: '8', rentalDuration: '1_day',
           paymentAmount: '', paymentType: 'cash', status: 'new', paymentStatus: 'pending',
           referralName: '', referralPercent: ''
         });
+        setDisplayAmount('');
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -93,7 +130,7 @@ export function OrderForm({ dict, order, clients, drivers }: { dict: any, order?
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-slate-200/80 shadow-2xl bg-white/95 backdrop-blur-xl">
         <DialogHeader>
           <DialogTitle>{order ? dict.new_order.replace('+', '✎') : dict.new_order}</DialogTitle>
         </DialogHeader>
@@ -130,8 +167,19 @@ export function OrderForm({ dict, order, clients, drivers }: { dict: any, order?
             </div>
 
             <div className="space-y-2">
-              <Label>{dict.scheduled_date}</Label>
-              <Input type="date" value={formData.scheduledAt} onChange={e => setFormData({...formData, scheduledAt: e.target.value})} required />
+              <Label className="flex items-center justify-between">
+                <span>{dict.scheduled_date}</span>
+                <span className="text-[10px] font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  {isUz ? "Sana va Vaqt" : "Дата и Время"}
+                </span>
+              </Label>
+              <Input 
+                type="datetime-local" 
+                value={formData.scheduledAt} 
+                onChange={e => setFormData({...formData, scheduledAt: e.target.value})} 
+                className="transition-all duration-200 focus:border-primary/80 focus:ring-1 focus:ring-primary/80"
+                required 
+              />
             </div>
             
             <div className="space-y-2">
@@ -152,8 +200,24 @@ export function OrderForm({ dict, order, clients, drivers }: { dict: any, order?
             </div>
             
             <div className="space-y-2">
-              <Label>{dict.amount} (RUB)</Label>
-              <Input type="number" value={formData.paymentAmount} onChange={e => setFormData({...formData, paymentAmount: e.target.value})} required />
+              <Label className="flex items-center justify-between">
+                <span>{dict.amount} (RUB)</span>
+                {displayAmount && (
+                  <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                    {displayAmount} RUB
+                  </span>
+                )}
+              </Label>
+              <Input 
+                type="text" 
+                inputMode="numeric"
+                pattern="[0-9 ]*"
+                placeholder="0"
+                value={displayAmount} 
+                onChange={handleAmountChange} 
+                className="transition-all duration-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-bold text-slate-800"
+                required 
+              />
             </div>
 
             <div className="space-y-2">

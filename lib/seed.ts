@@ -3,17 +3,22 @@ import { clients, drivers, orders, expenses, fuelLogs, warehouseIncome } from '.
 
 type OrderStatus = 'new' | 'assigned' | 'in_progress' | 'container_placed' | 'picked_up' | 'completed';
 
-function atTime(base: Date, hours: number, minutes = 0): Date {
-  const d = new Date(base);
+/** Local midnight for today + offset days (0 = today, 1 = tomorrow, -1 = yesterday). */
+function dayOffset(offset: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function atTimeOnDay(day: Date, hours: number, minutes = 0): Date {
+  const d = new Date(day);
   d.setHours(hours, minutes, 0, 0);
   return d;
 }
 
-function daysAgo(n: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function formatDay(d: Date): string {
+  return d.toLocaleDateString('uz-UZ', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 async function seed() {
@@ -34,8 +39,9 @@ async function seed() {
     { name: 'Jasur', phone: '+998905678901', vehiclePlate: '01 E 567 EE', username: 'jasur', password: 'password123' },
   ];
   const insertedDrivers = await db.insert(drivers).values(driverData).returning();
-  const polat = insertedDrivers[0];
+  const polat = insertedDrivers[0]; // mobil test — seed buyurtma bermaydi, dashboarddan qo'shiladi
   const aziz = insertedDrivers[1];
+  const seedDrivers = insertedDrivers.filter((d) => d.id !== polat.id);
   const sardor = insertedDrivers[2];
   const farrux = insertedDrivers[3];
   const jasur = insertedDrivers[4];
@@ -70,20 +76,26 @@ async function seed() {
   const pickClient = () => insertedClients[orderSeq++ % insertedClients.length];
   const amount = () => 150000 + Math.floor(Math.random() * 8) * 10000;
 
+  const today = dayOffset(0);
+  const tomorrow = dayOffset(1);
+
+  console.log(`Bugun: ${formatDay(today)}`);
+  console.log(`Ertaga: ${formatDay(tomorrow)}`);
+
   // --- O'tgan 14 kun: har kuni 2-4 ta buyurtma, HAMMASI completed ---
   for (let daysBack = 14; daysBack >= 1; daysBack--) {
-    const day = daysAgo(daysBack);
+    const day = dayOffset(-daysBack);
     const ordersToday = 2 + Math.floor(Math.random() * 3);
     for (let i = 0; i < ordersToday; i++) {
       const client = pickClient();
-      const driver = insertedDrivers[(daysBack + i) % insertedDrivers.length];
+      const driver = seedDrivers[(daysBack + i) % seedDrivers.length];
       const hour = 8 + i * 3 + Math.floor(Math.random() * 2);
       orderData.push({
         clientId: client.id,
         driverId: driver.id,
         address: client.address,
-        scheduledAt: atTime(day, hour, 30),
-        createdAt: atTime(day, hour, 0),
+        scheduledAt: atTimeOnDay(day, hour, 30),
+        createdAt: atTimeOnDay(day, hour, 0),
         containerSizeM3: 8,
         rentalDuration: durations[i % durations.length],
         status: 'completed',
@@ -94,45 +106,13 @@ async function seed() {
     }
   }
 
-  const today = daysAgo(0);
-  const tomorrow = daysAgo(-1);
-
-  // --- BUGUN: har haydovchida 0-2 ta FAOL buyurtma (real hayot) ---
-  // Polat (mobil test): hozir yo'lda + keyinroq yangi
-  orderData.push({
-    clientId: insertedClients[0].id,
-    driverId: polat.id,
-    address: insertedClients[0].address,
-    scheduledAt: atTime(today, 10, 0),
-    createdAt: atTime(today, 9, 30),
-    containerSizeM3: 8,
-    rentalDuration: '1_day',
-    status: 'in_progress',
-    paymentAmount: amount(),
-    paymentType: 'cash',
-    paymentStatus: 'pending',
-    operatorNote: 'Konteynerni qo\'yish kerak',
-  });
-  orderData.push({
-    clientId: insertedClients[1].id,
-    driverId: polat.id,
-    address: insertedClients[1].address,
-    scheduledAt: atTime(today, 15, 0),
-    createdAt: atTime(today, 8, 0),
-    containerSizeM3: 8,
-    rentalDuration: '1_week',
-    status: 'assigned',
-    paymentAmount: amount(),
-    paymentType: 'card',
-    paymentStatus: 'pending',
-  });
-
+  // --- BUGUN: har haydovchida 0-2 ta FAOL buyurtma (Polat — dashboarddan qo'shiladi) ---
   orderData.push({
     clientId: insertedClients[2].id,
     driverId: aziz.id,
     address: insertedClients[2].address,
-    scheduledAt: atTime(today, 11, 0),
-    createdAt: atTime(today, 10, 0),
+    scheduledAt: atTimeOnDay(today, 11, 0),
+    createdAt: atTimeOnDay(today, 10, 0),
     containerSizeM3: 8,
     rentalDuration: '1_day',
     status: 'new',
@@ -145,8 +125,8 @@ async function seed() {
     clientId: insertedClients[3].id,
     driverId: sardor.id,
     address: insertedClients[3].address,
-    scheduledAt: atTime(today, 9, 0),
-    createdAt: atTime(today, 8, 0),
+    scheduledAt: atTimeOnDay(today, 9, 0),
+    createdAt: atTimeOnDay(today, 8, 0),
     containerSizeM3: 8,
     rentalDuration: '1_month',
     status: 'container_placed',
@@ -159,8 +139,8 @@ async function seed() {
     clientId: insertedClients[4].id,
     driverId: farrux.id,
     address: insertedClients[4].address,
-    scheduledAt: atTime(today, 14, 0),
-    createdAt: atTime(today, 13, 0),
+    scheduledAt: atTimeOnDay(today, 14, 0),
+    createdAt: atTimeOnDay(today, 13, 0),
     containerSizeM3: 8,
     rentalDuration: '1_week',
     status: 'picked_up',
@@ -172,26 +152,13 @@ async function seed() {
 
   // Jasur bugun buyurtmasiz (bo'sh haydovchi)
 
-  // --- ERTAGA: jadval uchun 1-2 ta kelajak buyurtma ---
-  orderData.push({
-    clientId: insertedClients[5].id,
-    driverId: polat.id,
-    address: insertedClients[5].address,
-    scheduledAt: atTime(tomorrow, 10, 0),
-    createdAt: atTime(today, 12, 0),
-    containerSizeM3: 8,
-    rentalDuration: '1_day',
-    status: 'new',
-    paymentAmount: amount(),
-    paymentType: 'cash',
-    paymentStatus: 'pending',
-  });
+  // --- ERTAGA: jadval uchun kelajak buyurtma ---
   orderData.push({
     clientId: insertedClients[6].id,
     driverId: jasur.id,
     address: insertedClients[6].address,
-    scheduledAt: atTime(tomorrow, 12, 0),
-    createdAt: atTime(today, 12, 0),
+    scheduledAt: atTimeOnDay(tomorrow, 12, 0),
+    createdAt: atTimeOnDay(today, 12, 0),
     containerSizeM3: 8,
     rentalDuration: '1_week',
     status: 'assigned',
@@ -206,12 +173,12 @@ async function seed() {
   const warehouseData = [];
 
   for (let d = 14; d >= 0; d--) {
-    const date = daysAgo(d);
+    const date = dayOffset(-d);
     expenseData.push({
       category: expCategories[d % expCategories.length],
       amountRub: Math.floor(10000 + Math.random() * 20000),
       note: `Kunlik xarajat`,
-      recordedAt: atTime(date, 18, 0),
+      recordedAt: atTimeOnDay(date, 18, 0),
     });
     if (d % 2 === 0) {
       const driver = insertedDrivers[d % insertedDrivers.length];
@@ -222,7 +189,7 @@ async function seed() {
         liters,
         priceRub: liters * 100,
         vehicle: driver.vehiclePlate,
-        loggedAt: atTime(date, 17, 0),
+        loggedAt: atTimeOnDay(date, 17, 0),
       });
     }
     if (d % 2 === 1) {
@@ -230,7 +197,7 @@ async function seed() {
         source: (d % 3 === 0 ? 'client_payment' : 'external_vehicle_rental') as 'client_payment' | 'external_vehicle_rental',
         amountRub: Math.floor(20000 + Math.random() * 50000),
         note: `Ombor daromadi`,
-        recordedAt: atTime(date, 19, 0),
+        recordedAt: atTimeOnDay(date, 19, 0),
       });
     }
   }
@@ -246,6 +213,8 @@ async function seed() {
     const active = orderData.filter((o) => o.driverId === dr.id && o.status !== 'completed').length;
     console.log(`  ${dr.name}: ${count} jami, ${active} faol`);
   }
+
+  console.log(`\n${polat.name} (${polat.username}): seed buyurtmasiz — dashboarddan qo'shing.`);
 }
 
 seed().catch((err) => {

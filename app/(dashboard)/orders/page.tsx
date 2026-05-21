@@ -140,7 +140,14 @@ export default async function OrdersPage({
                   <TableCell className="font-medium text-slate-500">#{order.id}</TableCell>
                   <TableCell className="font-semibold">{client?.name}</TableCell>
                   <TableCell className="truncate max-w-[200px]">{order.address}</TableCell>
-                  <TableCell>{format(new Date(order.scheduledAt), 'dd.MM.yyyy')}</TableCell>
+                  <TableCell>
+                    <div className="font-semibold text-slate-800">
+                      {format(new Date(order.scheduledAt), 'dd.MM.yyyy')}
+                    </div>
+                    <div className="text-xs text-slate-400 font-medium">
+                      {format(new Date(order.scheduledAt), 'HH:mm')}
+                    </div>
+                  </TableCell>
                   <TableCell>{driver?.name || <span className="text-muted-foreground italic">{dict.unassigned}</span>}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 ${getStatusClasses(order.status)}`}>

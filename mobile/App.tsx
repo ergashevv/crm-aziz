@@ -34,6 +34,7 @@ import {
   AlertCircle as LucideAlertCircle,
   Navigation as LucideNavigation,
   ChevronRight as LucideChevronRight,
+  ChevronLeft as LucideChevronLeft,
   Home as LucideHome,
   Banknote as LucideBanknote,
   CreditCard as LucideCreditCard,
@@ -48,6 +49,10 @@ import {
   getRentalLabel,
   getPaymentLabel,
   getStatusLabel,
+  getWeekdayShort,
+  formatMonthYear,
+  formatCalendarDayTitle,
+  formatTimeOnly,
 } from './i18n';
 import './locationTask';
 import {
@@ -71,6 +76,7 @@ const X = LucideX as React.ComponentType<{ color?: string; size?: number }>;
 const AlertCircle = LucideAlertCircle as React.ComponentType<{ color?: string; size?: number; style?: object }>;
 const Navigation = LucideNavigation as React.ComponentType<{ color?: string; size?: number; style?: object }>;
 const ChevronRight = LucideChevronRight as React.ComponentType<{ color?: string; size?: number }>;
+const ChevronLeft = LucideChevronLeft as React.ComponentType<{ color?: string; size?: number }>;
 const Home = LucideHome as React.ComponentType<{ color?: string; size?: number }>;
 const Banknote = LucideBanknote as React.ComponentType<{ color?: string; size?: number }>;
 const CreditCard = LucideCreditCard as React.ComponentType<{ color?: string; size?: number }>;
@@ -176,6 +182,7 @@ function getStepIndex(status: string): number {
     case 'in_progress': return 3;
     case 'container_placed': return 3;
     case 'picked_up': return 4;
+    case 'completed': return 5;
     default: return 0;
   }
 }
@@ -274,6 +281,11 @@ export default function App() {
 
   const knownOrderIds = useRef<Set<number>>(new Set());
   const initialFetchDone = useRef(false);
+  const calendarScrollRef = useRef<ScrollView>(null);
+  const CALENDAR_PAST_DAYS = 14;
+  const CALENDAR_FUTURE_DAYS = 28;
+  const CALENDAR_DAY_WIDTH = 58;
+  const CALENDAR_DAY_GAP = 8;
 
   const [isTrackingGps, setIsTrackingGps] = useState(false);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
@@ -670,13 +682,63 @@ export default function App() {
   const calendarDays = useMemo(() => {
     const days: Date[] = [];
     const base = startOfDay(new Date());
-    for (let i = -2; i <= 12; i++) {
+    for (let i = -CALENDAR_PAST_DAYS; i <= CALENDAR_FUTURE_DAYS; i++) {
       const d = new Date(base);
       d.setDate(base.getDate() + i);
       days.push(d);
     }
     return days;
   }, []);
+
+  const calendarDayIndex = useCallback((day: Date) => {
+    const base = startOfDay(new Date());
+    return Math.round((startOfDay(day).getTime() - base.getTime()) / 86400000) + CALENDAR_PAST_DAYS;
+  }, []);
+
+  const scrollCalendarToDay = useCallback(
+    (day: Date) => {
+      requestAnimationFrame(() => {
+        const idx = calendarDayIndex(day);
+        calendarScrollRef.current?.scrollTo({
+          x: Math.max(0, idx * (CALENDAR_DAY_WIDTH + CALENDAR_DAY_GAP) - 56),
+          animated: true,
+        });
+      });
+    },
+    [calendarDayIndex]
+  );
+
+  const scrollCalendarToToday = useCallback(() => {
+    scrollCalendarToDay(new Date());
+  }, [scrollCalendarToDay]);
+
+  const goToCalendarToday = useCallback(() => {
+    Vibration.vibrate(20);
+    const today = startOfDay(new Date());
+    setSelectedCalendarDate(today);
+    scrollCalendarToToday();
+  }, [scrollCalendarToToday]);
+
+  const shiftCalendarWeek = useCallback(
+    (deltaWeeks: number) => {
+      const next = new Date(selectedCalendarDate);
+      next.setDate(next.getDate() + deltaWeeks * 7);
+      const min = calendarDays[0];
+      const max = calendarDays[calendarDays.length - 1];
+      const clamped = startOfDay(next < min ? min : next > max ? max : next);
+      Vibration.vibrate(20);
+      setSelectedCalendarDate(clamped);
+      scrollCalendarToDay(clamped);
+    },
+    [selectedCalendarDate, calendarDays, scrollCalendarToDay]
+  );
+
+  useEffect(() => {
+    if (activeTab === 'calendar') {
+      setSelectedCalendarDate(startOfDay(new Date()));
+      scrollCalendarToToday();
+    }
+  }, [activeTab, scrollCalendarToToday]);
 
   const getDayLabel = (d: Date) => {
     const today = startOfDay(new Date());
@@ -688,10 +750,19 @@ export default function App() {
   };
 
   const ordersForCalendarDay = useMemo(() => {
-    return orders
-      .filter(o => isSameDay(new Date(o.scheduledAt), selectedCalendarDate))
-      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+    const dayOrders = orders.filter(o => isSameDay(new Date(o.scheduledAt), selectedCalendarDate));
+    const active = dayOrders.filter(o => o.status !== 'completed');
+    const done = dayOrders.filter(o => o.status === 'completed');
+    const byTime = (a: Order, b: Order) =>
+      new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+    return [...active.sort(byTime), ...done.sort(byTime)];
   }, [orders, selectedCalendarDate]);
+
+  const calendarDayStats = useMemo(() => {
+    const active = ordersForCalendarDay.filter(o => o.status !== 'completed').length;
+    const done = ordersForCalendarDay.filter(o => o.status === 'completed').length;
+    return { active, done, total: ordersForCalendarDay.length };
+  }, [ordersForCalendarDay]);
 
   const activeOrders = useMemo(() => filterActiveOrders(orders), [orders]);
   const computedFocusOrder = useMemo(() => computeFocusOrder(orders), [orders]);
@@ -893,7 +964,7 @@ export default function App() {
           </View>
           <ChevronRight size={20} color="#cbd5e1" />
         </TouchableOpacity>
-        {showAction && (
+        {showAction && order.status !== 'completed' && (
           <View style={styles.orderCardAction}>
             {isPayment && mode === 'locked' ? (
               <View style={[styles.quickActionBtn, styles.lockedBtn]}>
@@ -951,6 +1022,44 @@ export default function App() {
         {renderPrimaryButton(order, true)}
         <TouchableOpacity style={styles.heroLinkBtn} onPress={() => openOrder(order)}>
           <Text style={styles.heroLinkText}>{t(locale, 'openOrder')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderCalendarTimelineOrder = (order: Order, isLast: boolean) => {
+    const time = formatTimeOnly(order.scheduledAt);
+    const { label, color, bg } = getStatusLabel(locale, order.status);
+    const completed = order.status === 'completed';
+    return (
+      <View key={order.id} style={styles.timelineRow}>
+        <View style={styles.timelineTimeCol}>
+          <Text style={styles.timelineTime}>{time}</Text>
+        </View>
+        <View style={styles.timelineRail}>
+          <View style={[styles.timelineDot, completed && styles.timelineDotDone]} />
+          {!isLast && <View style={styles.timelineLine} />}
+        </View>
+        <TouchableOpacity
+          style={[styles.timelineCard, completed && styles.timelineCardDone]}
+          onPress={() => openOrder(order)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.timelineCardHeader}>
+            <Text style={styles.timelineOrderId}>#{order.id}</Text>
+            <View style={[styles.statusBadge, styles.statusBadgeCompact, { backgroundColor: bg }]}>
+              <Text style={[styles.statusBadgeTextCompact, { color }]}>{label}</Text>
+            </View>
+          </View>
+          <Text style={styles.timelineAddress} numberOfLines={2}>{order.address}</Text>
+          <Text style={styles.timelineClient}>{order.clientName}</Text>
+          {order.operatorNote ? (
+            <Text style={styles.timelineNote} numberOfLines={1}>{order.operatorNote}</Text>
+          ) : null}
+          <View style={styles.timelineTapHint}>
+            <Text style={styles.timelineTapHintText}>{t(locale, 'openOrder')}</Text>
+            <ChevronRight size={14} color="#94a3b8" />
+          </View>
         </TouchableOpacity>
       </View>
     );
@@ -1127,27 +1236,60 @@ export default function App() {
             )}
           </>
         ) : activeTab === 'calendar' ? (
-          <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarScroll}>
+          <View style={styles.calendarPanel}>
+            <View style={styles.calendarToolbar}>
+              <TouchableOpacity style={styles.calendarNavBtn} onPress={() => shiftCalendarWeek(-1)}>
+                <ChevronLeft size={22} color="#475569" />
+              </TouchableOpacity>
+              <View style={styles.calendarToolbarCenter}>
+                <Text style={styles.calendarMonthTitle}>{formatMonthYear(locale, selectedCalendarDate)}</Text>
+                <TouchableOpacity style={styles.calendarTodayBtn} onPress={goToCalendarToday}>
+                  <Text style={styles.calendarTodayBtnText}>{t(locale, 'goToToday')}</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.calendarNavBtn} onPress={() => shiftCalendarWeek(1)}>
+                <ChevronRight size={22} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              ref={calendarScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.calendarScroll}
+            >
               {calendarDays.map(day => {
                 const selected = isSameDay(day, selectedCalendarDate);
+                const isToday = isSameDay(day, new Date());
                 const dayOrders = orders.filter(o => isSameDay(new Date(o.scheduledAt), day));
                 const count = dayOrders.length;
                 const hasActive = dayOrders.some(o => o.status !== 'completed' && o.status !== 'new');
                 const hasNew = dayOrders.some(o => o.status === 'new');
+                const dayNum = day.getDate();
                 return (
                   <TouchableOpacity
                     key={day.toISOString()}
-                    style={[styles.calendarDay, selected && styles.calendarDaySelected]}
-                    onPress={() => { Vibration.vibrate(20); setSelectedCalendarDate(startOfDay(day)); }}
+                    style={[
+                      styles.calendarDay,
+                      { width: CALENDAR_DAY_WIDTH },
+                      isToday && !selected && styles.calendarDayToday,
+                      selected && styles.calendarDaySelected,
+                    ]}
+                    onPress={() => {
+                      Vibration.vibrate(20);
+                      const d = startOfDay(day);
+                      setSelectedCalendarDate(d);
+                      scrollCalendarToDay(d);
+                    }}
                   >
-                    <Text style={[styles.calendarDayLabel, selected && styles.calendarDayLabelSelected]}>
-                      {getDayLabel(day)}
+                    <Text style={[styles.calendarWeekday, selected && styles.calendarDayTextSelected]}>
+                      {getWeekdayShort(locale, day)}
                     </Text>
-                    <Text style={[styles.calendarDayDate, selected && styles.calendarDayLabelSelected]}>
-                      {formatDateShort(day)}
-                    </Text>
-                    {count > 0 && (
+                    <Text style={[styles.calendarDayNum, selected && styles.calendarDayTextSelected]}>{dayNum}</Text>
+                    {isToday && !selected ? (
+                      <Text style={styles.calendarMiniLabel}>{t(locale, 'today')}</Text>
+                    ) : null}
+                    {count > 0 ? (
                       <View style={styles.calendarDotsRow}>
                         {hasActive && <View style={[styles.calendarDot, { backgroundColor: selected ? '#fde68a' : '#f59e0b' }]} />}
                         {hasNew && <View style={[styles.calendarDot, { backgroundColor: selected ? '#bfdbfe' : '#3b82f6' }]} />}
@@ -1155,23 +1297,54 @@ export default function App() {
                           <Text style={[styles.calendarBadgeText, selected && { color: '#fff' }]}>{count}</Text>
                         </View>
                       </View>
+                    ) : (
+                      <View style={styles.calendarEmptyDot} />
                     )}
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
-            <Text style={styles.calendarDayTitle}>
-              {getDayLabel(selectedCalendarDate)} · {formatDateShort(selectedCalendarDate)} — {t(locale, 'calendarDayOrders')} ({ordersForCalendarDay.length})
-            </Text>
+
+            <View style={styles.selectedDayCard}>
+              <View style={styles.selectedDayHeader}>
+                <Calendar size={20} color="#4f46e5" />
+                <View style={styles.selectedDayHeaderText}>
+                  <Text style={styles.selectedDayTitle}>{formatCalendarDayTitle(locale, selectedCalendarDate)}</Text>
+                  <Text style={styles.selectedDaySub}>{t(locale, 'calendarSchedule')}</Text>
+                </View>
+              </View>
+              {calendarDayStats.total > 0 && (
+                <View style={styles.selectedDayStats}>
+                  <View style={styles.statChip}>
+                    <Text style={styles.statChipLabel}>{t(locale, 'calendarActiveCount')}</Text>
+                    <Text style={styles.statChipValue}>{calendarDayStats.active}</Text>
+                  </View>
+                  <View style={[styles.statChip, styles.statChipDone]}>
+                    <Text style={styles.statChipLabel}>{t(locale, 'calendarDoneCount')}</Text>
+                    <Text style={styles.statChipValue}>{calendarDayStats.done}</Text>
+                  </View>
+                  <View style={styles.statChip}>
+                    <Text style={styles.statChipLabel}>{t(locale, 'calendarDayOrders')}</Text>
+                    <Text style={styles.statChipValue}>{calendarDayStats.total}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
             {ordersForCalendarDay.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Calendar size={48} color="#cbd5e1" />
+              <View style={styles.calendarEmpty}>
+                <Clock size={40} color="#cbd5e1" />
                 <Text style={styles.emptyTitle}>{t(locale, 'noOrdersOnDate')}</Text>
+                <Text style={styles.emptySub}>{formatCalendarDayTitle(locale, selectedCalendarDate)}</Text>
               </View>
             ) : (
-              ordersForCalendarDay.map(o => renderCompactCard(o, undefined, true))
+              <View style={styles.timelineList}>
+                {ordersForCalendarDay.map((o, i) =>
+                  renderCalendarTimelineOrder(o, i === ordersForCalendarDay.length - 1)
+                )}
+              </View>
             )}
-          </>
+          </View>
         ) : historyOrders.length === 0 ? (
           <View style={styles.emptyContainer}>
             <ClipboardList size={48} color="#cbd5e1" />
@@ -1187,7 +1360,13 @@ export default function App() {
           <TouchableOpacity
             key={id}
             style={styles.bottomNavItem}
-            onPress={() => { Vibration.vibrate(20); setActiveTab(id); }}
+            onPress={() => {
+              Vibration.vibrate(20);
+              if (id === 'calendar') {
+                goToCalendarToday();
+              }
+              setActiveTab(id);
+            }}
           >
             <Icon size={22} color={activeTab === id ? '#4f46e5' : '#94a3b8'} />
             <Text style={[styles.bottomNavLabel, activeTab === id && styles.bottomNavLabelActive]}>{label}</Text>
@@ -1375,22 +1554,59 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.6 },
   emptyHero: { backgroundColor: '#fff', borderRadius: 20, padding: 40, alignItems: 'center', marginBottom: 16 },
   sectionHeading: { fontSize: 14, fontWeight: '700', color: '#64748b', marginBottom: 12, marginTop: 4 },
-  calendarDayTitle: { fontSize: 15, fontWeight: '700', color: '#334155', marginBottom: 12, paddingHorizontal: 4 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusBadgeCompact: { paddingHorizontal: 8, paddingVertical: 2 },
   statusBadgeText: { fontSize: 12, fontWeight: '700' },
   statusBadgeTextCompact: { fontSize: 10 },
-  calendarScroll: { paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', marginBottom: 8 },
-  calendarDay: { width: 72, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', marginRight: 8, alignItems: 'center' },
-  calendarDaySelected: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
-  calendarDayLabel: { fontSize: 11, color: '#64748b', fontWeight: '600' },
-  calendarDayDate: { fontSize: 15, fontWeight: 'bold', color: '#1e293b', marginTop: 2 },
-  calendarDayLabelSelected: { color: '#fff' },
-  calendarDotsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 4 },
-  calendarDot: { width: 6, height: 6, borderRadius: 3 },
-  calendarBadge: { backgroundColor: '#e0e7ff', borderRadius: 10, minWidth: 20, paddingHorizontal: 6, alignItems: 'center' },
-  calendarBadgeSelected: { backgroundColor: 'rgba(255,255,255,0.3)' },
-  calendarBadgeText: { fontSize: 11, fontWeight: 'bold', color: '#4f46e5' },
+  calendarPanel: { marginBottom: 8 },
+  calendarToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 4 },
+  calendarNavBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' },
+  calendarToolbarCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+  calendarMonthTitle: { fontSize: 17, fontWeight: '800', color: '#0f172a', textTransform: 'capitalize' },
+  calendarTodayBtn: { marginTop: 6, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, backgroundColor: '#eef2ff' },
+  calendarTodayBtnText: { fontSize: 12, fontWeight: '700', color: '#4f46e5' },
+  calendarScroll: { paddingHorizontal: 12, paddingVertical: 8, alignItems: 'flex-end', marginBottom: 12 },
+  calendarDay: { paddingVertical: 10, paddingHorizontal: 6, borderRadius: 16, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', marginRight: 8, alignItems: 'center', minHeight: 88 },
+  calendarDayToday: { borderColor: '#4f46e5', borderWidth: 2, backgroundColor: '#eef2ff' },
+  calendarDaySelected: { backgroundColor: '#4f46e5', borderColor: '#4f46e5', shadowColor: '#4f46e5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
+  calendarWeekday: { fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' },
+  calendarDayNum: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginTop: 2 },
+  calendarDayTextSelected: { color: '#fff' },
+  calendarMiniLabel: { fontSize: 9, color: '#4f46e5', fontWeight: '700', marginTop: 2 },
+  calendarDotsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 3, minHeight: 14 },
+  calendarEmptyDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#e2e8f0', marginTop: 8 },
+  calendarDot: { width: 5, height: 5, borderRadius: 3 },
+  calendarBadge: { backgroundColor: '#e0e7ff', borderRadius: 8, minWidth: 18, height: 18, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  calendarBadgeSelected: { backgroundColor: 'rgba(255,255,255,0.35)' },
+  calendarBadgeText: { fontSize: 10, fontWeight: '800', color: '#4f46e5' },
+  selectedDayCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  selectedDayHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  selectedDayHeaderText: { flex: 1 },
+  selectedDayTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a', lineHeight: 22 },
+  selectedDaySub: { fontSize: 12, color: '#64748b', marginTop: 2, fontWeight: '600' },
+  selectedDayStats: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  statChip: { flex: 1, backgroundColor: '#f8fafc', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
+  statChipDone: { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
+  statChipLabel: { fontSize: 10, color: '#64748b', fontWeight: '600' },
+  statChipValue: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginTop: 2 },
+  calendarEmpty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  timelineList: { paddingBottom: 24 },
+  timelineRow: { flexDirection: 'row', marginBottom: 4 },
+  timelineTimeCol: { width: 52, paddingTop: 14, alignItems: 'flex-end', paddingRight: 8 },
+  timelineTime: { fontSize: 15, fontWeight: '800', color: '#4f46e5' },
+  timelineRail: { width: 20, alignItems: 'center', paddingTop: 16 },
+  timelineDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#4f46e5', borderWidth: 2, borderColor: '#fff', zIndex: 1 },
+  timelineDotDone: { backgroundColor: '#10b981' },
+  timelineLine: { flex: 1, width: 2, backgroundColor: '#e2e8f0', marginTop: 4, marginBottom: -8, minHeight: 24 },
+  timelineCard: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0', marginLeft: 4 },
+  timelineCardDone: { opacity: 0.85, backgroundColor: '#f8fafc' },
+  timelineCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  timelineOrderId: { fontSize: 13, fontWeight: '800', color: '#64748b' },
+  timelineAddress: { fontSize: 15, fontWeight: '600', color: '#1e293b', lineHeight: 21 },
+  timelineClient: { fontSize: 13, color: '#64748b', marginTop: 4 },
+  timelineNote: { fontSize: 12, color: '#b45309', marginTop: 6, fontStyle: 'italic' },
+  timelineTapHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10, gap: 2 },
+  timelineTapHintText: { fontSize: 12, color: '#94a3b8', fontWeight: '600' },
   ordersListContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
   orderCard: { backgroundColor: '#fff', borderRadius: 16, marginBottom: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e2e8f0' },
   orderCardFocus: { borderColor: '#2563eb', borderWidth: 2 },

@@ -101,7 +101,14 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                   {clientOrders.map(({ order, driver }) => (
                     <TableRowLink href={`/orders/${order.id}`} key={order.id}>
                       <TableCell className="font-medium text-slate-500">#{order.id}</TableCell>
-                      <TableCell>{format(new Date(order.scheduledAt), 'dd.MM.yyyy')}</TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-slate-800">
+                          {format(new Date(order.scheduledAt), 'dd.MM.yyyy')}
+                        </div>
+                        <div className="text-xs text-slate-400 font-medium">
+                          {format(new Date(order.scheduledAt), 'HH:mm')}
+                        </div>
+                      </TableCell>
                       <TableCell>{driver?.name || <span className="text-muted-foreground italic">{dict.unassigned}</span>}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 bg-slate-100 rounded text-xs font-semibold">

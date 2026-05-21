@@ -111,6 +111,42 @@ export default function DriverMapInner({ lang, dict }: { lang: string; dict: any
     }
   };
 
+  const handleSimulateGps = async () => {
+    setIsRefreshing(true);
+    const simulatedCoordinates: Record<string, { lat: number; lng: number }> = {
+      'Polat': { lat: 41.3032, lng: 69.2612 },
+      'Aziz': { lat: 41.2825, lng: 69.2086 },
+      'Sardor': { lat: 41.3211, lng: 69.2482 },
+      'Farrux': { lat: 41.3122, lng: 69.2785 },
+      'Jasur': { lat: 41.2678, lng: 69.2234 }
+    };
+
+    try {
+      await Promise.all(
+        drivers.map(async (d) => {
+          const coords = simulatedCoordinates[d.name] || {
+            lat: 41.3 + (Math.random() - 0.5) * 0.05,
+            lng: 69.24 + (Math.random() - 0.5) * 0.05
+          };
+          return fetch('/api/driver/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              driverId: d.id,
+              latitude: coords.lat,
+              longitude: coords.lng
+            })
+          });
+        })
+      );
+      await fetchDriverLocations(true);
+    } catch (err) {
+      console.error('Error simulating GPS:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Initialize Map
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current) {
@@ -271,6 +307,18 @@ export default function DriverMapInner({ lang, dict }: { lang: string; dict: any
           <p className="text-xs text-slate-400 font-medium">
             {dict.last_updated || 'Yangilandi'}: {lastRefreshed.toLocaleTimeString()}
           </p>
+          {drivers.length > 0 && (
+            <div className="mt-3">
+              <button
+                onClick={handleSimulateGps}
+                disabled={isRefreshing}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-all shadow-sm active:scale-95 duration-100"
+              >
+                <Radio className="h-3.5 w-3.5" />
+                {lang === 'uz' ? 'GPS Simulyatsiya qilish' : 'Симулировать GPS'}
+              </button>
+            </div>
+          )}
         </CardHeader>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">

@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   RefreshControl,
   Modal,
@@ -18,6 +17,7 @@ import {
   Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import {
   Warehouse as LucideWarehouse,
@@ -150,12 +150,15 @@ type Order = {
   id: number;
   status: string;
   address: string;
+  mapUrl?: string | null;
   scheduledAt: string;
   paymentAmount: number;
   paymentType: string;
+  paymentStatus: string;
   clientName: string;
   clientPhone: string;
   containerSizeM3: number;
+  containerNumber?: string | null;
   rentalDuration: string;
   operatorNote?: string;
 };
@@ -679,6 +682,19 @@ export default function App() {
     });
   };
 
+  const openNavigation = (order: Order) => {
+    const url = order.mapUrl
+      ? order.mapUrl
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`;
+    Linking.openURL(url).catch(() => {
+      // Fallback to Yandex Maps
+      const yandex = `https://yandex.ru/maps/?text=${encodeURIComponent(order.address)}`;
+      Linking.openURL(yandex).catch(() => {
+        showAlert(t(locale, 'call'), order.address);
+      });
+    });
+  };
+
   const calendarDays = useMemo(() => {
     const days: Date[] = [];
     const base = startOfDay(new Date());
@@ -1004,6 +1020,12 @@ export default function App() {
           <Text style={styles.heroDateSub}>{datePart}</Text>
         </View>
         <Text style={styles.heroAddress}>{order.address}</Text>
+        <TouchableOpacity style={styles.heroNavBtn} onPress={() => openNavigation(order)} activeOpacity={0.8}>
+          <Navigation size={16} color="#fff" />
+          <Text style={styles.heroNavBtnText}>
+            {locale === 'uz' ? 'Navigatsiya' : 'Навигация'}
+          </Text>
+        </TouchableOpacity>
         <View style={styles.heroClientRow}>
           <Text style={styles.heroClient}>{order.clientName}</Text>
           <TouchableOpacity style={styles.heroCallBtn} onPress={() => callClient(order.clientPhone)}>
@@ -1067,6 +1089,7 @@ export default function App() {
 
   if (!isLoggedIn) {
     return (
+      <SafeAreaProvider>
       <SafeAreaView style={styles.loginContainer}>
         <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
@@ -1162,6 +1185,7 @@ export default function App() {
           onOpenSettings={customAlert.openSettings ? () => Linking.openSettings() : undefined}
         />
       </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
@@ -1171,8 +1195,11 @@ export default function App() {
     { id: 'history' as const, label: t(locale, 'history'), Icon: CheckCircle, count: historyOrders.length },
   ];
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={styles.mainContainer}>
+    <SafeAreaProvider>
+    <SafeAreaView style={styles.mainContainer} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.appHeader}>
@@ -1355,7 +1382,8 @@ export default function App() {
         )}
       </ScrollView>
 
-      <View style={styles.bottomNav}>
+
+      <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         {bottomTabs.map(({ id, label, Icon, count }) => (
           <TouchableOpacity
             key={id}
@@ -1378,6 +1406,7 @@ export default function App() {
           </TouchableOpacity>
         ))}
       </View>
+
 
       {selectedOrder && (() => {
         const order = selectedOrder;
@@ -1411,6 +1440,17 @@ export default function App() {
                     <Text style={styles.modalWarn}>{t(locale, 'finishCurrentFirst')}</Text>
                   )}
                   <Text style={styles.modalBigAddress}>{order.address}</Text>
+                  <TouchableOpacity style={styles.navBtn} onPress={() => openNavigation(order)} activeOpacity={0.8}>
+                    <Navigation size={16} color="#fff" />
+                    <Text style={styles.navBtnText}>
+                      {locale === 'uz' ? 'Navigatsiya (xaritada ochish)' : 'Навигация (открыть карту)'}
+                    </Text>
+                  </TouchableOpacity>
+                  {order.containerNumber ? (
+                    <View style={styles.containerNumBadge}>
+                      <Text style={styles.containerNumText}>📦 #{order.containerNumber}</Text>
+                    </View>
+                  ) : null}
                   <Text style={styles.modalBigClient}>{order.clientName}</Text>
 
                   <TouchableOpacity style={styles.callBtn} onPress={() => callClient(order.clientPhone)}>
@@ -1475,6 +1515,7 @@ export default function App() {
         onOpenSettings={customAlert.openSettings ? () => Linking.openSettings() : undefined}
       />
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -1507,7 +1548,7 @@ const styles = StyleSheet.create({
   pulseRing: { position: 'absolute', height: 20, width: 20, borderRadius: 10, backgroundColor: '#34d399' },
   pulseDot: { height: 8, width: 8, borderRadius: 4, backgroundColor: '#10b981' },
   gpsActiveText: { fontSize: 12, color: '#065f46', fontWeight: '600', flex: 1 },
-  mainContainer: { flex: 1, backgroundColor: '#f1f5f9', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  mainContainer: { flex: 1, backgroundColor: '#f1f5f9' },
   mainScroll: { flex: 1 },
   appHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff' },
   driverInfoArea: { flex: 1 },
@@ -1517,7 +1558,7 @@ const styles = StyleSheet.create({
   headerMiniBtn: { padding: 8, borderRadius: 10, backgroundColor: '#f8fafc' },
   headerMiniBtnText: { fontSize: 12, fontWeight: '800', color: '#4f46e5' },
   actionIconBtn: { padding: 8, borderRadius: 10, backgroundColor: '#eef2ff' },
-  bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e2e8f0', paddingBottom: Platform.OS === 'ios' ? 4 : 8, paddingTop: 8 },
+  bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e2e8f0', paddingTop: 8 },
   bottomNavItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 6, position: 'relative' },
   bottomNavLabel: { fontSize: 11, color: '#94a3b8', marginTop: 4, fontWeight: '600' },
   bottomNavLabelActive: { color: '#4f46e5', fontWeight: '800' },
@@ -1541,6 +1582,12 @@ const styles = StyleSheet.create({
   stepLabelActive: { color: '#2563eb', fontWeight: '800' },
   heroTime: { fontSize: 28, fontWeight: '800', color: '#0f172a', marginTop: 12 },
   heroAddress: { fontSize: 18, color: '#1e293b', marginTop: 8, lineHeight: 26, fontWeight: '600' },
+  heroNavBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, backgroundColor: '#2563eb', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, alignSelf: 'flex-start' },
+  heroNavBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  navBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, backgroundColor: '#2563eb', borderRadius: 12, paddingVertical: 11, paddingHorizontal: 16 },
+  navBtnText: { color: '#fff', fontSize: 14, fontWeight: '700', flex: 1 },
+  containerNumBadge: { marginTop: 8, backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#e2e8f0' },
+  containerNumText: { fontSize: 13, fontWeight: '700', color: '#475569' },
   heroClientRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
   heroClient: { fontSize: 16, color: '#64748b', flex: 1 },
   heroCallBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center', marginLeft: 12 },

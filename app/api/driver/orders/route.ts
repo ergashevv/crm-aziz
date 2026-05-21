@@ -24,8 +24,10 @@ export async function GET(request: Request) {
       .select({
         id: orders.id,
         address: orders.address,
+        mapUrl: orders.mapUrl,
         scheduledAt: orders.scheduledAt,
         containerSizeM3: orders.containerSizeM3,
+        containerNumber: orders.containerNumber,
         rentalDuration: orders.rentalDuration,
         status: orders.status,
         paymentAmount: orders.paymentAmount,

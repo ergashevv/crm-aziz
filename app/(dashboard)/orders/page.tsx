@@ -1,5 +1,5 @@
 import React from 'react';
-import { getOrders, getClients, getDrivers } from '@/lib/data';
+import { getOrders, getClients, getDrivers, getDispatchers } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import { TableRowLink } from '@/components/TableRowLink';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Phone } from 'lucide-react';
 import { SearchAndFilter } from '@/components/SearchAndFilter';
 import { OrderForm } from '@/components/forms/OrderForm';
 import { ExportButton } from '@/components/ExportButton';
@@ -51,6 +51,7 @@ export default async function OrdersPage({
   const activeCount = (await getOrders('active', '')).length;
   const clients = await getClients();
   const drivers = await getDrivers();
+  const dispatchers = await getDispatchers();
 
   const exportOrdersData = allOrders.map(({ order, client, driver }) => ({
     id: `#${order.id}`,
@@ -98,7 +99,7 @@ export default async function OrdersPage({
             title={lang === 'uz' ? "Buyurtmalar Ro'yxati" : "Список заказов"} 
             dict={dict} 
           />
-          <OrderForm dict={dict} clients={clients} drivers={drivers} />
+          <OrderForm dict={dict} clients={clients} drivers={drivers} dispatchers={dispatchers} />
         </div>
       </div>
 
@@ -135,11 +136,24 @@ export default async function OrdersPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {allOrders.map(({ order, client, driver }) => (
+              {allOrders.map(({ order, client, driver, dispatcher }) => (
                 <TableRowLink href={`/orders/${order.id}`} key={order.id}>
                   <TableCell className="font-medium text-slate-500">#{order.id}</TableCell>
-                  <TableCell className="font-semibold">{client?.name}</TableCell>
-                  <TableCell className="truncate max-w-[200px]">{order.address}</TableCell>
+                  <TableCell>
+                    <div className="font-semibold">{client?.name}</div>
+                    {order.clientCategory === 'dispatcher' && dispatcher && (
+                      <div className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 mt-0.5">
+                        <Phone className="h-2.5 w-2.5" />
+                        {dispatcher.name}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="truncate max-w-[180px] text-sm">{order.address}</div>
+                    {order.containerNumber && (
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">#{order.containerNumber}</div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="font-semibold text-slate-800">
                       {format(new Date(order.scheduledAt), 'dd.MM.yyyy')}
@@ -163,7 +177,7 @@ export default async function OrdersPage({
                     {order.paymentAmount.toLocaleString()} <span className="text-xs text-slate-400 font-medium">RUB</span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <OrderForm dict={dict} order={order} clients={clients} drivers={drivers} />
+                    <OrderForm dict={dict} order={order} clients={clients} drivers={drivers} dispatchers={dispatchers} />
                   </TableCell>
                 </TableRowLink>
               ))}

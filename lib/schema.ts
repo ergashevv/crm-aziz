@@ -12,6 +12,14 @@ export const clients = pgTable('clients', {
   name: text('name').notNull(),
   phone: text('phone').notNull(),
   address: text('address').notNull(),
+  mapUrl: text('map_url'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const dispatchers = pgTable('dispatchers', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  phone: text('phone').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -34,13 +42,18 @@ export const orders = pgTable('orders', {
   driverId: integer('driver_id').references(() => drivers.id),
   operatorNote: text('operator_note'),
   address: text('address').notNull(),
+  mapUrl: text('map_url'),
   scheduledAt: timestamp('scheduled_at').notNull(),
   containerSizeM3: integer('container_size_m3').notNull(),
-  rentalDuration: rentalDurationEnum('rental_duration').notNull(),
+  containerNumber: text('container_number'),
+  rentalDuration: text('rental_duration').notNull(),
   status: orderStatusEnum('status').default('new').notNull(),
   paymentAmount: integer('payment_amount').notNull(),
   paymentType: paymentTypeEnum('payment_type').notNull(),
   paymentStatus: paymentStatusEnum('payment_status').default('pending').notNull(),
+  clientCategory: text('client_category').default('direct').notNull(),
+  dispatcherId: integer('dispatcher_id').references(() => dispatchers.id),
+  dispatcherFee: integer('dispatcher_fee'),
   referralName: text('referral_name'),
   referralPercent: integer('referral_percent'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

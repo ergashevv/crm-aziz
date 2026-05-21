@@ -1,5 +1,5 @@
 import { db } from './db';
-import { orders, clients, drivers, fuelLogs, expenses, warehouseIncome } from './schema';
+import { orders, clients, drivers, fuelLogs, expenses, warehouseIncome, dispatchers } from './schema';
 import { unstable_cache } from 'next/cache';
 import { desc, eq, and, or, ilike, ne } from 'drizzle-orm';
 
@@ -44,10 +44,12 @@ export const getOrders = unstable_cache(
       order: orders,
       client: clients,
       driver: drivers,
+      dispatcher: dispatchers,
     })
     .from(orders)
     .leftJoin(clients, eq(orders.clientId, clients.id))
-    .leftJoin(drivers, eq(orders.driverId, drivers.id));
+    .leftJoin(drivers, eq(orders.driverId, drivers.id))
+    .leftJoin(dispatchers, eq(orders.dispatcherId, dispatchers.id));
 
     return await (conditions.length > 0 
       ? query.where(and(...conditions)).orderBy(desc(orders.createdAt))
@@ -63,6 +65,14 @@ export const getClients = unstable_cache(
   },
   ['clients-list'],
   { revalidate: 30, tags: ['clients'] }
+);
+
+export const getDispatchers = unstable_cache(
+  async () => {
+    return await db.select().from(dispatchers).orderBy(desc(dispatchers.createdAt));
+  },
+  ['dispatchers-list'],
+  { revalidate: 30, tags: ['dispatchers'] }
 );
 
 export const getDrivers = unstable_cache(

@@ -14,11 +14,11 @@ async function seed() {
 
   // 2. Insert Drivers
   const driverData = [
-    { name: 'Rustam', phone: '+998901234567', vehiclePlate: '01 A 123 AA' },
-    { name: 'Aziz', phone: '+998902345678', vehiclePlate: '01 B 234 BB' },
-    { name: 'Sardor', phone: '+998903456789', vehiclePlate: '01 C 345 CC' },
-    { name: 'Farrux', phone: '+998904567890', vehiclePlate: '01 D 456 DD' },
-    { name: 'Jasur', phone: '+998905678901', vehiclePlate: '01 E 567 EE' },
+    { name: 'Polat', phone: '+998901234567', vehiclePlate: '01 A 123 AA', username: 'driver', password: 'driver123' },
+    { name: 'Aziz', phone: '+998902345678', vehiclePlate: '01 B 234 BB', username: 'aziz', password: 'password123' },
+    { name: 'Sardor', phone: '+998903456789', vehiclePlate: '01 C 345 CC', username: 'sardor', password: 'password123' },
+    { name: 'Farrux', phone: '+998904567890', vehiclePlate: '01 D 456 DD', username: 'farrux', password: 'password123' },
+    { name: 'Jasur', phone: '+998905678901', vehiclePlate: '01 E 567 EE', username: 'jasur', password: 'password123' },
   ];
   const insertedDrivers = await db.insert(drivers).values(driverData).returning();
 

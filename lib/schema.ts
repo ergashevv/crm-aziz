@@ -20,6 +20,8 @@ export const drivers = pgTable('drivers', {
   name: text('name').notNull(),
   phone: text('phone').notNull(),
   vehiclePlate: text('vehicle_plate').notNull(),
+  username: text('username'),
+  password: text('password'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

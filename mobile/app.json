@@ -10,6 +10,12 @@
     },
     "android": {
       "package": "com.driver.crm"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "566e3bf1-3841-40d4-9c07-d2305838330d"
+      }
+    },
+    "owner": "ergashevv"
   }
 }

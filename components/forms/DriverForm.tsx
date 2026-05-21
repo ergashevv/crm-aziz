@@ -11,10 +11,18 @@ import { Plus, Edit2 } from 'lucide-react';
 export function DriverForm({ dict, driver }: { dict: any, driver?: any }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(driver || {
+  const [formData, setFormData] = useState(driver ? {
+    name: driver.name || '',
+    phone: driver.phone || '',
+    vehiclePlate: driver.vehiclePlate || '',
+    username: driver.username || '',
+    password: driver.password || '',
+  } : {
     name: '',
     phone: '',
-    vehiclePlate: ''
+    vehiclePlate: '',
+    username: '',
+    password: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,7 +35,7 @@ export function DriverForm({ dict, driver }: { dict: any, driver?: any }) {
         await createDriver(formData);
       }
       setOpen(false);
-      if (!driver) setFormData({ name: '', phone: '', vehiclePlate: '' });
+      if (!driver) setFormData({ name: '', phone: '', vehiclePlate: '', username: '', password: '' });
     } finally {
       setLoading(false);
     }
@@ -62,6 +70,14 @@ export function DriverForm({ dict, driver }: { dict: any, driver?: any }) {
           <div className="space-y-2">
             <Label htmlFor="vehiclePlate">{dict.vehicle_plate}</Label>
             <Input id="vehiclePlate" value={formData.vehiclePlate} onChange={e => setFormData({...formData, vehiclePlate: e.target.value})} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="username">{dict.username} ({dict.optional || "Optional"})</Label>
+            <Input id="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">{dict.password} ({dict.optional || "Optional"})</Label>
+            <Input id="password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? '...' : driver ? (dict.save || 'Save') : (dict.create || 'Create')}

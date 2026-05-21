@@ -39,6 +39,8 @@ export async function createDriver(data: any) {
     name: data.name,
     phone: data.phone,
     vehiclePlate: data.vehiclePlate,
+    username: data.username || null,
+    password: data.password || null,
   });
   revalidateTag('drivers');
   revalidatePath('/drivers');
@@ -49,6 +51,8 @@ export async function updateDriver(id: number, data: any) {
     name: data.name,
     phone: data.phone,
     vehiclePlate: data.vehiclePlate,
+    username: data.username || null,
+    password: data.password || null,
   }).where(eq(drivers.id, id));
   revalidateTag('drivers');
   revalidatePath('/drivers');

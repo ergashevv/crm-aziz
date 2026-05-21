@@ -17,26 +17,46 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  Warehouse,
-  User,
-  Lock,
-  LogOut,
-  Settings,
-  ClipboardList,
-  Car,
-  MapPin,
-  Calendar,
-  DollarSign,
-  CheckCircle,
-  Clock,
-  Phone,
-  Truck,
-  CreditCard,
-  RefreshCw,
-  X,
-  PlusCircle,
-  Coins
+  Warehouse as LucideWarehouse,
+  User as LucideUser,
+  Lock as LucideLock,
+  LogOut as LucideLogOut,
+  Settings as LucideSettings,
+  ClipboardList as LucideClipboardList,
+  Car as LucideCar,
+  MapPin as LucideMapPin,
+  Calendar as LucideCalendar,
+  DollarSign as LucideDollarSign,
+  CheckCircle as LucideCheckCircle,
+  Clock as LucideClock,
+  Phone as LucidePhone,
+  Truck as LucideTruck,
+  CreditCard as LucideCreditCard,
+  RefreshCw as LucideRefreshCw,
+  X as LucideX,
+  PlusCircle as LucidePlusCircle,
+  Coins as LucideCoins
 } from 'lucide-react-native';
+
+const Warehouse = LucideWarehouse as any;
+const User = LucideUser as any;
+const Lock = LucideLock as any;
+const LogOut = LucideLogOut as any;
+const Settings = LucideSettings as any;
+const ClipboardList = LucideClipboardList as any;
+const Car = LucideCar as any;
+const MapPin = LucideMapPin as any;
+const Calendar = LucideCalendar as any;
+const DollarSign = LucideDollarSign as any;
+const CheckCircle = LucideCheckCircle as any;
+const Clock = LucideClock as any;
+const Phone = LucidePhone as any;
+const Truck = LucideTruck as any;
+const CreditCard = LucideCreditCard as any;
+const RefreshCw = LucideRefreshCw as any;
+const X = LucideX as any;
+const PlusCircle = LucidePlusCircle as any;
+const Coins = LucideCoins as any;
 
 export default function App() {
   // Connection states

@@ -13,7 +13,9 @@ import {
   Alert,
   StatusBar,
   Vibration,
+  Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Warehouse,
   User,
@@ -54,9 +56,32 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'all' | 'assigned' | 'in_progress' | 'container_placed' | 'picked_up'>('all');
 
   // For real-time simulation check
   const [prevOrderCount, setPrevOrderCount] = useState(0);
+
+  // Load saved states on mount
+  useEffect(() => {
+    const loadPersistedData = async () => {
+      try {
+        const savedIp = await AsyncStorage.getItem('@server_ip');
+        const savedPort = await AsyncStorage.getItem('@server_port');
+        const savedDriver = await AsyncStorage.getItem('@driver_data');
+
+        if (savedIp !== null) setServerIp(savedIp);
+        if (savedPort !== null) setPort(savedPort);
+        if (savedDriver !== null) {
+          const parsedDriver = JSON.parse(savedDriver);
+          setDriver(parsedDriver);
+          setIsLoggedIn(true);
+        }
+      } catch (e) {
+        console.error('Failed to load persisted app states:', e);
+      }
+    };
+    loadPersistedData();
+  }, []);
 
   const getApiUrl = useCallback(() => {
     if (serverIp.includes('.vercel.app') || (serverIp.includes('.') && !/^[0-9.]+$/.test(serverIp))) {
@@ -66,10 +91,26 @@ export default function App() {
     return `http://${serverIp}${portSuffix}/api`;
   }, [serverIp, port]);
 
+  // Fast custom date formatter to prevent lag in lists
+  const formatDate = useCallback((dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${day}.${month}.${year} ${hours}:${minutes}`;
+    } catch (e) {
+      return dateStr;
+    }
+  }, []);
+
   // Login Function
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert('Xatolik / Ошибка', 'Login va parolni kiriting / Введите логин и пароль');
+      Alert.alert('Xatolik / Ошибка', 'Login va parolni kiriting / Введите login va parol');
       return;
     }
 
@@ -89,6 +130,7 @@ export default function App() {
 
       setDriver(data);
       setIsLoggedIn(true);
+      await AsyncStorage.setItem('@driver_data', JSON.stringify(data));
       Vibration.vibrate(100);
     } catch (error: any) {
       Alert.alert('Xatolik / Ошибка', error.message || 'Serverga ulanib bo\'lmadi. IP manzilingizni sozlamalardan tekshiring.');
@@ -208,10 +250,13 @@ export default function App() {
     }
   };
 
-  // Filter orders based on Active vs History
+  // Filter orders based on Active vs History, and by status filter for active tab
   const filteredOrders = orders.filter(o => {
     if (activeTab === 'active') {
-      return o.status !== 'completed';
+      const isActive = o.status !== 'completed';
+      if (!isActive) return false;
+      if (selectedStatusFilter === 'all') return true;
+      return o.status === selectedStatusFilter;
     } else {
       return o.status === 'completed';
     }
@@ -242,23 +287,35 @@ export default function App() {
           {showSettings ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>IP Sozlamalari / Настройки IP</Text>
-              <Text style={styles.label}>Server IP manzili (Wi-Fi):</Text>
+              <Text style={styles.label}>Server IP manzili (Wi-Fi / Domen):</Text>
               <TextInput
                 style={styles.input}
                 value={serverIp}
                 onChangeText={setServerIp}
-                placeholder="Masalan: 192.168.1.10"
-                keyboardType="numeric"
+                placeholder="Masalan: crm-aziz.vercel.app"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
               <Text style={styles.label}>Port:</Text>
               <TextInput
                 style={styles.input}
                 value={port}
                 onChangeText={setPort}
-                placeholder="3000"
+                placeholder="Bo'sh qoldiring (Vercel) yoki 3000"
                 keyboardType="numeric"
               />
-              <TouchableOpacity style={styles.saveBtn} onPress={() => setShowSettings(false)}>
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={async () => {
+                  try {
+                    await AsyncStorage.setItem('@server_ip', serverIp);
+                    await AsyncStorage.setItem('@server_port', port);
+                    setShowSettings(false);
+                  } catch (e) {
+                    Alert.alert('Xatolik', 'Sozlamalarni saqlashda xatolik yuz berdi');
+                  }
+                }}
+              >
                 <Text style={styles.saveBtnText}>Saqlash / Сохранить</Text>
               </TouchableOpacity>
             </View>
@@ -337,9 +394,14 @@ export default function App() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.logoutBtn}
-            onPress={() => {
+            onPress={async () => {
               setIsLoggedIn(false);
               setDriver(null);
+              try {
+                await AsyncStorage.removeItem('@driver_data');
+              } catch (e) {
+                console.error(e);
+              }
             }}
           >
             <LogOut size={20} color="#ef4444" />
@@ -366,6 +428,37 @@ export default function App() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Status Filter Chips */}
+      {activeTab === 'active' && (
+        <View style={styles.filterContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            {[
+              { id: 'all', label: { uz: 'Barchasi', ru: 'Все' } },
+              { id: 'assigned', label: { uz: 'Biriktirildi', ru: 'Назначен' } },
+              { id: 'in_progress', label: { uz: 'Yo\'lda', ru: 'В пути' } },
+              { id: 'container_placed', label: { uz: 'Konteyner', ru: 'Контейнер' } },
+              { id: 'picked_up', label: { uz: 'Yuklandi', ru: 'Забран' } },
+            ].map(filter => (
+              <TouchableOpacity
+                key={filter.id}
+                style={[
+                  styles.filterChip,
+                  selectedStatusFilter === filter.id && styles.filterChipActive
+                ]}
+                onPress={() => setSelectedStatusFilter(filter.id as any)}
+              >
+                <Text style={[
+                  styles.filterChipText,
+                  selectedStatusFilter === filter.id && styles.filterChipTextActive
+                ]}>
+                  {filter.label.uz}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Orders List */}
       <ScrollView
@@ -412,7 +505,7 @@ export default function App() {
                 <View style={styles.orderInfoRow}>
                   <Calendar size={16} color="#64748b" style={styles.infoIcon} />
                   <Text style={styles.infoText}>
-                    {new Date(order.scheduledAt).toLocaleDateString('uz-UZ')} {new Date(order.scheduledAt).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                    {formatDate(order.scheduledAt)}
                   </Text>
                 </View>
 
@@ -586,6 +679,7 @@ const styles = StyleSheet.create({
   loginContainer: {
     flex: 1,
     backgroundColor: '#0B0F19',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -714,6 +808,7 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   appHeader: {
     flexDirection: 'row',
@@ -802,6 +897,36 @@ const styles = StyleSheet.create({
   tabButtonTextActive: {
     color: '#1e293b',
     fontWeight: '700',
+  },
+  filterContainer: {
+    height: 40,
+    marginBottom: 8,
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#e2e8f0',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+  },
+  filterChipActive: {
+    backgroundColor: '#4f46e5',
+    borderColor: '#4f46e5',
+  },
+  filterChipText: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  filterChipTextActive: {
+    color: '#ffffff',
+    fontWeight: '600',
   },
   ordersListContainer: {
     paddingHorizontal: 16,

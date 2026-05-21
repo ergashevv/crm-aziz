@@ -121,7 +121,17 @@ export const dictionaries = {
     password: "Пароль",
     sign_in: "Войти",
     invalid_credentials: "Неверное имя пользователя или пароль",
-    export: "Экспорт"
+    export: "Экспорт",
+    live_tracking: "Онлайн карта",
+    no_active_gps: "Нет активного GPS сигнала",
+    last_updated: "Последнее обновление",
+    driver_location: "Местоположение водителей",
+    view_on_map: "Показать на карте",
+    tracking_active: "В пути / GPS активен",
+    tracking_idle: "Не в пути / GPS выключен",
+    no_gps_yet: "GPS координаты еще не получены",
+    select_driver_to_view: "Выберите водителя из списка",
+    destination: "Пункт назначения"
   },
   uz: {
     dashboard: "Boshqaruv paneli",
@@ -245,7 +255,17 @@ export const dictionaries = {
     password: "Parol",
     sign_in: "Kirish",
     invalid_credentials: "Foydalanuvchi nomi yoki parol xato",
-    export: "Eksport"
+    export: "Eksport",
+    live_tracking: "Onlayn xarita",
+    no_active_gps: "Faol GPS signal yo'q",
+    last_updated: "So'nggi yangilanish",
+    driver_location: "Haydovchilar joylashuvi",
+    view_on_map: "Xaritada ko'rsatish",
+    tracking_active: "Yo'lda / GPS faol",
+    tracking_idle: "Yo'lda emas / GPS o'chirilgan",
+    no_gps_yet: "GPS koordinatalari hali olinmagan",
+    select_driver_to_view: "Ro'yxatdan haydovchini tanlang",
+    destination: "Belgilangan manzil"
   }
 };
 

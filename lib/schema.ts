@@ -22,6 +22,9 @@ export const drivers = pgTable('drivers', {
   vehiclePlate: text('vehicle_plate').notNull(),
   username: text('username'),
   password: text('password'),
+  latitude: text('latitude'),
+  longitude: text('longitude'),
+  locationUpdatedAt: timestamp('location_updated_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

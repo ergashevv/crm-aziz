@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -14,8 +14,10 @@ import {
   StatusBar,
   Vibration,
   Platform,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import {
   Warehouse as LucideWarehouse,
   User as LucideUser,
@@ -81,6 +83,11 @@ export default function App() {
   // For real-time simulation check
   const [prevOrderCount, setPrevOrderCount] = useState(0);
 
+  // GPS tracking states
+  const [isTrackingGps, setIsTrackingGps] = useState(false);
+  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+
   // Load saved states on mount
   useEffect(() => {
     const loadPersistedData = async () => {
@@ -102,6 +109,112 @@ export default function App() {
     };
     loadPersistedData();
   }, []);
+
+  // Pulse animation for GPS active dot
+  useEffect(() => {
+    let anim: Animated.CompositeAnimation | null = null;
+    if (isTrackingGps) {
+      anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0.4,
+            duration: 1200,
+            useNativeDriver: true,
+          })
+        ])
+      );
+      anim.start();
+    } else {
+      pulseAnim.setValue(0.4);
+    }
+    return () => {
+      if (anim) anim.stop();
+    };
+  }, [isTrackingGps]);
+
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      return status === 'granted';
+    } catch (e) {
+      console.warn("Failed to request location permission:", e);
+      return false;
+    }
+  };
+
+  // GPS realtime location tracking when active order status is 'in_progress'
+  useEffect(() => {
+    const hasInProgress = orders.some(o => o.status === 'in_progress');
+    let active = true;
+
+    const startTracking = async () => {
+      if (isLoggedIn && driver && hasInProgress) {
+        const granted = await requestLocationPermission();
+        if (!granted) {
+          Alert.alert(
+            "GPS Ruxsati / Разрешение GPS", 
+            "Realtime kuzatuv uchun GPS ruxsati zarur. Sozlamalardan yoqing. / Для отслеживания в реальном времени требуется доступ к GPS."
+          );
+          return;
+        }
+
+        if (!locationSubscription.current && active) {
+          setIsTrackingGps(true);
+          Vibration.vibrate([0, 150, 100, 150]);
+          
+          try {
+            locationSubscription.current = await Location.watchPositionAsync(
+              {
+                accuracy: Location.Accuracy.Balanced,
+                timeInterval: 10000, // every 10 seconds
+                distanceInterval: 10, // every 10 meters
+              },
+              async (loc) => {
+                const { latitude, longitude } = loc.coords;
+                try {
+                  await fetch(`${getApiUrl()}/driver/location`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      driverId: driver.id,
+                      latitude,
+                      longitude,
+                    }),
+                  });
+                } catch (e) {
+                  console.error("Error sending GPS coordinates:", e);
+                }
+              }
+            );
+          } catch (err) {
+            console.error("Error starting watchPositionAsync:", err);
+            setIsTrackingGps(false);
+          }
+        }
+      } else {
+        if (locationSubscription.current) {
+          locationSubscription.current.remove();
+          locationSubscription.current = null;
+        }
+        setIsTrackingGps(false);
+      }
+    };
+
+    startTracking();
+
+    return () => {
+      active = false;
+      if (locationSubscription.current) {
+        locationSubscription.current.remove();
+        locationSubscription.current = null;
+      }
+    };
+  }, [orders, isLoggedIn, driver, getApiUrl]);
 
   const getApiUrl = useCallback(() => {
     if (serverIp.includes('.vercel.app') || (serverIp.includes('.') && !/^[0-9.]+$/.test(serverIp))) {
@@ -151,7 +264,9 @@ export default function App() {
       setDriver(data);
       setIsLoggedIn(true);
       await AsyncStorage.setItem('@driver_data', JSON.stringify(data));
-      Vibration.vibrate(100);
+      Vibration.vibrate([0, 80, 40, 80]);
+      // Prompt for location permissions early
+      Location.requestForegroundPermissionsAsync().catch(err => console.log(err));
     } catch (error: any) {
       Alert.alert('Xatolik / Ошибка', error.message || 'Serverga ulanib bo\'lmadi. IP manzilingizni sozlamalardan tekshiring.');
     } finally {
@@ -165,7 +280,13 @@ export default function App() {
     if (showIndicator) setLoading(true);
 
     try {
-      const response = await fetch(`${getApiUrl()}/driver/orders?driverId=${driver.id}`);
+      const response = await fetch(`${getApiUrl()}/driver/orders?driverId=${driver.id}&t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -203,7 +324,7 @@ export default function App() {
       }, 10000);
       return () => clearInterval(interval);
     }
-  }, [isLoggedIn, driver]);
+  }, [isLoggedIn, driver, fetchOrders]);
 
   // Update Order Status
   const handleUpdateStatus = async (orderId: number, newStatus: string) => {
@@ -408,13 +529,17 @@ export default function App() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.actionIconBtn}
-            onPress={() => fetchOrders(true)}
+            onPress={() => {
+              Vibration.vibrate(30);
+              fetchOrders(true);
+            }}
           >
             <RefreshCw size={20} color="#1e293b" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.logoutBtn}
             onPress={async () => {
+              Vibration.vibrate([0, 100, 50, 100]);
               setIsLoggedIn(false);
               setDriver(null);
               try {
@@ -429,11 +554,27 @@ export default function App() {
         </View>
       </View>
 
+      {/* GPS Tracking Pulsing Status Bar */}
+      {isTrackingGps && (
+        <View style={styles.gpsActiveBar}>
+          <View style={styles.pulseContainer}>
+            <Animated.View style={[styles.pulseRing, { opacity: pulseAnim }]} />
+            <View style={styles.pulseDot} />
+          </View>
+          <Text style={styles.gpsActiveText}>
+            Realtime GPS xaritada kuzatilmoqda... / GPS отслеживание активно...
+          </Text>
+        </View>
+      )}
+
       {/* Tabs */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'active' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('active')}
+          onPress={() => {
+            Vibration.vibrate(20);
+            setActiveTab('active');
+          }}
         >
           <Text style={[styles.tabButtonText, activeTab === 'active' && styles.tabButtonTextActive]}>
             Faollar / Активные ({orders.filter(o => o.status !== 'completed').length})
@@ -441,7 +582,10 @@ export default function App() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'history' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('history')}
+          onPress={() => {
+            Vibration.vibrate(20);
+            setActiveTab('history');
+          }}
         >
           <Text style={[styles.tabButtonText, activeTab === 'history' && styles.tabButtonTextActive]}>
             Tarix / История ({orders.filter(o => o.status === 'completed').length})
@@ -466,7 +610,10 @@ export default function App() {
                   styles.filterChip,
                   selectedStatusFilter === filter.id && styles.filterChipActive
                 ]}
-                onPress={() => setSelectedStatusFilter(filter.id as any)}
+                onPress={() => {
+                  Vibration.vibrate(20);
+                  setSelectedStatusFilter(filter.id as any);
+                }}
               >
                 <Text style={[
                   styles.filterChipText,
@@ -502,7 +649,10 @@ export default function App() {
               <TouchableOpacity
                 key={order.id}
                 style={styles.orderCard}
-                onPress={() => setSelectedOrder(order)}
+                onPress={() => {
+                  Vibration.vibrate(40);
+                  setSelectedOrder(order);
+                }}
               >
                 <View style={styles.orderCardHeader}>
                   <Text style={styles.orderIdText}>Buyurtma #{order.id}</Text>
@@ -556,7 +706,10 @@ export default function App() {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Buyurtma #{selectedOrder.id}</Text>
-                <TouchableOpacity onPress={() => setSelectedOrder(null)}>
+                <TouchableOpacity onPress={() => {
+                  Vibration.vibrate(20);
+                  setSelectedOrder(null);
+                }}>
                   <X size={24} color="#1e293b" />
                 </TouchableOpacity>
               </View>
@@ -581,7 +734,10 @@ export default function App() {
                   <Text style={styles.clientNameText}>{selectedOrder.clientName}</Text>
                   <TouchableOpacity
                     style={styles.phoneRow}
-                    onPress={() => Alert.alert('Qo\'ng\'iroq', `${selectedOrder.clientPhone} raqamiga qo'ng'iroq qilinmoqda...`)}
+                    onPress={() => {
+                      Vibration.vibrate(30);
+                      Alert.alert('Qo\'ng\'iroq', `${selectedOrder.clientPhone} raqamiga qo'ng'iroq qilinmoqda...`);
+                    }}
                   >
                     <Phone size={16} color="#4f46e5" style={{ marginRight: 6 }} />
                     <Text style={styles.phoneText}>{selectedOrder.clientPhone}</Text>
@@ -627,7 +783,10 @@ export default function App() {
                     {selectedOrder.status === 'assigned' && (
                       <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: '#f59e0b' }]}
-                        onPress={() => handleUpdateStatus(selectedOrder.id, 'in_progress')}
+                        onPress={() => {
+                          Vibration.vibrate([0, 150, 100, 150]);
+                          handleUpdateStatus(selectedOrder.id, 'in_progress');
+                        }}
                       >
                         <Truck size={20} color="#fff" style={{ marginRight: 8 }} />
                         <Text style={styles.actionBtnText}>Yo'lga chiqish / В пути</Text>
@@ -637,7 +796,10 @@ export default function App() {
                     {selectedOrder.status === 'in_progress' && (
                       <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: '#f97316' }]}
-                        onPress={() => handleUpdateStatus(selectedOrder.id, 'container_placed')}
+                        onPress={() => {
+                          Vibration.vibrate([0, 80, 40, 80]);
+                          handleUpdateStatus(selectedOrder.id, 'container_placed');
+                        }}
                       >
                         <CheckCircle size={20} color="#fff" style={{ marginRight: 8 }} />
                         <Text style={styles.actionBtnText}>Konteyner qo'yildi / Установлен</Text>
@@ -647,7 +809,10 @@ export default function App() {
                     {selectedOrder.status === 'container_placed' && (
                       <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: '#14b8a6' }]}
-                        onPress={() => handleUpdateStatus(selectedOrder.id, 'picked_up')}
+                        onPress={() => {
+                          Vibration.vibrate([0, 80, 40, 80]);
+                          handleUpdateStatus(selectedOrder.id, 'picked_up');
+                        }}
                       >
                         <Truck size={20} color="#fff" style={{ marginRight: 8 }} />
                         <Text style={styles.actionBtnText}>Konteynerni yuklash / Забран</Text>
@@ -661,7 +826,10 @@ export default function App() {
 
                         <TouchableOpacity
                           style={[styles.paymentBtn, { backgroundColor: '#10b981' }]}
-                          onPress={() => handleCompleteOrder(selectedOrder.id, 'cash')}
+                          onPress={() => {
+                            Vibration.vibrate([0, 60, 30, 60, 30, 60]);
+                            handleCompleteOrder(selectedOrder.id, 'cash');
+                          }}
                         >
                           <Coins size={20} color="#fff" style={{ marginRight: 8 }} />
                           <Text style={styles.paymentBtnText}>💵 Naqd pul oldim / Наличные</Text>
@@ -669,7 +837,10 @@ export default function App() {
 
                         <TouchableOpacity
                           style={[styles.paymentBtn, { backgroundColor: '#3b82f6' }]}
-                          onPress={() => handleCompleteOrder(selectedOrder.id, 'card')}
+                          onPress={() => {
+                            Vibration.vibrate([0, 100, 50, 100]);
+                            handleCompleteOrder(selectedOrder.id, 'card');
+                          }}
                         >
                           <CreditCard size={20} color="#fff" style={{ marginRight: 8 }} />
                           <Text style={styles.paymentBtnText}>💳 Karta orqali oldim / Карта</Text>
@@ -677,7 +848,10 @@ export default function App() {
 
                         <TouchableOpacity
                           style={[styles.paymentBtn, { backgroundColor: '#6366f1' }]}
-                          onPress={() => handleCompleteOrder(selectedOrder.id, 'online')}
+                          onPress={() => {
+                            Vibration.vibrate([0, 150]);
+                            handleCompleteOrder(selectedOrder.id, 'online');
+                          }}
                         >
                           <PlusCircle size={20} color="#fff" style={{ marginRight: 8 }} />
                           <Text style={styles.paymentBtnText}>📱 Onlayn o'tkazma / Онлайн</Text>
@@ -824,6 +998,44 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontSize: 12,
     marginTop: 40,
+  },
+  gpsActiveBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderColor: '#a7f3d0',
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+  },
+  pulseContainer: {
+    height: 12,
+    width: 12,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pulseRing: {
+    position: 'absolute',
+    height: 20,
+    width: 20,
+    borderRadius: 10,
+    backgroundColor: '#34d399',
+  },
+  pulseDot: {
+    height: 8,
+    width: 8,
+    borderRadius: 4,
+    backgroundColor: '#10b981',
+  },
+  gpsActiveText: {
+    fontSize: 12,
+    color: '#065f46',
+    fontWeight: '600',
+    flex: 1,
   },
   mainContainer: {
     flex: 1,

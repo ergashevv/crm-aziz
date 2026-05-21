@@ -10,7 +10,8 @@ import {
   Wallet, 
   Fuel, 
   Warehouse,
-  LogOut
+  LogOut,
+  Map
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./lang-switcher";
@@ -28,6 +29,7 @@ export function Sidebar({
 
   const routes = [
     { label: dict.dashboard, icon: LayoutDashboard, href: "/dashboard" },
+    { label: dict.live_tracking || "Onlayn xarita", icon: Map, href: "/map" },
     { label: dict.orders, icon: ClipboardList, href: "/orders" },
     { label: dict.clients, icon: Users, href: "/clients" },
     { label: dict.drivers, icon: Car, href: "/drivers" },

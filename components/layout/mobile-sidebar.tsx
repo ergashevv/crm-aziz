@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./lang-switcher";
 import { getDictionary } from "@/lib/dictionaries";
+import { RefreshDataButton } from "@/components/RefreshDataButton";
 
 export function MobileSidebar({ lang = 'ru' }: { lang?: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -62,8 +63,11 @@ export function MobileSidebar({ lang = 'ru' }: { lang?: string }) {
           </Link>
         </div>
 
-        <div className="w-24 scale-90 origin-right">
-          <LangSwitcher lang={lang} />
+        <div className="flex items-center gap-2 scale-90 origin-right">
+          <RefreshDataButton lang={lang} compact />
+          <div className="w-24">
+            <LangSwitcher lang={lang} />
+          </div>
         </div>
       </header>
 

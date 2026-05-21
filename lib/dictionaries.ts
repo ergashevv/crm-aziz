@@ -131,7 +131,9 @@ export const dictionaries = {
     tracking_idle: "Не в пути / GPS выключен",
     no_gps_yet: "GPS координаты еще не получены",
     select_driver_to_view: "Выберите водителя из списка",
-    destination: "Пункт назначения"
+    destination: "Пункт назначения",
+    refresh_data: "Обновить данные",
+    refreshing: "Обновление...",
   },
   uz: {
     dashboard: "Boshqaruv paneli",
@@ -265,7 +267,9 @@ export const dictionaries = {
     tracking_idle: "Yo'lda emas / GPS o'chirilgan",
     no_gps_yet: "GPS koordinatalari hali olinmagan",
     select_driver_to_view: "Ro'yxatdan haydovchini tanlang",
-    destination: "Belgilangan manzil"
+    destination: "Belgilangan manzil",
+    refresh_data: "Ma'lumotlarni yangilash",
+    refreshing: "Yangilanmoqda...",
   }
 };
 

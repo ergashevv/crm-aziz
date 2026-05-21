@@ -12,6 +12,8 @@ import { SearchAndFilter } from '@/components/SearchAndFilter';
 import { OrderForm } from '@/components/forms/OrderForm';
 import { ExportButton } from '@/components/ExportButton';
 
+export const dynamic = 'force-dynamic';
+
 const getStatusClasses = (status: string) => {
   switch (status) {
     case 'new': return 'bg-blue-50 text-blue-700 border-blue-200';
@@ -42,9 +44,11 @@ export default async function OrdersPage({
   const dict = getDictionary(lang);
 
   const q = typeof searchParams.q === 'string' ? searchParams.q : '';
-  const status = typeof searchParams.status === 'string' ? searchParams.status : '';
+  const statusParam = typeof searchParams.status === 'string' ? searchParams.status : '';
+  const status = statusParam || 'active';
 
   const allOrders = await getOrders(status, q);
+  const activeCount = (await getOrders('active', '')).length;
   const clients = await getClients();
   const drivers = await getDrivers();
 
@@ -79,7 +83,11 @@ export default async function OrdersPage({
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.orders}</h1>
-            <p className="text-slate-500 mt-1 font-medium">{dict.manage_orders}</p>
+            <p className="text-slate-500 mt-1 font-medium">
+              {lang === 'uz'
+                ? `Ko'rsatilmoqda: ${allOrders.length} ta${status === 'active' ? ' faol' : ''} · jami faol: ${activeCount}`
+                : `Показано: ${allOrders.length}${status === 'active' ? ' активных' : ''} · всего активных: ${activeCount}`}
+            </p>
           </div>
         </div>
         <div className="flex gap-3 items-center w-full sm:w-auto justify-end">
@@ -94,7 +102,21 @@ export default async function OrdersPage({
         </div>
       </div>
 
-      <SearchAndFilter dict={dict} />
+      <SearchAndFilter
+        dict={dict}
+        defaultFilter="active"
+        filterPlaceholder={lang === 'uz' ? 'Faol buyurtmalar' : 'Активные заказы'}
+        filterOptions={[
+          { value: 'active', label: lang === 'uz' ? 'Faol (tugallanmagan)' : 'Активные' },
+          { value: 'all', label: lang === 'uz' ? 'Barchasi' : 'Все' },
+          { value: 'new', label: dict.new },
+          { value: 'assigned', label: dict.assigned },
+          { value: 'in_progress', label: dict.in_progress },
+          { value: 'container_placed', label: dict.container_placed },
+          { value: 'picked_up', label: dict.picked_up },
+          { value: 'completed', label: dict.completed },
+        ]}
+      />
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
         <CardContent className="p-0">

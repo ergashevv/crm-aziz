@@ -5,6 +5,7 @@ import { Sidebar } from './sidebar';
 import { MobileSidebar } from './mobile-sidebar';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { RefreshDataButton } from '@/components/RefreshDataButton';
 
 export function SidebarWrapper({ 
   lang, 
@@ -38,6 +39,9 @@ export function SidebarWrapper({
         </div>
         <main className="md:pl-64 h-full relative z-10 pt-16 md:pt-0">
           <div className="p-4 md:p-8 max-w-7xl mx-auto">
+            <div className="hidden md:flex justify-end mb-4">
+              <RefreshDataButton lang={lang} />
+            </div>
             {children}
           </div>
         </main>
@@ -73,6 +77,9 @@ export function SidebarWrapper({
         isCollapsed ? "md:pl-20" : "md:pl-64"
       )}>
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
+          <div className="hidden md:flex justify-end mb-4">
+            <RefreshDataButton lang={lang} />
+          </div>
           {children}
         </div>
       </main>

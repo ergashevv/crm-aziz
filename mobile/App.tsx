@@ -15,6 +15,7 @@ import {
   Platform,
   Animated,
   Linking,
+  Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
@@ -34,14 +35,19 @@ import {
   Navigation as LucideNavigation,
   ChevronRight as LucideChevronRight,
   Home as LucideHome,
+  Banknote as LucideBanknote,
+  CreditCard as LucideCreditCard,
+  Smartphone as LucideSmartphone,
+  Clock as LucideClock,
+  MapPin as LucideMapPin,
 } from 'lucide-react-native';
 import {
   t,
   Locale,
   TranslationKey,
-  getStatusLabel,
   getRentalLabel,
   getPaymentLabel,
+  getStatusLabel,
 } from './i18n';
 import './locationTask';
 import {
@@ -66,6 +72,73 @@ const AlertCircle = LucideAlertCircle as React.ComponentType<{ color?: string; s
 const Navigation = LucideNavigation as React.ComponentType<{ color?: string; size?: number; style?: object }>;
 const ChevronRight = LucideChevronRight as React.ComponentType<{ color?: string; size?: number }>;
 const Home = LucideHome as React.ComponentType<{ color?: string; size?: number }>;
+const Banknote = LucideBanknote as React.ComponentType<{ color?: string; size?: number }>;
+const CreditCard = LucideCreditCard as React.ComponentType<{ color?: string; size?: number }>;
+const Smartphone = LucideSmartphone as React.ComponentType<{ color?: string; size?: number }>;
+const Clock = LucideClock as React.ComponentType<{ color?: string; size?: number; style?: object }>;
+const MapPin = LucideMapPin as React.ComponentType<{ color?: string; size?: number; style?: object }>;
+
+const WORKFLOW_RANK: Record<string, number> = {
+  new: 0,
+  assigned: 1,
+  in_progress: 2,
+  container_placed: 3,
+  picked_up: 4,
+};
+
+const WORKING_STATUSES = new Set(['assigned', 'in_progress', 'container_placed', 'picked_up']);
+
+function getWorkflowRank(status: string): number {
+  return WORKFLOW_RANK[status] ?? -1;
+}
+
+function filterActiveOrders(list: Order[]): Order[] {
+  return list.filter(o => o.status !== 'completed');
+}
+
+/** Focus = order driver is executing (highest workflow stage, then earliest schedule). */
+function computeFocusOrder(list: Order[]): Order | null {
+  const active = filterActiveOrders(list);
+  if (active.length === 0) return null;
+
+  const working = active.filter(o => WORKING_STATUSES.has(o.status));
+  const pool = working.length > 0 ? working : active;
+
+  return [...pool].sort((a, b) => {
+    const rankDiff = getWorkflowRank(b.status) - getWorkflowRank(a.status);
+    if (rankDiff !== 0) return rankDiff;
+    return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+  })[0];
+}
+
+function sortQueueOrders(list: Order[], focusId: number | null): Order[] {
+  return filterActiveOrders(list)
+    .filter(o => o.id !== focusId)
+    .sort((a, b) => {
+      const aWorking = WORKING_STATUSES.has(a.status) ? 0 : 1;
+      const bWorking = WORKING_STATUSES.has(b.status) ? 0 : 1;
+      if (aWorking !== bWorking) return aWorking - bWorking;
+      return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+    });
+}
+
+/** After accept (assigned+), other orders are queue-only until focus completes */
+function hasBlockingWorkflow(focus: Order | null): boolean {
+  return focus != null && focus.status !== 'new';
+}
+
+function canRunWorkflowOnOrder(order: Order, focus: Order | null): boolean {
+  if (!focus || focus.id === order.id) return true;
+  if (!hasBlockingWorkflow(focus)) return true;
+  return false;
+}
+
+function queueActionMode(order: Order, focus: Order | null): 'full' | 'accept_only' | 'locked' {
+  if (!focus || focus.id === order.id) return 'full';
+  if (order.status === 'new') return 'accept_only';
+  if (hasBlockingWorkflow(focus)) return 'locked';
+  return 'full';
+}
 
 type Order = {
   id: number;
@@ -91,44 +164,50 @@ function isSameDay(a: Date, b: Date): boolean {
   return startOfDay(a).getTime() === startOfDay(b).getTime();
 }
 
-const STATUS_PRIORITY: Record<string, number> = {
-  in_progress: 0,
-  new: 1,
-  assigned: 2,
-  container_placed: 3,
-  picked_up: 4,
-};
+/** Bump when DB seed resets driver IDs — forces mobile re-login */
+const SESSION_VERSION = '3';
 
-function sortActiveOrders(list: Order[]): Order[] {
-  return list
-    .filter(o => o.status !== 'completed')
-    .sort((a, b) => {
-      const pa = STATUS_PRIORITY[a.status] ?? 99;
-      const pb = STATUS_PRIORITY[b.status] ?? 99;
-      if (pa !== pb) return pa - pb;
-      return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
-    });
+const STEP_KEYS: TranslationKey[] = ['stepAccept', 'stepOnWay', 'stepContainer', 'stepPayment'];
+
+function getStepIndex(status: string): number {
+  switch (status) {
+    case 'new': return 1;
+    case 'assigned': return 2;
+    case 'in_progress': return 3;
+    case 'container_placed': return 3;
+    case 'picked_up': return 4;
+    default: return 0;
+  }
 }
 
-function getPrimaryActionKey(status: string): TranslationKey | null {
+function getPrimaryButtonKey(status: string): TranslationKey | null {
   switch (status) {
-    case 'new': return 'acceptOrder';
-    case 'assigned': return 'startTrip';
-    case 'in_progress': return 'dropContainer';
-    case 'container_placed': return 'pickUp';
-    case 'picked_up': return 'completeWithPayment';
+    case 'new': return 'btnAccept';
+    case 'assigned': return 'btnStart';
+    case 'in_progress': return 'btnDrop';
+    case 'container_placed': return 'btnPickup';
     default: return null;
   }
 }
 
 function getPrimaryActionColor(status: string): string {
   switch (status) {
-    case 'new': return '#6366f1';
-    case 'assigned': return '#f59e0b';
-    case 'in_progress': return '#f97316';
-    case 'container_placed': return '#14b8a6';
-    case 'picked_up': return '#10b981';
+    case 'new': return '#2563eb';
+    case 'assigned': return '#d97706';
+    case 'in_progress': return '#ea580c';
+    case 'container_placed': return '#0d9488';
+    case 'picked_up': return '#059669';
     default: return '#4f46e5';
+  }
+}
+
+function getNextStatus(status: string): string | null {
+  switch (status) {
+    case 'new': return 'assigned';
+    case 'assigned': return 'in_progress';
+    case 'in_progress': return 'container_placed';
+    case 'container_placed': return 'picked_up';
+    default: return null;
   }
 }
 
@@ -189,6 +268,9 @@ export default function App() {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(startOfDay(new Date()));
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  /** Stays on current job until completed — accepting another order does not switch hero card */
+  const [pinnedFocusId, setPinnedFocusId] = useState<number | null>(null);
 
   const knownOrderIds = useRef<Set<number>>(new Set());
   const initialFetchDone = useRef(false);
@@ -237,6 +319,29 @@ export default function App() {
     return `${day}.${month}`;
   }, []);
 
+  const clearSession = useCallback(async () => {
+    setIsLoggedIn(false);
+    setDriver(null);
+    setOrders([]);
+    knownOrderIds.current = new Set();
+    initialFetchDone.current = false;
+    await AsyncStorage.multiRemove(['@driver_data', '@session_version']);
+  }, []);
+
+  const validateDriverSession = useCallback(
+    async (driverId: number, apiUrl: string): Promise<boolean> => {
+      try {
+        const res = await fetch(`${apiUrl}/driver/validate?driverId=${driverId}&t=${Date.now()}`);
+        if (res.status === 404) return true;
+        const data = await res.json();
+        return res.ok && data.valid === true;
+      } catch {
+        return false;
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     const loadPersistedData = async () => {
       try {
@@ -244,12 +349,35 @@ export default function App() {
         const savedPort = await AsyncStorage.getItem('@server_port');
         const savedDriver = await AsyncStorage.getItem('@driver_data');
         const savedLocale = await AsyncStorage.getItem('@locale');
+        const savedSessionVersion = await AsyncStorage.getItem('@session_version');
 
         if (savedIp !== null) setServerIp(savedIp);
         if (savedPort !== null) setPort(savedPort);
         if (savedLocale === 'ru' || savedLocale === 'uz') setLocale(savedLocale);
+
+        if (savedSessionVersion !== SESSION_VERSION) {
+          await clearSession();
+          if (savedDriver !== null) {
+            showAlert(t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpired'), t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpiredMessage'));
+          }
+          return;
+        }
+
         if (savedDriver !== null) {
-          setDriver(JSON.parse(savedDriver));
+          const parsed = JSON.parse(savedDriver) as { id: number; name: string; vehiclePlate: string };
+          const apiBase =
+            (savedIp ?? 'crm-aziz.vercel.app').includes('.vercel.app') ||
+            ((savedIp ?? '').includes('.') && !/^[0-9.]+$/.test(savedIp ?? ''))
+              ? `https://${savedIp ?? 'crm-aziz.vercel.app'}/api`
+              : `http://${savedIp ?? 'crm-aziz.vercel.app'}${savedPort ? `:${savedPort}` : ''}/api`;
+
+          const valid = await validateDriverSession(parsed.id, apiBase);
+          if (!valid) {
+            await clearSession();
+            showAlert(t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpired'), t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpiredMessage'));
+            return;
+          }
+          setDriver(parsed);
           setIsLoggedIn(true);
         }
       } catch (e) {
@@ -257,7 +385,7 @@ export default function App() {
       }
     };
     loadPersistedData();
-  }, []);
+  }, [clearSession, validateDriverSession, showAlert]);
 
   const toggleLocale = async () => {
     const next: Locale = locale === 'uz' ? 'ru' : 'uz';
@@ -385,6 +513,7 @@ export default function App() {
       knownOrderIds.current = new Set();
       initialFetchDone.current = false;
       await AsyncStorage.setItem('@driver_data', JSON.stringify(data));
+      await AsyncStorage.setItem('@session_version', SESSION_VERSION);
       Vibration.vibrate([0, 80, 40, 80]);
 
       const perms = await requestFullLocationAccess();
@@ -428,15 +557,29 @@ export default function App() {
 
       if (!response.ok) throw new Error(data.error || t(locale, 'loadError'));
 
+      if (!Array.isArray(data)) {
+        throw new Error(t(locale, 'loadError'));
+      }
+
+      if (data.length === 0) {
+        const valid = await validateDriverSession(driver.id, getApiUrl());
+        if (!valid) {
+          await clearSession();
+          showAlert(t(locale, 'sessionExpired'), t(locale, 'sessionExpiredMessage'));
+          return;
+        }
+      }
+
       setOrders(data);
       detectNewOrders(data);
     } catch (error: unknown) {
       console.error(error);
+      showAlert(t(locale, 'loginError'), t(locale, 'loadErrorRetry'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [driver, getApiUrl, locale, detectNewOrders]);
+  }, [driver, getApiUrl, locale, detectNewOrders, validateDriverSession, clearSession, showAlert]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -452,6 +595,8 @@ export default function App() {
   }, [isLoggedIn, driver, fetchOrders]);
 
   const handleUpdateStatus = async (orderId: number, newStatus: string) => {
+    if (updatingOrderId !== null) return;
+    setUpdatingOrderId(orderId);
     try {
       const response = await fetch(`${getApiUrl()}/driver/orders/${orderId}`, {
         method: 'PUT',
@@ -469,10 +614,19 @@ export default function App() {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t(locale, 'statusUpdateError');
       showAlert(t(locale, 'loginError'), msg);
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
   const handleCompleteOrder = async (orderId: number, payType: string) => {
+    if (updatingOrderId !== null) return;
+    const order = orders.find(o => o.id === orderId);
+    if (order && !canRunWorkflowOnOrder(order, focusOrder)) {
+      showAlert(t(locale, 'lockedAction'), t(locale, 'finishCurrentFirst'));
+      return;
+    }
+    setUpdatingOrderId(orderId);
     try {
       const response = await fetch(`${getApiUrl()}/driver/orders/${orderId}`, {
         method: 'PUT',
@@ -495,11 +649,14 @@ export default function App() {
       );
 
       setSelectedOrder(null);
+      if (pinnedFocusId === orderId) setPinnedFocusId(null);
       Vibration.vibrate([0, 200, 100, 200]);
       showAlert(t(locale, 'orderCompletedTitle'), t(locale, 'orderCompletedMessage'));
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t(locale, 'completeError');
       showAlert(t(locale, 'loginError'), msg);
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -536,9 +693,33 @@ export default function App() {
       .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   }, [orders, selectedCalendarDate]);
 
-  const activeOrders = useMemo(() => sortActiveOrders(orders), [orders]);
-  const focusOrder = activeOrders[0] ?? null;
-  const otherActiveOrders = focusOrder ? activeOrders.filter(o => o.id !== focusOrder.id) : [];
+  const activeOrders = useMemo(() => filterActiveOrders(orders), [orders]);
+  const computedFocusOrder = useMemo(() => computeFocusOrder(orders), [orders]);
+
+  const focusOrder = useMemo(() => {
+    if (pinnedFocusId != null) {
+      const pinned = activeOrders.find(o => o.id === pinnedFocusId);
+      if (pinned) return pinned;
+    }
+    return computedFocusOrder;
+  }, [activeOrders, computedFocusOrder, pinnedFocusId]);
+
+  useEffect(() => {
+    if (pinnedFocusId != null && !activeOrders.some(o => o.id === pinnedFocusId)) {
+      setPinnedFocusId(null);
+    }
+  }, [activeOrders, pinnedFocusId]);
+
+  useEffect(() => {
+    if (pinnedFocusId == null && computedFocusOrder) {
+      setPinnedFocusId(computedFocusOrder.id);
+    }
+  }, [computedFocusOrder, pinnedFocusId]);
+
+  const otherActiveOrders = useMemo(
+    () => sortQueueOrders(orders, focusOrder?.id ?? null),
+    [orders, focusOrder?.id]
+  );
   const historyOrders = useMemo(
     () => orders.filter(o => o.status === 'completed').sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()),
     [orders]
@@ -551,69 +732,223 @@ export default function App() {
   };
 
   const runPrimaryAction = (order: Order) => {
-    Vibration.vibrate([0, 80]);
-    switch (order.status) {
-      case 'new':
-        handleUpdateStatus(order.id, 'assigned');
-        break;
-      case 'assigned':
-        handleUpdateStatus(order.id, 'in_progress');
-        break;
-      case 'in_progress':
-        handleUpdateStatus(order.id, 'container_placed');
-        break;
-      case 'container_placed':
-        handleUpdateStatus(order.id, 'picked_up');
-        break;
-      default:
-        break;
+    const next = getNextStatus(order.status);
+    if (!next || updatingOrderId !== null) return;
+
+    const mode = queueActionMode(order, focusOrder);
+    if (mode === 'locked') {
+      showAlert(t(locale, 'lockedAction'), t(locale, 'finishCurrentFirst'));
+      return;
     }
+    if (mode === 'accept_only' && next !== 'assigned') {
+      showAlert(t(locale, 'lockedAction'), t(locale, 'finishCurrentFirst'));
+      return;
+    }
+    if (!canRunWorkflowOnOrder(order, focusOrder) && next !== 'assigned') {
+      showAlert(t(locale, 'lockedAction'), t(locale, 'finishCurrentFirst'));
+      return;
+    }
+
+    if (pinnedFocusId == null) {
+      setPinnedFocusId(order.id);
+    }
+    Vibration.vibrate([0, 80]);
+    handleUpdateStatus(order.id, next);
   };
 
-  const renderCompactCard = (order: Order, highlight = false) => {
-    const statusConfig = getStatusLabel(locale, order.status);
-    const timeOnly = formatDate(order.scheduledAt).split(' ')[1] || formatDate(order.scheduledAt);
+  const renderStepProgress = (status: string) => {
+    const current = getStepIndex(status);
+    return (
+      <View style={styles.stepRow}>
+        {STEP_KEYS.map((key, i) => {
+          const stepNum = i + 1;
+          const done = stepNum < current;
+          const active = stepNum === current;
+          return (
+            <View key={key} style={styles.stepItem}>
+              <View style={[styles.stepDot, done && styles.stepDotDone, active && styles.stepDotActive]}>
+                {done ? <CheckCircle size={14} color="#fff" /> : <Text style={[styles.stepDotNum, active && styles.stepDotNumActive]}>{stepNum}</Text>}
+              </View>
+              <Text style={[styles.stepLabel, active && styles.stepLabelActive]} numberOfLines={1}>{t(locale, key)}</Text>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  const PAYMENT_OPTIONS = [
+    { key: 'btnPayCash' as const, type: 'cash' as const, color: '#059669', Icon: Banknote },
+    { key: 'btnPayCard' as const, type: 'card' as const, color: '#2563eb', Icon: CreditCard },
+    { key: 'btnPayOnline' as const, type: 'online' as const, color: '#7c3aed', Icon: Smartphone },
+  ];
+
+  const renderPrimaryButton = (order: Order, large = false) => {
+    const btnKey = getPrimaryButtonKey(order.status);
+    const isUpdating = updatingOrderId === order.id;
+    const btnStyle = large ? styles.heroBtn : styles.quickActionBtn;
+    const txtStyle = large ? styles.heroBtnText : styles.quickActionText;
+    const mode = queueActionMode(order, focusOrder);
+
+    if (order.status === 'picked_up') {
+      if (mode === 'locked') {
+        return (
+          <View style={[large ? styles.heroPayBlock : styles.compactPayRow, styles.lockedBlock]}>
+            <Text style={styles.lockedHint}>{t(locale, 'finishCurrentFirst')}</Text>
+          </View>
+        );
+      }
+      return (
+        <View style={large ? styles.heroPayBlock : styles.compactPayRow}>
+          <Text style={styles.payHint}>{t(locale, 'waitingPayment')}</Text>
+          <View style={styles.paymentRow}>
+            {PAYMENT_OPTIONS.map(({ key, type, color, Icon }) => (
+              <TouchableOpacity
+                key={key}
+                style={[styles.payChip, { backgroundColor: color }, isUpdating && styles.btnDisabled]}
+                disabled={isUpdating}
+                onPress={() => handleCompleteOrder(order.id, type)}
+                activeOpacity={0.85}
+              >
+                <Icon size={22} color="#fff" />
+                <Text style={styles.payChipText}>{t(locale, key)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    if (mode === 'locked') {
+      return (
+        <View style={[btnStyle, styles.lockedBtn]}>
+          <Text style={styles.lockedBtnText}>{t(locale, 'lockedAction')}</Text>
+        </View>
+      );
+    }
+
+    if (mode === 'accept_only' && order.status !== 'new') {
+      return (
+        <View style={[btnStyle, styles.lockedBtn]}>
+          <Text style={styles.lockedBtnText}>{t(locale, 'lockedAction')}</Text>
+        </View>
+      );
+    }
+
+    if (!btnKey) return null;
+
     return (
       <TouchableOpacity
-        key={order.id}
-        style={[styles.orderCard, highlight && styles.orderCardHighlight]}
-        onPress={() => openOrder(order)}
-        activeOpacity={0.85}
+        style={[btnStyle, { backgroundColor: getPrimaryActionColor(order.status) }, isUpdating && styles.btnDisabled]}
+        disabled={isUpdating}
+        onPress={() => runPrimaryAction(order)}
+        activeOpacity={0.8}
       >
-        <View style={[styles.statusStripe, { backgroundColor: statusConfig.color }]} />
-        <View style={styles.orderCardBody}>
-          <View style={styles.orderCardTop}>
-            <Text style={styles.orderTime}>{timeOnly}</Text>
-            <Text style={[styles.orderStatusMini, { color: statusConfig.color }]}>{statusConfig.label}</Text>
-          </View>
-          <Text style={styles.orderAddress} numberOfLines={2}>{order.address}</Text>
-          <Text style={styles.orderMeta}>#{order.id} · {order.clientName}</Text>
-        </View>
-        <ChevronRight size={20} color="#cbd5e1" />
+        {isUpdating ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={txtStyle}>{t(locale, btnKey)}</Text>
+        )}
       </TouchableOpacity>
     );
   };
 
+  const renderStatusBadge = (status: string, compact = false) => {
+    const { label, color, bg } = getStatusLabel(locale, status);
+    return (
+      <View style={[styles.statusBadge, { backgroundColor: bg }, compact && styles.statusBadgeCompact]}>
+        <Text style={[styles.statusBadgeText, { color }, compact && styles.statusBadgeTextCompact]}>{label}</Text>
+      </View>
+    );
+  };
+
+  const renderCompactCard = (order: Order, queueIndex?: number, inCalendar = false) => {
+    const scheduledFull = formatDate(order.scheduledAt);
+    const timeOnly = scheduledFull.split(' ')[1] || scheduledFull;
+    const btnKey = getPrimaryButtonKey(order.status);
+    const isPayment = order.status === 'picked_up';
+    const mode = queueActionMode(order, focusOrder);
+    const showAction = btnKey || isPayment;
+    const isFocus = focusOrder?.id === order.id;
+
+    return (
+      <View key={order.id} style={[styles.orderCard, isFocus && styles.orderCardFocus]}>
+        <TouchableOpacity style={styles.orderCardTap} onPress={() => openOrder(order)} activeOpacity={0.85}>
+          <View style={styles.orderCardBody}>
+            <View style={styles.orderCardTop}>
+              <Text style={styles.orderQueue}>
+                {queueIndex != null ? `${t(locale, 'queueNext')} #${queueIndex}` : `#${order.id}`}
+              </Text>
+              {renderStatusBadge(order.status, true)}
+            </View>
+            <View style={styles.orderTimeRow}>
+              <Clock size={14} color="#64748b" style={{ marginRight: 4 }} />
+              <Text style={styles.orderTime}>{inCalendar ? scheduledFull : timeOnly}</Text>
+            </View>
+            <View style={styles.orderAddressRow}>
+              <MapPin size={14} color="#94a3b8" style={{ marginTop: 2, marginRight: 4 }} />
+              <Text style={styles.orderAddress} numberOfLines={2}>{order.address}</Text>
+            </View>
+            <Text style={styles.orderMeta}>{order.clientName}</Text>
+          </View>
+          <ChevronRight size={20} color="#cbd5e1" />
+        </TouchableOpacity>
+        {showAction && (
+          <View style={styles.orderCardAction}>
+            {isPayment && mode === 'locked' ? (
+              <View style={[styles.quickActionBtn, styles.lockedBtn]}>
+                <Text style={styles.lockedBtnText}>{t(locale, 'lockedAction')}</Text>
+              </View>
+            ) : isPayment ? (
+              <TouchableOpacity
+                style={[styles.quickActionBtn, { backgroundColor: '#059669' }]}
+                onPress={() => openOrder(order)}
+              >
+                <Text style={styles.quickActionText}>{t(locale, 'stepPayment')}</Text>
+              </TouchableOpacity>
+            ) : (
+              renderPrimaryButton(order, false)
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const renderHeroCard = (order: Order) => {
-    const statusConfig = getStatusLabel(locale, order.status);
-    const actionKey = getPrimaryActionKey(order.status);
+    const scheduledFull = formatDate(order.scheduledAt);
+    const timeOnly = scheduledFull.split(' ')[1] || scheduledFull;
+    const datePart = scheduledFull.split(' ')[0] || scheduledFull;
+    const btnKey = getPrimaryButtonKey(order.status);
     return (
       <View style={styles.heroCard}>
-        <Text style={styles.heroLabel}>{t(locale, 'nextTask')}</Text>
-        <View style={[styles.heroStatusPill, { backgroundColor: statusConfig.bg }]}>
-          <Text style={[styles.heroStatusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
+        <View style={styles.heroTopRow}>
+          <Text style={styles.heroLabel}>{t(locale, 'currentOrder')}</Text>
+          {renderStatusBadge(order.status)}
         </View>
-        <Text style={styles.heroTime}>{formatDate(order.scheduledAt)}</Text>
+        {renderStepProgress(order.status)}
+        <View style={styles.heroScheduleBlock}>
+          <Text style={styles.heroScheduleLabel}>{t(locale, 'scheduledAt')}</Text>
+          <Text style={styles.heroTime}>{timeOnly}</Text>
+          <Text style={styles.heroDateSub}>{datePart}</Text>
+        </View>
         <Text style={styles.heroAddress}>{order.address}</Text>
-        <Text style={styles.heroClient}>{order.clientName}</Text>
-        {actionKey && order.status !== 'picked_up' ? (
-          <TouchableOpacity
-            style={[styles.heroBtn, { backgroundColor: getPrimaryActionColor(order.status) }]}
-            onPress={() => runPrimaryAction(order)}
-          >
-            <Text style={styles.heroBtnText}>{t(locale, actionKey)}</Text>
+        <View style={styles.heroClientRow}>
+          <Text style={styles.heroClient}>{order.clientName}</Text>
+          <TouchableOpacity style={styles.heroCallBtn} onPress={() => callClient(order.clientPhone)}>
+            <Phone size={18} color="#fff" />
           </TouchableOpacity>
+        </View>
+        {order.status === 'new' && (
+          <Text style={styles.heroHint}>{t(locale, 'acceptAnytimeHint')}</Text>
+        )}
+        {order.status === 'assigned' && (
+          <Text style={styles.heroHint}>{t(locale, 'earlyTripHint')}</Text>
+        )}
+        {btnKey || order.status === 'picked_up' ? (
+          <Text style={styles.whatToDoLabel}>{t(locale, 'whatToDo')}</Text>
         ) : null}
+        {renderPrimaryButton(order, true)}
         <TouchableOpacity style={styles.heroLinkBtn} onPress={() => openOrder(order)}>
           <Text style={styles.heroLinkText}>{t(locale, 'openOrder')}</Text>
         </TouchableOpacity>
@@ -747,11 +1082,7 @@ export default function App() {
             style={styles.headerMiniBtn}
             onPress={async () => {
               Vibration.vibrate([0, 100]);
-              setIsLoggedIn(false);
-              setDriver(null);
-              knownOrderIds.current = new Set();
-              initialFetchDone.current = false;
-              await AsyncStorage.removeItem('@driver_data');
+              await clearSession();
             }}
           >
             <LogOut size={18} color="#ef4444" />
@@ -791,7 +1122,7 @@ export default function App() {
             {otherActiveOrders.length > 0 && (
               <>
                 <Text style={styles.sectionHeading}>{t(locale, 'otherOrders')}</Text>
-                {otherActiveOrders.map(o => renderCompactCard(o))}
+                {otherActiveOrders.map((o, i) => renderCompactCard(o, i + 2))}
               </>
             )}
           </>
@@ -800,7 +1131,10 @@ export default function App() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarScroll}>
               {calendarDays.map(day => {
                 const selected = isSameDay(day, selectedCalendarDate);
-                const count = orders.filter(o => isSameDay(new Date(o.scheduledAt), day)).length;
+                const dayOrders = orders.filter(o => isSameDay(new Date(o.scheduledAt), day));
+                const count = dayOrders.length;
+                const hasActive = dayOrders.some(o => o.status !== 'completed' && o.status !== 'new');
+                const hasNew = dayOrders.some(o => o.status === 'new');
                 return (
                   <TouchableOpacity
                     key={day.toISOString()}
@@ -814,21 +1148,28 @@ export default function App() {
                       {formatDateShort(day)}
                     </Text>
                     {count > 0 && (
-                      <View style={[styles.calendarBadge, selected && styles.calendarBadgeSelected]}>
-                        <Text style={[styles.calendarBadgeText, selected && { color: '#fff' }]}>{count}</Text>
+                      <View style={styles.calendarDotsRow}>
+                        {hasActive && <View style={[styles.calendarDot, { backgroundColor: selected ? '#fde68a' : '#f59e0b' }]} />}
+                        {hasNew && <View style={[styles.calendarDot, { backgroundColor: selected ? '#bfdbfe' : '#3b82f6' }]} />}
+                        <View style={[styles.calendarBadge, selected && styles.calendarBadgeSelected]}>
+                          <Text style={[styles.calendarBadgeText, selected && { color: '#fff' }]}>{count}</Text>
+                        </View>
                       </View>
                     )}
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
+            <Text style={styles.calendarDayTitle}>
+              {getDayLabel(selectedCalendarDate)} · {formatDateShort(selectedCalendarDate)} — {t(locale, 'calendarDayOrders')} ({ordersForCalendarDay.length})
+            </Text>
             {ordersForCalendarDay.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Calendar size={48} color="#cbd5e1" />
                 <Text style={styles.emptyTitle}>{t(locale, 'noOrdersOnDate')}</Text>
               </View>
             ) : (
-              ordersForCalendarDay.map(o => renderCompactCard(o))
+              ordersForCalendarDay.map(o => renderCompactCard(o, undefined, true))
             )}
           </>
         ) : historyOrders.length === 0 ? (
@@ -860,35 +1201,47 @@ export default function App() {
       </View>
 
       {selectedOrder && (() => {
-        const st = getStatusLabel(locale, selectedOrder.status);
-        const actionKey = getPrimaryActionKey(selectedOrder.status);
+        const order = selectedOrder;
+        const isUpdating = updatingOrderId === order.id;
         return (
           <Modal animationType="slide" transparent visible onRequestClose={() => setSelectedOrder(null)}>
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+            <Pressable style={styles.modalOverlay} onPress={() => setSelectedOrder(null)}>
+              <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
                 <View style={styles.modalHeader}>
                   <TouchableOpacity onPress={() => { Vibration.vibrate(20); setSelectedOrder(null); }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                     <X size={26} color="#1e293b" />
                   </TouchableOpacity>
-                  <View style={[styles.modalStatusPill, { backgroundColor: st.bg }]}>
-                    <Text style={[styles.modalStatusText, { color: st.color }]}>{st.label}</Text>
-                  </View>
-                  <Text style={styles.modalOrderId}>#{selectedOrder.id}</Text>
+                  <Text style={styles.modalOrderId}>#{order.id}</Text>
                 </View>
 
                 <ScrollView style={styles.modalScrollFlex} contentContainerStyle={{ paddingBottom: 16, paddingHorizontal: 20 }}>
-                  <Text style={styles.modalBigTime}>{formatDate(selectedOrder.scheduledAt)}</Text>
-                  <Text style={styles.modalBigAddress}>{selectedOrder.address}</Text>
-                  <Text style={styles.modalBigClient}>{selectedOrder.clientName}</Text>
+                  <View style={styles.modalStatusRow}>
+                    {renderStatusBadge(order.status)}
+                    <Text style={styles.modalOrderIdInline}>#{order.id}</Text>
+                  </View>
+                  {renderStepProgress(order.status)}
+                  <Text style={styles.modalScheduleLabel}>{t(locale, 'scheduledAt')}</Text>
+                  <Text style={styles.modalBigTime}>{formatDate(order.scheduledAt)}</Text>
+                  {order.status === 'assigned' && (
+                    <Text style={styles.modalHint}>{t(locale, 'earlyTripHint')}</Text>
+                  )}
+                  {order.status === 'new' && queueActionMode(order, focusOrder) === 'accept_only' && (
+                    <Text style={styles.modalHint}>{t(locale, 'acceptAnytimeHint')}</Text>
+                  )}
+                  {queueActionMode(order, focusOrder) === 'locked' && (
+                    <Text style={styles.modalWarn}>{t(locale, 'finishCurrentFirst')}</Text>
+                  )}
+                  <Text style={styles.modalBigAddress}>{order.address}</Text>
+                  <Text style={styles.modalBigClient}>{order.clientName}</Text>
 
-                  <TouchableOpacity style={styles.callBtn} onPress={() => callClient(selectedOrder.clientPhone)}>
+                  <TouchableOpacity style={styles.callBtn} onPress={() => callClient(order.clientPhone)}>
                     <Phone size={18} color="#4f46e5" />
                     <Text style={styles.callBtnText}>{t(locale, 'callClient')}</Text>
                   </TouchableOpacity>
 
-                  {selectedOrder.operatorNote ? (
+                  {order.operatorNote ? (
                     <View style={styles.noteBox}>
-                      <Text style={styles.noteText}>{selectedOrder.operatorNote}</Text>
+                      <Text style={styles.noteText}>{order.operatorNote}</Text>
                     </View>
                   ) : null}
 
@@ -901,53 +1254,35 @@ export default function App() {
                   {showOrderDetails && (
                     <View style={styles.detailsBlock}>
                       <Text style={styles.detailsLine}>
-                        {t(locale, 'container')}: {selectedOrder.containerSizeM3} m³
+                        {t(locale, 'container')}: {order.containerSizeM3} m³
                       </Text>
                       <Text style={styles.detailsLine}>
-                        {t(locale, 'duration')}: {getRentalLabel(locale, selectedOrder.rentalDuration)}
+                        {t(locale, 'duration')}: {getRentalLabel(locale, order.rentalDuration)}
                       </Text>
                       <Text style={styles.detailsLine}>
-                        {selectedOrder.paymentAmount.toLocaleString()} {t(locale, 'currency')} · {getPaymentLabel(locale, selectedOrder.paymentType)}
+                        {order.paymentAmount.toLocaleString()} {t(locale, 'currency')} · {getPaymentLabel(locale, order.paymentType)}
                       </Text>
                     </View>
                   )}
 
-                  {selectedOrder.status === 'in_progress' && (
+                  {order.status === 'in_progress' && canRunWorkflowOnOrder(order, focusOrder) && (
                     <TouchableOpacity
                       style={styles.altActionLink}
-                      onPress={() => { Vibration.vibrate(40); handleUpdateStatus(selectedOrder.id, 'picked_up'); }}
+                      disabled={isUpdating}
+                      onPress={() => { Vibration.vibrate(40); handleUpdateStatus(order.id, 'picked_up'); }}
                     >
                       <Text style={styles.altActionLinkText}>{t(locale, 'pickUpNow')}</Text>
                     </TouchableOpacity>
                   )}
                 </ScrollView>
 
-                {selectedOrder.status !== 'completed' && (
+                {order.status !== 'completed' && (
                   <View style={styles.modalFooter}>
-                    {selectedOrder.status === 'picked_up' ? (
-                      <View style={styles.paymentRow}>
-                        <TouchableOpacity style={[styles.payChip, { backgroundColor: '#10b981' }]} onPress={() => handleCompleteOrder(selectedOrder.id, 'cash')}>
-                          <Text style={styles.payChipText}>{t(locale, 'payment_cash')}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.payChip, { backgroundColor: '#3b82f6' }]} onPress={() => handleCompleteOrder(selectedOrder.id, 'card')}>
-                          <Text style={styles.payChipText}>{t(locale, 'payment_card')}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.payChip, { backgroundColor: '#6366f1' }]} onPress={() => handleCompleteOrder(selectedOrder.id, 'online')}>
-                          <Text style={styles.payChipText}>{t(locale, 'payment_online')}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : actionKey ? (
-                      <TouchableOpacity
-                        style={[styles.modalPrimaryBtn, { backgroundColor: getPrimaryActionColor(selectedOrder.status) }]}
-                        onPress={() => runPrimaryAction(selectedOrder)}
-                      >
-                        <Text style={styles.modalPrimaryBtnText}>{t(locale, actionKey)}</Text>
-                      </TouchableOpacity>
-                    ) : null}
+                    {renderPrimaryButton(order, true)}
                   </View>
                 )}
-              </View>
-            </View>
+              </Pressable>
+            </Pressable>
           </Modal>
         );
       })()}
@@ -1009,38 +1344,69 @@ const styles = StyleSheet.create({
   bottomNavLabelActive: { color: '#4f46e5', fontWeight: '800' },
   bottomNavBadge: { position: 'absolute', top: 0, right: '22%', backgroundColor: '#ef4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
   bottomNavBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
-  heroCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 2, borderColor: '#4f46e5' },
-  heroLabel: { fontSize: 12, fontWeight: '800', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: 0.5 },
-  heroStatusPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginTop: 10 },
-  heroStatusText: { fontSize: 13, fontWeight: '700' },
-  heroTime: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginTop: 14 },
-  heroAddress: { fontSize: 17, color: '#334155', marginTop: 8, lineHeight: 24 },
-  heroClient: { fontSize: 15, color: '#64748b', marginTop: 6 },
-  heroBtn: { marginTop: 20, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  heroBtnText: { color: '#fff', fontSize: 17, fontWeight: '800' },
+  heroCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 2, borderColor: '#2563eb', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
+  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  heroLabel: { fontSize: 12, fontWeight: '800', color: '#2563eb', textTransform: 'uppercase', letterSpacing: 0.5, flex: 1 },
+  heroScheduleBlock: { marginTop: 12 },
+  heroScheduleLabel: { fontSize: 12, color: '#64748b', fontWeight: '600' },
+  heroDateSub: { fontSize: 15, color: '#64748b', marginTop: 2, fontWeight: '600' },
+  heroHint: { fontSize: 13, color: '#0369a1', backgroundColor: '#e0f2fe', padding: 10, borderRadius: 10, marginTop: 12, lineHeight: 18 },
+  stepRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 4 },
+  stepItem: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
+  stepDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  stepDotDone: { backgroundColor: '#10b981' },
+  stepDotActive: { backgroundColor: '#2563eb' },
+  stepDotNum: { fontSize: 12, fontWeight: '800', color: '#64748b' },
+  stepDotNumActive: { color: '#fff' },
+  stepLabel: { fontSize: 9, color: '#94a3b8', fontWeight: '600', textAlign: 'center' },
+  stepLabelActive: { color: '#2563eb', fontWeight: '800' },
+  heroTime: { fontSize: 28, fontWeight: '800', color: '#0f172a', marginTop: 12 },
+  heroAddress: { fontSize: 18, color: '#1e293b', marginTop: 8, lineHeight: 26, fontWeight: '600' },
+  heroClientRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  heroClient: { fontSize: 16, color: '#64748b', flex: 1 },
+  heroCallBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center', marginLeft: 12 },
+  whatToDoLabel: { fontSize: 13, color: '#64748b', marginTop: 16, fontWeight: '600' },
+  heroBtn: { marginTop: 12, height: 58, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  heroBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
+  heroPayBlock: { marginTop: 8 },
+  payHint: { fontSize: 14, color: '#475569', fontWeight: '600', marginBottom: 10, textAlign: 'center' },
   heroLinkBtn: { marginTop: 12, alignItems: 'center', paddingVertical: 8 },
-  heroLinkText: { color: '#4f46e5', fontSize: 14, fontWeight: '600' },
+  heroLinkText: { color: '#64748b', fontSize: 14, fontWeight: '600' },
+  btnDisabled: { opacity: 0.6 },
   emptyHero: { backgroundColor: '#fff', borderRadius: 20, padding: 40, alignItems: 'center', marginBottom: 16 },
   sectionHeading: { fontSize: 14, fontWeight: '700', color: '#64748b', marginBottom: 12, marginTop: 4 },
+  calendarDayTitle: { fontSize: 15, fontWeight: '700', color: '#334155', marginBottom: 12, paddingHorizontal: 4 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  statusBadgeCompact: { paddingHorizontal: 8, paddingVertical: 2 },
+  statusBadgeText: { fontSize: 12, fontWeight: '700' },
+  statusBadgeTextCompact: { fontSize: 10 },
   calendarScroll: { paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', marginBottom: 8 },
   calendarDay: { width: 72, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', marginRight: 8, alignItems: 'center' },
   calendarDaySelected: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
   calendarDayLabel: { fontSize: 11, color: '#64748b', fontWeight: '600' },
   calendarDayDate: { fontSize: 15, fontWeight: 'bold', color: '#1e293b', marginTop: 2 },
   calendarDayLabelSelected: { color: '#fff' },
-  calendarBadge: { marginTop: 6, backgroundColor: '#e0e7ff', borderRadius: 10, minWidth: 20, paddingHorizontal: 6, alignItems: 'center' },
+  calendarDotsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 4 },
+  calendarDot: { width: 6, height: 6, borderRadius: 3 },
+  calendarBadge: { backgroundColor: '#e0e7ff', borderRadius: 10, minWidth: 20, paddingHorizontal: 6, alignItems: 'center' },
   calendarBadgeSelected: { backgroundColor: 'rgba(255,255,255,0.3)' },
   calendarBadgeText: { fontSize: 11, fontWeight: 'bold', color: '#4f46e5' },
   ordersListContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
-  orderCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, marginBottom: 10, overflow: 'hidden', minHeight: 76 },
-  orderCardHighlight: { borderWidth: 1, borderColor: '#c7d2fe' },
-  statusStripe: { width: 5, alignSelf: 'stretch' },
+  orderCard: { backgroundColor: '#fff', borderRadius: 16, marginBottom: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e2e8f0' },
+  orderCardFocus: { borderColor: '#2563eb', borderWidth: 2 },
+  orderTimeRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  orderAddressRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 4 },
+  orderCardTap: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
+  orderCardAction: { paddingHorizontal: 12, paddingBottom: 12 },
   orderCardBody: { flex: 1, paddingVertical: 14, paddingHorizontal: 14 },
   orderCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  orderQueue: { fontSize: 12, fontWeight: '700', color: '#94a3b8' },
   orderTime: { fontSize: 16, fontWeight: '800', color: '#0f172a' },
-  orderStatusMini: { fontSize: 11, fontWeight: '700' },
-  orderAddress: { fontSize: 14, color: '#334155', lineHeight: 20 },
-  orderMeta: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
+  orderAddress: { fontSize: 15, color: '#334155', lineHeight: 21, fontWeight: '500' },
+  orderMeta: { fontSize: 13, color: '#94a3b8', marginTop: 4 },
+  quickActionBtn: { height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  quickActionText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  compactPayRow: { paddingTop: 4 },
   orderInfoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   infoIcon: { marginRight: 8 },
   infoText: { fontSize: 13, color: '#475569', flex: 1 },
@@ -1051,9 +1417,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', minHeight: '55%', flexDirection: 'column' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, gap: 12 },
-  modalStatusPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  modalStatusText: { fontSize: 13, fontWeight: '700' },
-  modalOrderId: { marginLeft: 'auto', fontSize: 15, fontWeight: '700', color: '#94a3b8' },
+  modalOrderId: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: '#64748b' },
   modalScrollFlex: { flexShrink: 1, flexGrow: 1 },
   modalBigTime: { fontSize: 15, color: '#64748b', fontWeight: '600' },
   modalBigAddress: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginTop: 8, lineHeight: 30 },
@@ -1069,11 +1433,18 @@ const styles = StyleSheet.create({
   noteBox: { backgroundColor: '#fffbeb', borderRadius: 12, padding: 14, marginTop: 16 },
   noteText: { fontSize: 14, color: '#b45309', lineHeight: 20 },
   modalFooter: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: Platform.OS === 'ios' ? 28 : 20, borderTopWidth: 1, borderTopColor: '#f1f5f9', backgroundColor: '#fff' },
-  modalPrimaryBtn: { height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  modalPrimaryBtnText: { color: '#fff', fontSize: 17, fontWeight: '800' },
   paymentRow: { flexDirection: 'row', gap: 8 },
-  payChip: { flex: 1, paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
-  payChipText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  payChip: { flex: 1, paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, alignItems: 'center', minHeight: 72, justifyContent: 'center', gap: 6 },
+  payChipText: { color: '#fff', fontSize: 10, fontWeight: '800', textAlign: 'center' },
+  lockedBtn: { backgroundColor: '#e2e8f0' },
+  lockedBtnText: { color: '#64748b', fontSize: 14, fontWeight: '700' },
+  lockedBlock: { paddingVertical: 8 },
+  lockedHint: { fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 18 },
+  modalStatusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  modalOrderIdInline: { fontSize: 14, fontWeight: '700', color: '#94a3b8' },
+  modalScheduleLabel: { fontSize: 12, color: '#64748b', fontWeight: '600', marginTop: 8 },
+  modalHint: { fontSize: 13, color: '#0369a1', backgroundColor: '#e0f2fe', padding: 10, borderRadius: 10, marginTop: 10, lineHeight: 18 },
+  modalWarn: { fontSize: 13, color: '#b45309', backgroundColor: '#fffbeb', padding: 10, borderRadius: 10, marginTop: 10, lineHeight: 18 },
   alertOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   alertBox: { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '100%', alignItems: 'center', elevation: 5 },
   alertTitle: { fontSize: 20, fontWeight: 'bold', color: '#1e293b', marginBottom: 8, textAlign: 'center' },

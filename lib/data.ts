@@ -1,7 +1,7 @@
 import { db } from './db';
 import { orders, clients, drivers, fuelLogs, expenses, warehouseIncome } from './schema';
 import { unstable_cache } from 'next/cache';
-import { desc, eq, and, or, ilike } from 'drizzle-orm';
+import { desc, eq, and, or, ilike, ne } from 'drizzle-orm';
 
 export const getDashboardData = unstable_cache(
   async () => {
@@ -15,7 +15,9 @@ export const getOrders = unstable_cache(
   async (status?: string, q?: string) => {
     let conditions = [];
     
-    if (status && status !== 'all') {
+    if (status === 'active') {
+      conditions.push(ne(orders.status, 'completed'));
+    } else if (status && status !== 'all') {
       conditions.push(eq(orders.status, status as any));
     }
     

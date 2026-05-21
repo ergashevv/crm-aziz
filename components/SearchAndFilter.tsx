@@ -10,14 +10,16 @@ export function SearchAndFilter({
   filterOptions, 
   filterPlaceholder = "Все", 
   filterParam = "status",
-  hideFilter = false
+  hideFilter = false,
+  defaultFilter = "all",
 }: { 
   dict?: any, 
   placeholder?: string,
   filterOptions?: { value: string, label: string }[],
   filterPlaceholder?: string,
   filterParam?: string,
-  hideFilter?: boolean
+  hideFilter?: boolean,
+  defaultFilter?: string,
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -68,7 +70,7 @@ export function SearchAndFilter({
       {!hideFilter && (
         <div className="w-full sm:w-56 relative">
           <select 
-            defaultValue={searchParams.get(filterParam) || 'all'}
+            defaultValue={searchParams.get(filterParam) || defaultFilter}
             onChange={handleStatus}
             className="w-full pl-4 pr-10 py-3 bg-white border border-slate-200/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm font-bold text-slate-700 appearance-none transition-all cursor-pointer"
           >

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { db } from '@/lib/db';
 import { orders } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
@@ -37,6 +38,11 @@ export async function PUT(
     if (updated.length === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
+
+    revalidateTag('orders');
+    revalidatePath('/dashboard');
+    revalidatePath('/orders');
+    revalidatePath(`/orders/${orderId}`);
 
     return NextResponse.json(updated[0]);
   } catch (error) {

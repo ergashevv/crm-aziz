@@ -12,6 +12,8 @@ import { Car } from 'lucide-react';
 import { DriverForm } from '@/components/forms/DriverForm';
 import { ExportButton } from '@/components/ExportButton';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DriversPage({
   searchParams,
 }: {
@@ -36,11 +38,12 @@ export default async function DriversPage({
     );
   }
 
-  const statsByDriver: Record<number, { count: number }> = {};
+  const statsByDriver: Record<number, { total: number; active: number }> = {};
   allOrders.forEach(o => {
     if (o.driverId) {
-      if (!statsByDriver[o.driverId]) statsByDriver[o.driverId] = { count: 0 };
-      statsByDriver[o.driverId].count++;
+      if (!statsByDriver[o.driverId]) statsByDriver[o.driverId] = { total: 0, active: 0 };
+      statsByDriver[o.driverId].total++;
+      if (o.status !== 'completed') statsByDriver[o.driverId].active++;
     }
   });
 
@@ -49,7 +52,8 @@ export default async function DriversPage({
     name: d.name,
     phone: d.phone,
     vehicle_plate: d.vehiclePlate,
-    total_orders: statsByDriver[d.id]?.count || 0,
+    active_orders: statsByDriver[d.id]?.active || 0,
+    total_orders: statsByDriver[d.id]?.total || 0,
     joined_date: format(new Date(d.createdAt), 'dd.MM.yyyy')
   }));
 
@@ -58,6 +62,7 @@ export default async function DriversPage({
     { key: 'name', label: dict.name },
     { key: 'phone', label: dict.phone },
     { key: 'vehicle_plate', label: dict.vehicle_plate },
+    { key: 'active_orders', label: dict.active_orders },
     { key: 'total_orders', label: dict.total_orders },
     { key: 'joined_date', label: dict.joined_date || "Sana" }
   ];
@@ -101,6 +106,7 @@ export default async function DriversPage({
                 <TableHead>{dict.name}</TableHead>
                 <TableHead>{dict.phone}</TableHead>
                 <TableHead>{dict.vehicle_plate}</TableHead>
+                <TableHead>{dict.active_orders}</TableHead>
                 <TableHead>{dict.total_orders}</TableHead>
                 <TableHead>{dict.joined_date}</TableHead>
                 <TableHead className="w-10"></TableHead>
@@ -117,8 +123,13 @@ export default async function DriversPage({
                       {driver.vehiclePlate}
                     </span>
                   </TableCell>
-                  <TableCell className="font-medium text-blue-600">
-                    {statsByDriver[driver.id]?.count || 0}
+                  <TableCell>
+                    <span className={`font-bold ${(statsByDriver[driver.id]?.active || 0) > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                      {statsByDriver[driver.id]?.active || 0}
+                    </span>
+                  </TableCell>
+                  <TableCell className="font-medium text-slate-600">
+                    {statsByDriver[driver.id]?.total || 0}
                   </TableCell>
                   <TableCell>{format(new Date(driver.createdAt), 'dd.MM.yyyy')}</TableCell>
                   <TableCell className="text-right">
@@ -128,7 +139,7 @@ export default async function DriversPage({
               ))}
               {filteredDrivers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                     {lang === 'uz' ? "Haydovchilar topilmadi." : "Водители не найдены."}
                   </TableCell>
                 </TableRow>

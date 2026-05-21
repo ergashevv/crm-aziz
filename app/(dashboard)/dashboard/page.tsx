@@ -11,6 +11,8 @@ import { TableRowLink } from '@/components/TableRowLink';
 import { LayoutDashboard, Users, Truck, TrendingDown, DollarSign } from 'lucide-react';
 import { DashboardCharts } from '@/components/DashboardCharts';
 
+export const dynamic = 'force-dynamic';
+
 function getStatusBadge(status: string, dict: any) {
   switch (status) {
     case 'new': return <Badge variant="info">{dict.new}</Badge>;
@@ -53,7 +55,7 @@ export default async function DashboardPage() {
     if (order.paymentStatus === 'pending') {
       pendingPayments++;
     }
-    if (order.status !== 'completed' && order.status !== 'picked_up') {
+    if (order.status !== 'completed') {
       activeOrders++;
     }
   }
@@ -76,7 +78,7 @@ export default async function DashboardPage() {
   const totalClientsCount = allClients.length;
   const totalDriversCount = allDrivers.length;
 
-  const recentOrders = allOrders.slice(0, 5);
+  const recentOrders = allOrders.filter(o => o.status !== 'completed').slice(0, 8);
 
   // Generate last 7 days list for charts
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -190,7 +192,7 @@ export default async function DashboardPage() {
           </Card>
         </Link>
         
-        <Link href="/orders" className="block transition-transform hover:scale-105 active:scale-95">
+        <Link href="/orders?status=active" className="block transition-transform hover:scale-105 active:scale-95">
           <Card className="h-full border-0 shadow-lg shadow-blue-500/10 ring-1 ring-blue-100 rounded-3xl overflow-hidden bg-gradient-to-br from-blue-50 to-white relative cursor-pointer">
             <div className="absolute top-0 right-0 p-4 opacity-10 text-blue-600">
                <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>

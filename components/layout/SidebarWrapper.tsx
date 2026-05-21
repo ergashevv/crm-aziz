@@ -33,7 +33,7 @@ export function SidebarWrapper({
 
   if (!isMounted) {
     return (
-      <div className="h-full relative bg-slate-100/80 min-h-screen font-sans antialiased">
+    <div className="h-full relative bg-mesh min-h-screen font-sans antialiased">
         <div className="hidden h-full md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-[80]">
           <Sidebar lang={lang} isCollapsed={false} />
         </div>
@@ -50,8 +50,8 @@ export function SidebarWrapper({
   }
 
   return (
-    <div className="h-full relative bg-slate-100/80 min-h-screen font-sans antialiased">
-      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-slate-200/50 to-transparent pointer-events-none z-0" />
+    <div className="h-full relative bg-mesh min-h-screen font-sans antialiased">
+      <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-blue-50/40 to-transparent pointer-events-none z-0" />
       
       {/* Mobile Sidebar & Header */}
       <MobileSidebar lang={lang} />

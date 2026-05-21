@@ -9,445 +9,325 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { createOrder, updateOrder } from '@/app/actions/entities';
-import { Plus, Edit2, MapPin, ExternalLink, Phone, User } from 'lucide-react';
+import { Plus, Edit2, MapPin, ExternalLink, Phone, User, Package, Clock, CreditCard, Truck, Navigation } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const formatLocalDate = (dateInput: any) => {
   if (!dateInput) return '';
   const date = new Date(dateInput);
   if (isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  return `${y}-${mo}-${d}T${h}:${mi}`;
 };
 
-const formatNumberWithSpaces = (val: string | number) => {
-  if (val === undefined || val === null || val === '') return '';
-  const numStr = String(val).replace(/\D/g, '');
-  if (!numStr) return '';
-  return new Intl.NumberFormat('ru-RU').format(parseInt(numStr, 10));
+const formatNum = (val: string | number) => {
+  const n = String(val).replace(/\D/g, '');
+  if (!n) return '';
+  return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
 };
 
 const CONTAINER_SIZES = [8, 20, 27];
 const RENTAL_PRESETS = ['2 часа', '24 часа', '1 день', '1 неделя', '1 месяц'];
 
-interface Client { id: number; name: string; phone: string; address: string; mapUrl?: string | null; }
-interface Dispatcher { id: number; name: string; phone: string; }
-interface Driver { id: number; name: string; vehiclePlate: string; }
+const PAYMENT_TYPES = [
+  { val: 'cash',   emoji: '💵', label: 'Нал.' },
+  { val: 'online', emoji: '📱', label: 'Онлайн' },
+  { val: 'card',   emoji: '💳', label: 'Безнал' },
+];
 
-export function OrderForm({
-  dict,
-  order,
-  clients,
-  drivers,
-  dispatchers,
-}: {
+interface Client     { id: number; name: string; phone: string; address: string; mapUrl?: string | null; }
+interface Dispatcher { id: number; name: string; phone: string; }
+interface Driver     { id: number; name: string; vehiclePlate: string; }
+
+export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
   dict: any;
   order?: any;
   clients: Client[];
   drivers: Driver[];
   dispatchers: Dispatcher[];
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]     = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]   = useState<string | null>(null);
   const router = useRouter();
 
   const defaultDateTime = formatLocalDate(new Date());
 
-  const getInitialFormData = () => {
+  const fresh = (): any => {
     if (order) {
-      const client = clients.find(c => c.id === order.clientId);
+      const client     = clients.find(c => c.id === order.clientId);
       const dispatcher = dispatchers.find(d => d.id === order.dispatcherId);
       return {
-        clientId: String(order.clientId || ''),
-        clientName: client?.name || '',
-        clientPhone: client?.phone || '',
-        clientAddress: client?.address || '',
-        clientMapUrl: client?.mapUrl || '',
-        driverId: String(order.driverId || ''),
-        operatorNote: order.operatorNote || '',
-        address: order.address || '',
-        mapUrl: order.mapUrl || '',
-        scheduledAt: formatLocalDate(order.scheduledAt),
+        clientId:        String(order.clientId || ''),
+        clientName:      client?.name  || '',
+        clientPhone:     client?.phone || '',
+        clientAddress:   client?.address || '',
+        clientMapUrl:    client?.mapUrl  || '',
+        driverId:        String(order.driverId || ''),
+        operatorNote:    order.operatorNote    || '',
+        address:         order.address         || '',
+        mapUrl:          order.mapUrl          || '',
+        scheduledAt:     formatLocalDate(order.scheduledAt),
         containerSizeM3: String(order.containerSizeM3 || '8'),
         containerNumber: order.containerNumber || '',
-        rentalDuration: order.rentalDuration || '1 день',
-        paymentAmount: String(order.paymentAmount || ''),
-        paymentType: order.paymentType || 'cash',
-        status: order.status || 'new',
-        paymentStatus: order.paymentStatus || 'pending',
-        clientCategory: order.clientCategory || 'direct',
-        dispatcherId: String(order.dispatcherId || ''),
-        dispatcherName: dispatcher?.name || '',
+        rentalDuration:  order.rentalDuration  || '1 день',
+        paymentAmount:   String(order.paymentAmount || ''),
+        paymentType:     order.paymentType     || 'cash',
+        status:          order.status          || 'new',
+        paymentStatus:   order.paymentStatus   || 'pending',
+        clientCategory:  order.clientCategory  || 'direct',
+        dispatcherId:    String(order.dispatcherId || ''),
+        dispatcherName:  dispatcher?.name  || '',
         dispatcherPhone: dispatcher?.phone || '',
-        dispatcherFee: String(order.dispatcherFee || ''),
-        referralName: order.referralName || '',
+        dispatcherFee:   String(order.dispatcherFee || ''),
+        referralName:    order.referralName    || '',
         referralPercent: String(order.referralPercent || ''),
       };
     }
     return {
-      clientId: '',
-      clientName: '',
-      clientPhone: '',
-      clientAddress: '',
-      clientMapUrl: '',
-      driverId: '',
-      operatorNote: '',
-      address: '',
-      mapUrl: '',
+      clientId: '', clientName: '', clientPhone: '', clientAddress: '', clientMapUrl: '',
+      driverId: '', operatorNote: '', address: '', mapUrl: '',
       scheduledAt: defaultDateTime,
-      containerSizeM3: '8',
-      containerNumber: '',
+      containerSizeM3: '8', containerNumber: '',
       rentalDuration: '1 день',
-      paymentAmount: '',
-      paymentType: 'cash',
-      status: 'new',
-      paymentStatus: 'pending',
+      paymentAmount: '', paymentType: 'cash',
+      status: 'new', paymentStatus: 'pending',
       clientCategory: 'direct',
-      dispatcherId: '',
-      dispatcherName: '',
-      dispatcherPhone: '',
-      dispatcherFee: '',
-      referralName: '',
-      referralPercent: '',
+      dispatcherId: '', dispatcherName: '', dispatcherPhone: '', dispatcherFee: '',
+      referralName: '', referralPercent: '',
     };
   };
 
-  const [formData, setFormData] = useState(getInitialFormData);
-  const [displayAmount, setDisplayAmount] = useState(order ? formatNumberWithSpaces(order.paymentAmount) : '');
-  const [displayDispatcherFee, setDisplayDispatcherFee] = useState(order ? formatNumberWithSpaces(order.dispatcherFee) : '');
+  const [form, setForm]     = useState(fresh);
+  const [dispAmt, setDispAmt] = useState(order ? formatNum(order.dispatcherFee || '') : '');
+  const [amt, setAmt]         = useState(order ? formatNum(order.paymentAmount || '') : '');
   const [customRental, setCustomRental] = useState(!RENTAL_PRESETS.includes(order?.rentalDuration || '1 день'));
 
-  const set = (key: string, val: string) => setFormData(p => ({ ...p, [key]: val }));
+  const set = (k: string, v: string) => setForm((p: any) => ({ ...p, [k]: v }));
 
-  const handleClientSelect = (clientId: string) => {
-    if (clientId === '' || clientId === 'new') {
-      set('clientId', clientId);
-      set('clientName', '');
-      set('clientPhone', '');
-      set('clientAddress', '');
-      set('clientMapUrl', '');
-    } else {
-      const client = clients.find(c => String(c.id) === clientId);
-      if (client) {
-        setFormData(p => ({
-          ...p,
-          clientId,
-          clientName: client.name,
-          clientPhone: client.phone,
-          clientAddress: client.address,
-          clientMapUrl: client.mapUrl || '',
-        }));
-      }
-    }
+  /* ── CLIENT SELECT ── */
+  const selectClient = (id: string) => {
+    if (!id || id === 'new') { set('clientId', id || ''); return; }
+    const c = clients.find(x => String(x.id) === id);
+    if (c) setForm((p: any) => ({ ...p, clientId: id, clientName: c.name, clientPhone: c.phone, clientAddress: c.address, clientMapUrl: c.mapUrl || '' }));
   };
 
-  const handleDispatcherSelect = (dispId: string) => {
-    if (dispId === '' || dispId === 'new') {
-      set('dispatcherId', dispId);
-      set('dispatcherName', '');
-      set('dispatcherPhone', '');
-    } else {
-      const disp = dispatchers.find(d => String(d.id) === dispId);
-      if (disp) {
-        setFormData(p => ({
-          ...p,
-          dispatcherId: dispId,
-          dispatcherName: disp.name,
-          dispatcherPhone: disp.phone,
-        }));
-      }
-    }
+  /* ── DISPATCHER SELECT ── */
+  const selectDispatcher = (id: string) => {
+    if (!id || id === 'new') { set('dispatcherId', id || ''); return; }
+    const d = dispatchers.find(x => String(x.id) === id);
+    if (d) setForm((p: any) => ({ ...p, dispatcherId: id, dispatcherName: d.name, dispatcherPhone: d.phone }));
   };
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /* ── NUMBER INPUTS ── */
+  const onAmt = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
-    setDisplayAmount(raw ? formatNumberWithSpaces(raw) : '');
+    setAmt(raw ? formatNum(raw) : '');
     set('paymentAmount', raw);
   };
-
-  const handleDispatcherFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onDispAmt = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
-    setDisplayDispatcherFee(raw ? formatNumberWithSpaces(raw) : '');
+    setDispAmt(raw ? formatNum(raw) : '');
     set('dispatcherFee', raw);
   };
 
-  const handleRentalChange = (val: string) => {
-    if (val === '__custom__') {
-      setCustomRental(true);
-      set('rentalDuration', '');
-    } else {
-      setCustomRental(false);
-      set('rentalDuration', val);
-    }
-  };
-
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen);
-    if (!isOpen) {
-      setError(null);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  /* ── SUBMIT ── */
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
-      let res;
-      if (order) {
-        res = await updateOrder(order.id, formData);
-      } else {
-        res = await createOrder(formData);
-      }
-
-      if (res && !res.success) {
-        setError(res.error);
-        return;
-      }
-
+      const res = order ? await updateOrder(order.id, form) : await createOrder(form);
+      if (res && !res.success) { setError(res.error); return; }
       setOpen(false);
       router.refresh();
-
-      if (!order) {
-        const fresh = getInitialFormData();
-        setFormData(fresh);
-        setDisplayAmount('');
-        setDisplayDispatcherFee('');
-        setCustomRental(false);
-      }
+      if (!order) { setForm(fresh()); setAmt(''); setDispAmt(''); setCustomRental(false); }
     } catch (err: any) {
       setError(err.message || 'Произошла ошибка');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  const clientOptions = clients.map(c => ({ value: String(c.id), label: c.name, sub: c.phone }));
+  const clientOptions     = clients.map(c => ({ value: String(c.id), label: c.name, sub: c.phone }));
   const dispatcherOptions = dispatchers.map(d => ({ value: String(d.id), label: d.name, sub: d.phone }));
-  const driverOptions = [
+  const driverOptions     = [
     { value: 'none', label: dict.unassigned || 'Не назначен' },
     ...drivers.map(d => ({ value: String(d.id), label: d.name, sub: d.vehiclePlate })),
   ];
-
-  const isDispatcher = formData.clientCategory === 'dispatcher';
+  const isDispatcher = form.clientCategory === 'dispatcher';
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) setError(null); }}>
       <DialogTrigger asChild>
         {order ? (
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl">
             <Edit2 className="h-4 w-4" />
           </Button>
         ) : (
-          <Button className="rounded-full px-6 py-2.5 font-semibold shadow-lg shadow-primary/30 transition-all hover:scale-105">
-            <Plus className="h-4 w-4 mr-2" /> {dict.new_order}
+          <Button className="rounded-2xl px-5 py-2.5 h-10 font-bold text-sm shadow-lg shadow-primary/25 gap-2 transition-all hover:scale-[1.02] hover:shadow-primary/40">
+            <Plus className="h-4 w-4" />
+            {dict.new_order}
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border-slate-200/80 shadow-2xl bg-white/98 backdrop-blur-xl p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle className="text-xl font-extrabold text-slate-900">
-            {order ? '✎ Редактировать заказ' : dict.new_order}
-          </DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-3xl border border-slate-200/60 shadow-2xl bg-white">
+        {/* Header */}
+        <DialogHeader className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-100 px-6 py-4 rounded-t-3xl">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              {order ? <Edit2 className="h-4.5 w-4.5 text-primary" /> : <Plus className="h-4.5 w-4.5 text-primary" />}
+            </div>
+            <DialogTitle className="text-lg font-extrabold text-slate-900">
+              {order ? 'Редактировать заказ' : dict.new_order}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="px-6 pb-6 pt-4 space-y-5">
+        <form onSubmit={onSubmit} className="px-6 pb-6 pt-5 space-y-4">
+
+          {/* Error */}
           {error && (
-            <div className="p-3 text-sm font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl">
+            <div className="flex items-start gap-2.5 p-3.5 text-sm font-semibold text-rose-700 bg-rose-50 border border-rose-200/70 rounded-2xl">
+              <span className="text-base leading-none mt-0.5">⚠️</span>
               {error}
             </div>
           )}
 
-          {/* === CLIENT CATEGORY TOGGLE === */}
-          <div>
-            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Тип клиента</Label>
-            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
-              {(['direct', 'dispatcher'] as const).map(cat => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => set('clientCategory', cat)}
-                  className={`py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-200 ${
-                    formData.clientCategory === cat
-                      ? 'bg-white text-primary shadow-sm ring-1 ring-primary/20'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {cat === 'direct' ? '👤 Прямой клиент' : '📞 Диспетчер'}
-                </button>
-              ))}
-            </div>
+          {/* ══ CATEGORY TOGGLE ══ */}
+          <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
+            {(['direct', 'dispatcher'] as const).map(cat => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => set('clientCategory', cat)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  form.clientCategory === cat
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {cat === 'direct'
+                  ? <><User className="h-4 w-4 text-blue-500" /> Прямой клиент</>
+                  : <><Phone className="h-4 w-4 text-indigo-500" /> Диспетчер</>}
+              </button>
+            ))}
           </div>
 
-          {/* === CLIENT SECTION === */}
-          <div className="space-y-3 p-4 bg-slate-50/80 rounded-2xl border border-slate-100">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+          {/* ══ CLIENT ══ */}
+          <section className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
+            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <User className="h-3.5 w-3.5" /> Клиент
             </p>
-
-            <div>
-              <Label className="text-xs mb-1.5 block">Выбрать существующего</Label>
-              <SearchableSelect
-                options={clientOptions}
-                value={formData.clientId === 'new' ? '' : formData.clientId}
-                onChange={handleClientSelect}
-                placeholder="Поиск клиента..."
-                addNewLabel="+ Новый клиент"
-                onAddNew={() => handleClientSelect('new')}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <SearchableSelect
+              options={clientOptions}
+              value={form.clientId === 'new' ? '' : form.clientId}
+              onChange={selectClient}
+              placeholder="Поиск по клиентам..."
+              addNewLabel="+ Новый клиент"
+              onAddNew={() => selectClient('new')}
+            />
+            <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <Label className="text-xs mb-1.5 block">Имя *</Label>
-                <Input
-                  value={formData.clientName}
-                  onChange={e => set('clientName', e.target.value)}
-                  placeholder="Имя клиента"
-                  required
-                  className="rounded-xl"
-                />
+                <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Имя *</Label>
+                <Input value={form.clientName} onChange={e => set('clientName', e.target.value)} placeholder="Имя клиента" required className="h-9 rounded-xl text-sm" />
               </div>
               <div>
-                <Label className="text-xs mb-1.5 block flex items-center gap-1">
-                  <Phone className="h-3 w-3" /> Телефон *
-                </Label>
-                <Input
-                  value={formData.clientPhone}
-                  onChange={e => set('clientPhone', e.target.value)}
-                  placeholder="+998 __ ___ __ __"
-                  required
-                  className="rounded-xl"
-                />
+                <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Телефон *</Label>
+                <Input value={form.clientPhone} onChange={e => set('clientPhone', e.target.value)} placeholder="+998 90 000 00 00" required className="h-9 rounded-xl text-sm" />
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* === DISPATCHER SECTION (only if category = dispatcher) === */}
+          {/* ══ DISPATCHER (conditional) ══ */}
           {isDispatcher && (
-            <div className="space-y-3 p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100">
-              <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+            <section className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
+              <p className="text-[11px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-1.5">
                 <Phone className="h-3.5 w-3.5" /> Диспетчер
               </p>
-
-              <div>
-                <Label className="text-xs mb-1.5 block">Выбрать диспетчера</Label>
-                <SearchableSelect
-                  options={dispatcherOptions}
-                  value={formData.dispatcherId === 'new' ? '' : formData.dispatcherId}
-                  onChange={handleDispatcherSelect}
-                  placeholder="Поиск диспетчера..."
-                  addNewLabel="+ Новый диспетчер"
-                  onAddNew={() => handleDispatcherSelect('new')}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <SearchableSelect
+                options={dispatcherOptions}
+                value={form.dispatcherId === 'new' ? '' : form.dispatcherId}
+                onChange={selectDispatcher}
+                placeholder="Поиск диспетчера..."
+                addNewLabel="+ Новый диспетчер"
+                onAddNew={() => selectDispatcher('new')}
+              />
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <Label className="text-xs mb-1.5 block">Имя диспетчера</Label>
-                  <Input
-                    value={formData.dispatcherName}
-                    onChange={e => set('dispatcherName', e.target.value)}
-                    placeholder="Имя"
-                    className="rounded-xl"
-                  />
+                  <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block">Имя</Label>
+                  <Input value={form.dispatcherName} onChange={e => set('dispatcherName', e.target.value)} placeholder="Имя" className="h-9 rounded-xl text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs mb-1.5 block">Телефон диспетчера</Label>
-                  <Input
-                    value={formData.dispatcherPhone}
-                    onChange={e => set('dispatcherPhone', e.target.value)}
-                    placeholder="+998 __ ___ __ __"
-                    className="rounded-xl"
-                  />
+                  <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block">Телефон</Label>
+                  <Input value={form.dispatcherPhone} onChange={e => set('dispatcherPhone', e.target.value)} placeholder="+998 90 000 00 00" className="h-9 rounded-xl text-sm" />
                 </div>
               </div>
-
               <div>
-                <Label className="text-xs mb-1.5 block font-semibold text-indigo-700">
-                  💰 Услуга диспетчера (сумма)
+                <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" /> Услуга диспетчера (сумма)
                 </Label>
                 <div className="relative">
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={displayDispatcherFee}
-                    onChange={handleDispatcherFeeChange}
-                    className="rounded-xl font-bold pr-14"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">RUB</span>
+                  <Input type="text" inputMode="numeric" placeholder="0" value={dispAmt} onChange={onDispAmt}
+                    className="h-9 rounded-xl text-sm font-semibold pr-14 bg-white" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
-          {/* === ADDRESS + MAP === */}
-          <div className="grid grid-cols-1 gap-3">
+          {/* ══ ADDRESS + MAP ══ */}
+          <section className="space-y-2.5">
             <div>
-              <Label className="flex items-center gap-1.5 text-xs mb-1.5">
-                <MapPin className="h-3.5 w-3.5 text-rose-500" /> {dict.address}
+              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-rose-500" /> {dict.address} *
               </Label>
-              <Input value={formData.address} onChange={e => set('address', e.target.value)} placeholder="Адрес доставки" required className="rounded-xl" />
+              <Input value={form.address} onChange={e => set('address', e.target.value)}
+                placeholder="Адрес доставки" required className="h-9 rounded-xl text-sm" />
             </div>
             <div>
-              <Label className="flex items-center justify-between text-xs mb-1.5">
+              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <ExternalLink className="h-3.5 w-3.5 text-blue-500" />
-                  Ссылка на карту (Google Maps / Yandex)
+                  <Navigation className="h-3.5 w-3.5 text-blue-500" />
+                  Ссылка на карту
                 </span>
-                {formData.mapUrl && (
-                  <a href={formData.mapUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-700 text-[10px] font-semibold flex items-center gap-1"
+                {form.mapUrl && (
+                  <a href={form.mapUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-blue-500 text-[10px] font-bold hover:text-blue-700 flex items-center gap-0.5"
                     onClick={e => e.stopPropagation()}>
-                    <MapPin className="h-3 w-3" /> Открыть
+                    <ExternalLink className="h-3 w-3" /> Открыть
                   </a>
                 )}
               </Label>
-              <Input
-                value={formData.mapUrl}
-                onChange={e => set('mapUrl', e.target.value)}
-                placeholder="https://maps.google.com/... или https://yandex.ru/maps/..."
-                className="rounded-xl text-sm"
-              />
+              <Input value={form.mapUrl} onChange={e => set('mapUrl', e.target.value)}
+                placeholder="https://maps.google.com/... или yandex.ru/maps/..."
+                className="h-9 rounded-xl text-sm" />
             </div>
-          </div>
+          </section>
 
-          {/* === DATE + CONTAINER === */}
+          {/* ══ DATE + CONTAINER SIZE ══ */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs mb-1.5 block">
-                {dict.scheduled_date} <span className="text-primary font-bold">(с временем)</span>
+              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-amber-500" /> {dict.scheduled_date} *
               </Label>
-              <Input
-                type="datetime-local"
-                value={formData.scheduledAt}
-                onChange={e => set('scheduledAt', e.target.value)}
-                className="rounded-xl"
-                required
-              />
+              <Input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)}
+                required className="h-9 rounded-xl text-sm" />
             </div>
-
             <div>
-              <Label className="text-xs mb-1.5 block">{dict.container_size} (m³)</Label>
-              <div className="grid grid-cols-3 gap-1.5">
+              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                <Package className="h-3.5 w-3.5 text-orange-500" /> {dict.container_size} *
+              </Label>
+              <div className="grid grid-cols-3 gap-1.5 h-9">
                 {CONTAINER_SIZES.map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => set('containerSizeM3', String(s))}
-                    className={`py-2 rounded-xl text-sm font-bold border transition-all ${
-                      formData.containerSizeM3 === String(s)
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40'
-                    }`}
-                  >
+                  <button key={s} type="button" onClick={() => set('containerSizeM3', String(s))}
+                    className={`h-full rounded-xl text-sm font-bold border transition-all ${
+                      form.containerSizeM3 === String(s)
+                        ? 'bg-primary text-white border-primary shadow-sm shadow-primary/30'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary'
+                    }`}>
                     {s}³
                   </button>
                 ))}
@@ -455,116 +335,89 @@ export function OrderForm({
             </div>
           </div>
 
-          {/* === CONTAINER NUMBER + RENTAL DURATION === */}
+          {/* ══ CONTAINER NUMBER + RENTAL ══ */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs mb-1.5 block">Номер контейнера</Label>
-              <Input
-                value={formData.containerNumber}
-                onChange={e => set('containerNumber', e.target.value)}
-                placeholder="Напр. КТ-001"
-                className="rounded-xl"
-              />
+              <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Номер контейнера</Label>
+              <Input value={form.containerNumber} onChange={e => set('containerNumber', e.target.value)}
+                placeholder="Напр. КТ-001" className="h-9 rounded-xl text-sm font-mono" />
             </div>
-
             <div>
-              <Label className="text-xs mb-1.5 block">{dict.rental_duration}</Label>
+              <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">{dict.rental_duration} *</Label>
               {!customRental ? (
-                <Select value={formData.rentalDuration} onValueChange={handleRentalChange}>
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={form.rentalDuration} onValueChange={v => {
+                  if (v === '__custom__') { setCustomRental(true); set('rentalDuration', ''); }
+                  else { set('rentalDuration', v); }
+                }}>
+                  <SelectTrigger className="h-9 rounded-xl text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {RENTAL_PRESETS.map(p => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
+                    {RENTAL_PRESETS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                     <SelectItem value="__custom__">✏️ Другое...</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
                 <div className="flex gap-1.5">
-                  <Input
-                    value={formData.rentalDuration}
-                    onChange={e => set('rentalDuration', e.target.value)}
-                    placeholder="напр. 3 дня, 6 часов"
-                    className="rounded-xl"
-                    required
-                    autoFocus
-                  />
-                  <Button type="button" variant="outline" size="icon" className="rounded-xl flex-shrink-0"
-                    onClick={() => { setCustomRental(false); set('rentalDuration', '1 день'); }}>
+                  <Input value={form.rentalDuration} onChange={e => set('rentalDuration', e.target.value)}
+                    placeholder="напр. 3 дня" className="h-9 rounded-xl text-sm flex-1" required autoFocus />
+                  <button type="button" onClick={() => { setCustomRental(false); set('rentalDuration', '1 день'); }}
+                    className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 bg-white text-lg flex-shrink-0">
                     ×
-                  </Button>
+                  </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* === PAYMENT === */}
+          {/* ══ AMOUNT + PAYMENT TYPE ══ */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs mb-1.5 block flex items-center justify-between">
-                <span>{dict.amount} (RUB)</span>
-                {displayAmount && (
-                  <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100">
-                    {displayAmount}
-                  </span>
-                )}
+              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                <CreditCard className="h-3.5 w-3.5 text-emerald-500" /> {dict.amount} *
               </Label>
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={displayAmount}
-                onChange={handleAmountChange}
-                className="rounded-xl font-bold text-slate-800"
-                required
-              />
+              <div className="relative">
+                <Input type="text" inputMode="numeric" placeholder="0" value={amt} onChange={onAmt}
+                  className="h-9 rounded-xl text-sm font-bold pr-14" required />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
+              </div>
             </div>
-
             <div>
-              <Label className="text-xs mb-1.5 block">{dict.payment_type || 'Тип оплаты'}</Label>
-              <div className="grid grid-cols-3 gap-1">
-                {[
-                  { val: 'cash', label: '💵 Нал.' },
-                  { val: 'online', label: '📱 Онлайн' },
-                  { val: 'card', label: '💳 Безнал' },
-                ].map(({ val, label }) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => set('paymentType', val)}
-                    className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                      formData.paymentType === val
+              <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Тип оплаты *</Label>
+              <div className="grid grid-cols-3 gap-1.5 h-9">
+                {PAYMENT_TYPES.map(({ val, emoji, label }) => (
+                  <button key={val} type="button" onClick={() => set('paymentType', val)}
+                    className={`h-full rounded-xl text-xs font-bold border transition-all ${
+                      form.paymentType === val
                         ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-primary/40'
-                    }`}
-                  >
-                    {label}
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary'
+                    }`}>
+                    {emoji} {label}
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* === DRIVER === */}
+          {/* ══ DRIVER ══ */}
           <div>
-            <Label className="text-xs mb-1.5 block">{dict.driver} ({dict.optional || 'необязательно'})</Label>
+            <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+              <Truck className="h-3.5 w-3.5 text-slate-500" />
+              {dict.driver} <span className="text-slate-300">({dict.optional || 'необязательно'})</span>
+            </Label>
             <SearchableSelect
               options={driverOptions}
-              value={formData.driverId || 'none'}
-              onChange={val => set('driverId', val === 'none' ? '' : val)}
-              placeholder={dict.select_driver || 'Выбрать водителя...'}
+              value={form.driverId || 'none'}
+              onChange={v => set('driverId', v === 'none' ? '' : v)}
+              placeholder="Выбрать водителя..."
             />
           </div>
 
-          {/* === STATUS (edit only) === */}
+          {/* ══ STATUS (edit only) ══ */}
           {order && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs mb-1.5 block">{dict.status}</Label>
-                <Select value={formData.status} onValueChange={val => set('status', val)}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">{dict.status}</Label>
+                <Select value={form.status} onValueChange={v => set('status', v)}>
+                  <SelectTrigger className="h-9 rounded-xl text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {['new','assigned','in_progress','container_placed','picked_up','completed'].map(s => (
                       <SelectItem key={s} value={s}>{dict[s] || s}</SelectItem>
@@ -573,9 +426,9 @@ export function OrderForm({
                 </Select>
               </div>
               <div>
-                <Label className="text-xs mb-1.5 block">{dict.payment_status}</Label>
-                <Select value={formData.paymentStatus} onValueChange={val => set('paymentStatus', val)}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">{dict.payment_status}</Label>
+                <Select value={form.paymentStatus} onValueChange={v => set('paymentStatus', v)}>
+                  <SelectTrigger className="h-9 rounded-xl text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {['pending','received','entered'].map(s => (
                       <SelectItem key={s} value={s}>{dict[s] || s}</SelectItem>
@@ -586,14 +439,20 @@ export function OrderForm({
             </div>
           )}
 
-          {/* === NOTES === */}
+          {/* ══ NOTE ══ */}
           <div>
-            <Label className="text-xs mb-1.5 block">{dict.operator_note}</Label>
-            <Textarea value={formData.operatorNote} onChange={e => set('operatorNote', e.target.value)} className="rounded-xl resize-none" rows={2} />
+            <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">{dict.operator_note}</Label>
+            <Textarea value={form.operatorNote} onChange={e => set('operatorNote', e.target.value)}
+              className="rounded-xl resize-none text-sm" rows={2} placeholder="Izoh / Заметка..." />
           </div>
 
-          <Button type="submit" className="w-full rounded-2xl h-11 text-base font-bold" disabled={loading}>
-            {loading ? '...' : order ? (dict.save || 'Сохранить') : (dict.create || 'Создать')}
+          {/* ══ SUBMIT ══ */}
+          <Button type="submit"
+            className="w-full h-11 rounded-2xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01]"
+            disabled={loading}>
+            {loading
+              ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Сохраняется...</span>
+              : order ? (dict.save || 'Сохранить') : (dict.create || '+ Создать заказ')}
           </Button>
         </form>
       </DialogContent>

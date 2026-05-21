@@ -260,7 +260,9 @@ function AlertModal({
   );
 }
 
-export default function App() {
+function AppInner() {
+  const insets = useSafeAreaInsets();
+
   const [serverIp, setServerIp] = useState('crm-aziz.vercel.app');
   const [port, setPort] = useState('');
   const [locale, setLocale] = useState<Locale>('uz');
@@ -1089,7 +1091,6 @@ export default function App() {
 
   if (!isLoggedIn) {
     return (
-      <SafeAreaProvider>
       <SafeAreaView style={styles.loginContainer}>
         <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
@@ -1185,7 +1186,6 @@ export default function App() {
           onOpenSettings={customAlert.openSettings ? () => Linking.openSettings() : undefined}
         />
       </SafeAreaView>
-      </SafeAreaProvider>
     );
   }
 
@@ -1195,10 +1195,8 @@ export default function App() {
     { id: 'history' as const, label: t(locale, 'history'), Icon: CheckCircle, count: historyOrders.length },
   ];
 
-  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaProvider>
     <SafeAreaView style={styles.mainContainer} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
@@ -1515,6 +1513,13 @@ export default function App() {
         onOpenSettings={customAlert.openSettings ? () => Linking.openSettings() : undefined}
       />
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppInner />
     </SafeAreaProvider>
   );
 }

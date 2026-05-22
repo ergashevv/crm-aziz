@@ -34,13 +34,13 @@ export async function GET() {
     // Map active orders to drivers
     const driversWithOrders = allDrivers.map(d => {
       const driverOrders = activeOrders.filter(o => o.driverId === d.id);
-      const inProgressOrder = driverOrders.find(o => o.status === 'in_progress');
+      const activeTransitOrder = driverOrders.find(o => o.status === 'in_progress' || o.status === 'picked_up');
       
       return {
         ...d,
         activeOrders: driverOrders,
-        isTracking: !!inProgressOrder,
-        currentOrderAddress: inProgressOrder?.address || null,
+        isTracking: !!activeTransitOrder,
+        currentOrderAddress: activeTransitOrder?.address || null,
       };
     });
 

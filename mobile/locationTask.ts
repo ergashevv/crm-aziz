@@ -35,10 +35,11 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
       AsyncStorage.getItem('@server_port'),
     ]);
 
-    if (!driverRaw || !serverIp) return;
+    if (!driverRaw) return;
 
     const driver = JSON.parse(driverRaw) as { id: number };
-    const apiUrl = buildApiUrl(serverIp, port ?? '');
+    const ip = serverIp || 'crm-aziz.vercel.app';
+    const apiUrl = buildApiUrl(ip, port ?? '');
 
     await fetch(`${apiUrl}/driver/location`, {
       method: 'POST',
@@ -83,7 +84,6 @@ export async function startBackgroundLocationTracking(): Promise<boolean> {
   await Location.startLocationUpdatesAsync(LOCATION_TASK, {
     accuracy: Location.Accuracy.Balanced,
     timeInterval: 10000,
-    distanceInterval: 10,
     showsBackgroundLocationIndicator: true,
     foregroundService: {
       notificationTitle: 'Haydovchi — joylashuv',

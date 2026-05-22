@@ -462,13 +462,13 @@ function AppInner() {
     [driver, getApiUrl]
   );
 
-  const hasInProgress = orders.some(o => o.status === 'in_progress');
+  const isActiveTransit = orders.some(o => o.status === 'in_progress' || o.status === 'picked_up');
 
   useEffect(() => {
     let active = true;
 
     const startTracking = async () => {
-      if (!isLoggedIn || !driver || !hasInProgress) {
+      if (!isLoggedIn || !driver) {
         if (locationSubscription.current) {
           locationSubscription.current.remove();
           locationSubscription.current = null;
@@ -498,7 +498,21 @@ function AppInner() {
             return;
           }
         } catch (e) {
-          console.warn('Background location start failed:', e);
+          console.log('Background location start failed:', e);
+        }
+      } else {
+        const { foreground, background, canAskAgain } = await requestFullLocationAccess();
+        if (background) {
+          try {
+            const started = await startBackgroundLocationTracking();
+            if (started && active) {
+              setIsTrackingGps(true);
+              Vibration.vibrate([0, 150, 100, 150]);
+              return;
+            }
+          } catch (e) {}
+        } else if (canAskAgain) {
+          showAlert(t(locale, 'gpsAlwaysTitle'), t(locale, 'gpsAlwaysMessage'), true);
         }
       }
 
@@ -507,7 +521,7 @@ function AppInner() {
         Vibration.vibrate([0, 150, 100, 150]);
         try {
           locationSubscription.current = await Location.watchPositionAsync(
-            { accuracy: Location.Accuracy.Balanced, timeInterval: 10000, distanceInterval: 10 },
+            { accuracy: Location.Accuracy.Balanced, timeInterval: 10000 },
             (loc) => postLocation(loc.coords.latitude, loc.coords.longitude)
           );
         } catch {
@@ -525,7 +539,7 @@ function AppInner() {
         locationSubscription.current = null;
       }
     };
-  }, [hasInProgress, isLoggedIn, driver, locale, showAlert, postLocation]);
+  }, [isLoggedIn, driver, locale, showAlert, postLocation]);
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -1303,7 +1317,7 @@ function AppInner() {
         </View>
       </View>
 
-      {isTrackingGps && (
+      {isTrackingGps ? (
         <View style={styles.gpsActiveBar}>
           <View style={styles.pulseContainer}>
             <Animated.View style={[styles.pulseRing, { opacity: pulseAnim }]} />
@@ -1311,6 +1325,14 @@ function AppInner() {
           </View>
           <Navigation size={14} color="#065f46" style={{ marginRight: 6 }} />
           <Text style={styles.gpsActiveText}>{t(locale, 'gpsTracking')}</Text>
+        </View>
+      ) : (
+        <View style={styles.gpsIdleBar}>
+          <View style={styles.pulseContainer}>
+            <View style={[styles.pulseDot, { backgroundColor: '#94a3b8' }]} />
+          </View>
+          <Navigation size={14} color="#94a3b8" style={{ marginRight: 6 }} />
+          <Text style={styles.gpsIdleText}>{t(locale, 'gpsIdle')}</Text>
         </View>
       )}
 
@@ -1657,10 +1679,12 @@ const styles = StyleSheet.create({
   loginBtn: { backgroundColor: '#4f46e5', height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   loginBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   gpsActiveBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ecfdf5', paddingHorizontal: 16, paddingVertical: 8 },
+  gpsIdleBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', paddingHorizontal: 16, paddingVertical: 8 },
   pulseContainer: { height: 12, width: 12, marginRight: 10, justifyContent: 'center', alignItems: 'center' },
   pulseRing: { position: 'absolute', height: 20, width: 20, borderRadius: 10, backgroundColor: '#34d399' },
   pulseDot: { height: 8, width: 8, borderRadius: 4, backgroundColor: '#10b981' },
   gpsActiveText: { fontSize: 12, color: '#065f46', fontWeight: '600', flex: 1 },
+  gpsIdleText: { fontSize: 12, color: '#64748b', fontWeight: '600', flex: 1 },
   mainContainer: { flex: 1, backgroundColor: '#f1f5f9' },
   mainScroll: { flex: 1 },
   appHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff' },
@@ -1680,6 +1704,7 @@ const styles = StyleSheet.create({
   heroCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 2, borderColor: '#2563eb', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   heroLabel: { fontSize: 12, fontWeight: '800', color: '#2563eb', textTransform: 'uppercase', letterSpacing: 0.5, flex: 1 },
+  heroTimeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   heroScheduleBlock: { marginTop: 12 },
   heroScheduleLabel: { fontSize: 12, color: '#64748b', fontWeight: '600' },
   heroDateSub: { fontSize: 15, color: '#64748b', marginTop: 2, fontWeight: '600' },

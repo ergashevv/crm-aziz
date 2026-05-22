@@ -46,10 +46,10 @@ export default async function DashboardPage() {
 
   for (const order of allOrders) {
     const orderDate = new Date(order.createdAt);
-    if (orderDate >= today && order.paymentStatus === 'entered') {
+    if (orderDate >= today && (order.paymentStatus === 'entered' || order.paymentStatus === 'received')) {
       todaysRevenue += order.paymentAmount;
     }
-    if (orderDate >= thisMonth && order.paymentStatus === 'entered') {
+    if (orderDate >= thisMonth && (order.paymentStatus === 'entered' || order.paymentStatus === 'received')) {
       monthlyRevenue += order.paymentAmount;
     }
     if (order.paymentStatus === 'pending') {
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
     allOrders.forEach(order => {
       const orderDate = new Date(order.createdAt);
       orderDate.setHours(0, 0, 0, 0);
-      if (orderDate.getTime() === date.getTime() && order.paymentStatus === 'entered') {
+      if (orderDate.getTime() === date.getTime() && (order.paymentStatus === 'entered' || order.paymentStatus === 'received')) {
         income += order.paymentAmount;
       }
     });

@@ -99,7 +99,7 @@ export default async function FinancePage({
 
   // 1. Client payments from completed/entered orders
   allOrders.forEach(o => {
-    if (o.paymentStatus === 'entered') {
+    if (o.paymentStatus === 'entered' || o.paymentStatus === 'received') {
       const client = clientMap.get(o.clientId);
       combinedIncomes.push({
         id: `order-${o.id}`,
@@ -193,7 +193,7 @@ export default async function FinancePage({
 
     allOrders.forEach(order => {
       const orderDate = new Date(order.createdAt);
-      if (orderDate.getMonth() === date.getMonth() && orderDate.getFullYear() === date.getFullYear() && order.paymentStatus === 'entered') {
+      if (orderDate.getMonth() === date.getMonth() && orderDate.getFullYear() === date.getFullYear() && (order.paymentStatus === 'entered' || order.paymentStatus === 'received')) {
         income += order.paymentAmount;
       }
     });

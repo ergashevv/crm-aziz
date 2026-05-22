@@ -117,6 +117,17 @@ function computeFocusOrder(list: Order[]): Order | null {
   })[0];
 }
 
+function formatAddressDisplay(address: string, locale: string): string {
+  if (!address) return '';
+  const lower = address.toLowerCase();
+  if (lower.startsWith('http://') || lower.startsWith('https://')) {
+    if (lower.includes('yandex')) return locale === 'uz' ? 'Yandex xarita havolasi (URL)' : 'Ссылка Яндекс Карты (URL)';
+    if (lower.includes('google')) return locale === 'uz' ? 'Google xarita havolasi (URL)' : 'Ссылка Google Карты (URL)';
+    return locale === 'uz' ? 'Xarita havolasi (URL)' : 'Ссылка на карту (URL)';
+  }
+  return address;
+}
+
 function sortQueueOrders(list: Order[], focusId: number | null): Order[] {
   return filterActiveOrders(list)
     .filter(o => o.id !== focusId)
@@ -1013,7 +1024,7 @@ function AppInner() {
             </View>
             <View style={styles.orderAddressRow}>
               <MapPin size={14} color="#94a3b8" style={{ marginTop: 2, marginRight: 4 }} />
-              <Text style={styles.orderAddress} numberOfLines={2}>{order.address}</Text>
+              <Text style={styles.orderAddress} numberOfLines={2}>{formatAddressDisplay(order.address, locale)}</Text>
             </View>
             <Text style={styles.orderMeta}>{order.clientName}</Text>
           </View>
@@ -1058,7 +1069,7 @@ function AppInner() {
           <Text style={styles.heroTime}>{timeOnly}</Text>
           <Text style={styles.heroDateSub}>{datePart}</Text>
         </View>
-        <Text style={styles.heroAddress}>{order.address}</Text>
+        <Text style={styles.heroAddress}>{formatAddressDisplay(order.address, locale)}</Text>
         <TouchableOpacity style={styles.heroNavBtn} onPress={() => openNavigation(order)} activeOpacity={0.8}>
           <Navigation size={16} color="#fff" />
           <Text style={styles.heroNavBtnText}>
@@ -1112,7 +1123,7 @@ function AppInner() {
               <Text style={[styles.statusBadgeTextCompact, { color }]}>{label}</Text>
             </View>
           </View>
-          <Text style={styles.timelineAddress} numberOfLines={2}>{order.address}</Text>
+          <Text style={styles.timelineAddress} numberOfLines={2}>{formatAddressDisplay(order.address, locale)}</Text>
           <Text style={styles.timelineClient}>{order.clientName}</Text>
           {order.operatorNote ? (
             <Text style={styles.timelineNote} numberOfLines={1}>{order.operatorNote}</Text>
@@ -1474,7 +1485,7 @@ function AppInner() {
                   {queueActionMode(order, focusOrder) === 'locked' && (
                     <Text style={styles.modalWarn}>{t(locale, 'finishCurrentFirst')}</Text>
                   )}
-                  <Text style={styles.modalBigAddress}>{order.address}</Text>
+                  <Text style={styles.modalBigAddress}>{formatAddressDisplay(order.address, locale)}</Text>
                   <TouchableOpacity style={styles.navBtn} onPress={() => openNavigation(order)} activeOpacity={0.8}>
                     <Navigation size={16} color="#fff" />
                     <Text style={styles.navBtnText}>

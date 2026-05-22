@@ -481,6 +481,19 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
                   const coords = e.get('coords');
                   setSelectedPoint(coords);
                   set('mapUrl', `https://yandex.ru/maps/?pt=${coords[1]},${coords[0]}&z=18`);
+                  
+                  const ymaps = (window as any).ymaps;
+                  if (ymaps && ymaps.geocode) {
+                    ymaps.geocode(coords).then((res: any) => {
+                      const firstGeoObject = res.geoObjects.get(0);
+                      if (firstGeoObject) {
+                        const addr = firstGeoObject.getAddressLine();
+                        if (addr) set('address', addr);
+                      }
+                    }).catch((err: any) => console.error('Geocode error:', err));
+                  } else if (!form.address) {
+                    set('address', 'Локация по карте (URL)');
+                  }
                 }}
               >
                 <SearchControl options={{ float: 'right' }} />

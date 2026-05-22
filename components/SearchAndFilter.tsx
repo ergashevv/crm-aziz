@@ -45,7 +45,7 @@ export function SearchAndFilter({
 
   const handleStatus = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (e.target.value && e.target.value !== 'all') {
+    if (e.target.value && e.target.value !== defaultFilter) {
       params.set(filterParam, e.target.value);
     } else {
       params.delete(filterParam);
@@ -74,8 +74,8 @@ export function SearchAndFilter({
             onChange={handleStatus}
             className="w-full pl-4 pr-10 py-3 bg-white border border-slate-200/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm font-bold text-slate-700 appearance-none transition-all cursor-pointer"
           >
-            <option value="all">{filterPlaceholder}</option>
-            {filterOptions ? filterOptions.map(opt => (
+            <option value={defaultFilter}>{filterPlaceholder}</option>
+            {filterOptions ? filterOptions.filter(opt => opt.value !== defaultFilter).map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             )) : (
               <>

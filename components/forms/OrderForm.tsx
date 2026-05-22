@@ -56,6 +56,7 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
   const [error, setError]   = useState<string | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<number[] | null>(null);
+  const [ymapsInstance, setYmapsInstance] = useState<any>(null);
   const router = useRouter();
 
   const defaultDateTime = formatLocalDate(new Date());
@@ -477,23 +478,42 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
                 defaultState={{ center: [41.2995, 69.2401], zoom: 12, controls: [] }}
                 width="100%"
                 height="100%"
+                modules={['geocode']}
+                onLoad={(ymaps: any) => setYmapsInstance(ymaps)}
                 onClick={(e: any) => {
                   const coords = e.get('coords');
                   setSelectedPoint(coords);
                   set('mapUrl', `https://yandex.ru/maps/?pt=${coords[1]},${coords[0]}&z=18`);
                   
-                  const ymaps = (window as any).ymaps;
-                  if (ymaps && ymaps.geocode) {
-                    ymaps.geocode(coords).then((res: any) => {
-                      const firstGeoObject = res.geoObjects.get(0);
-                      if (firstGeoObject) {
-                        const addr = firstGeoObject.getAddressLine();
-                        if (addr) set('address', addr);
+                  const lat = coords[0];
+                  const lon = coords[1];
+                  
+                  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ru`)
+                    .then(res => res.json())
+                    .then(data => {
+                      if (data && data.display_name) {
+                        // Extract a shorter address if possible (e.g., street and house number)
+                        const addr = data.address;
+                        let shortName = data.display_name;
+                        if (addr) {
+                          const parts = [];
+                          if (addr.road) parts.push(addr.road);
+                          if (addr.house_number) parts.push(addr.house_number);
+                          if (addr.suburb || addr.neighbourhood) parts.push(addr.suburb || addr.neighbourhood);
+                          if (addr.city || addr.town) parts.push(addr.city || addr.town);
+                          if (parts.length > 0) {
+                            shortName = parts.join(', ');
+                          }
+                        }
+                        set('address', shortName);
+                      } else {
+                        set('address', 'Локация по карте (URL)');
                       }
-                    }).catch((err: any) => console.error('Geocode error:', err));
-                  } else if (!form.address) {
-                    set('address', 'Локация по карте (URL)');
-                  }
+                    })
+                    .catch((err) => {
+                      console.error('Nominatim error:', err);
+                      set('address', 'Локация по карте (URL)');
+                    });
                 }}
               >
                 <SearchControl options={{ float: 'right' }} />

@@ -8,8 +8,10 @@ import { format } from 'date-fns';
 import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import { TableRowLink } from '@/components/TableRowLink';
-import { LayoutDashboard, Users, Truck, TrendingDown, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Users, Truck, DollarSign, Fuel, CarFront, FileWarning, Recycle, Wrench, Briefcase, HandCoins } from 'lucide-react';
 import { DashboardCharts } from '@/components/DashboardCharts';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
+import { MetricCard } from '@/components/MetricCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +27,11 @@ function getStatusBadge(status: string, dict: any) {
   }
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
 
@@ -33,47 +39,120 @@ export default async function DashboardPage() {
   const { allExpenses, allWarehouseIncome } = await getFinanceData();
   const allClients = await getClients();
   const allDrivers = await getDrivers();
+
+  // Date Parsing Logic
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  const fromParam = searchParams?.from as string;
+  const toParam = searchParams?.to as string;
+
+  const parseLocal = (dateStr: string) => {
+    const [y, m, d] = dateStr.split('-');
+    return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), 0, 0, 0, 0);
+  };
+
+  const currentFrom = fromParam ? parseLocal(fromParam) : new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+  const currentTo = toParam ? parseLocal(toParam) : new Date(todayDate.getTime());
+  currentTo.setHours(23, 59, 59, 999);
+
+  const durationMs = currentTo.getTime() - currentFrom.getTime();
   
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const prevTo = new Date(currentFrom.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - durationMs);
+  prevFrom.setHours(0, 0, 0, 0);
+  prevTo.setHours(23, 59, 59, 999);
 
-  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const isCurrent = (d: Date) => d >= currentFrom && d <= currentTo;
+  const isPrev = (d: Date) => d >= prevFrom && d <= prevTo;
 
-  let todaysRevenue = 0;
-  let monthlyRevenue = 0;
+  let currentMetrics = {
+    revenue: 0, expenses: 0, profit: 0,
+    dispatcherOrders: 0, dispatcherFee: 0, dispatcherSalary: 0,
+    fuel: 0, gai: 0, utilizationM3: 0, utilizationExpense: 0,
+    spareParts: 0, driverSalary: 0
+  };
+
+  let prevMetrics = {
+    revenue: 0, expenses: 0, profit: 0,
+    dispatcherOrders: 0, dispatcherFee: 0, dispatcherSalary: 0,
+    fuel: 0, gai: 0, utilizationM3: 0, utilizationExpense: 0,
+    spareParts: 0, driverSalary: 0
+  };
+
   let pendingPayments = 0;
   let activeOrders = 0;
 
   for (const order of allOrders) {
     const orderDate = new Date(order.createdAt);
-    if (orderDate >= today && (order.paymentStatus === 'entered' || order.paymentStatus === 'received')) {
-      todaysRevenue += order.paymentAmount;
+    
+    // Revenue
+    if (order.paymentStatus === 'entered' || order.paymentStatus === 'received') {
+      if (isCurrent(orderDate)) currentMetrics.revenue += order.paymentAmount;
+      if (isPrev(orderDate)) prevMetrics.revenue += order.paymentAmount;
     }
-    if (orderDate >= thisMonth && (order.paymentStatus === 'entered' || order.paymentStatus === 'received')) {
-      monthlyRevenue += order.paymentAmount;
+
+    // Dispatcher
+    if (order.dispatcherId) {
+      if (isCurrent(orderDate)) {
+        currentMetrics.dispatcherOrders++;
+        currentMetrics.dispatcherFee += (order.dispatcherFee || 0);
+      }
+      if (isPrev(orderDate)) {
+        prevMetrics.dispatcherOrders++;
+        prevMetrics.dispatcherFee += (order.dispatcherFee || 0);
+      }
     }
-    if (order.paymentStatus === 'pending') {
-      pendingPayments++;
+
+    // Utilization Volume
+    if (order.status === 'completed') {
+      if (isCurrent(orderDate)) currentMetrics.utilizationM3 += (order.containerSizeM3 || 0);
+      if (isPrev(orderDate)) prevMetrics.utilizationM3 += (order.containerSizeM3 || 0);
     }
-    if (order.status !== 'completed') {
-      activeOrders++;
-    }
+
+    // Active & Pending status counts for quick links (ignoring date)
+    if (order.paymentStatus === 'pending') pendingPayments++;
+    if (order.status !== 'completed') activeOrders++;
   }
 
   for (const w of allWarehouseIncome) {
      if (w.source === 'client_payment') continue;
      const wDate = new Date(w.recordedAt);
-     if (wDate >= today) todaysRevenue += w.amountRub;
-     if (wDate >= thisMonth) monthlyRevenue += w.amountRub;
+     if (isCurrent(wDate)) currentMetrics.revenue += w.amountRub;
+     if (isPrev(wDate)) prevMetrics.revenue += w.amountRub;
   }
 
-  let monthlyExpenses = 0;
   for (const e of allExpenses) {
     const eDate = new Date(e.recordedAt);
-    if (eDate >= thisMonth) monthlyExpenses += e.amountRub;
+    const amt = e.amountRub;
+    
+    if (isCurrent(eDate)) {
+      currentMetrics.expenses += amt;
+      if (e.category === 'fuel' || e.category === 'diesel') currentMetrics.fuel += amt;
+      if (e.category === 'gai') currentMetrics.gai += amt;
+      if (e.category === 'utilization') currentMetrics.utilizationExpense += amt;
+      if (e.category === 'spare_parts') currentMetrics.spareParts += amt;
+      if (e.category === 'driver_salary') currentMetrics.driverSalary += amt;
+      if (e.category === 'dispatcher_salary') currentMetrics.dispatcherSalary += amt;
+    }
+    if (isPrev(eDate)) {
+      prevMetrics.expenses += amt;
+      if (e.category === 'fuel' || e.category === 'diesel') prevMetrics.fuel += amt;
+      if (e.category === 'gai') prevMetrics.gai += amt;
+      if (e.category === 'utilization') prevMetrics.utilizationExpense += amt;
+      if (e.category === 'spare_parts') prevMetrics.spareParts += amt;
+      if (e.category === 'driver_salary') prevMetrics.driverSalary += amt;
+      if (e.category === 'dispatcher_salary') prevMetrics.dispatcherSalary += amt;
+    }
   }
 
-  const monthlyProfit = monthlyRevenue - monthlyExpenses;
+  currentMetrics.profit = currentMetrics.revenue - currentMetrics.expenses;
+  prevMetrics.profit = prevMetrics.revenue - prevMetrics.expenses;
+
+  const calcTrend = (current: number, prev: number) => {
+    if (prev === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - prev) / Math.abs(prev)) * 100);
+  };
 
   const totalClientsCount = allClients.length;
   const totalDriversCount = allDrivers.length;
@@ -83,7 +162,7 @@ export default async function DashboardPage() {
   // Generate last 7 days list for charts
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    d.setDate(today.getDate() - i);
+    d.setDate(todayDate.getDate() - i);
     d.setHours(0, 0, 0, 0);
     return d;
   }).reverse();
@@ -121,11 +200,9 @@ export default async function DashboardPage() {
     return { date: dateStr, income, expenses };
   });
 
-  // monthly expenses breakdown for chart
   const expensesMap: Record<string, number> = {};
   allExpenses.forEach(e => {
-    const eDate = new Date(e.recordedAt);
-    if (eDate >= thisMonth) {
+    if (isCurrent(new Date(e.recordedAt))) {
       expensesMap[e.category] = (expensesMap[e.category] || 0) + e.amountRub;
     }
   });
@@ -144,123 +221,97 @@ export default async function DashboardPage() {
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.dashboard}</h1>
-            <p className="text-slate-500 mt-1 font-medium">{dict.overview}</p>
+            <p className="text-slate-500 mt-1 font-medium">Мониторинг основных показателей</p>
           </div>
         </div>
+        <DashboardDatePicker />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Link href="/finance" className="block transition-transform hover:scale-105 active:scale-95">
-          <Card className="h-full border-0 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-100 rounded-3xl overflow-hidden bg-gradient-to-br from-indigo-50 to-white relative cursor-pointer">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-indigo-600">
-               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-indigo-800 uppercase tracking-wider">{dict.todays_revenue}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-indigo-600 tracking-tight">{todaysRevenue.toLocaleString()} <span className="text-lg font-semibold opacity-70">RUB</span></div>
-            </CardContent>
-          </Card>
-        </Link>
-        
-        <Link href="/finance" className="block transition-transform hover:scale-105 active:scale-95">
-          <Card className="h-full border-0 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-100 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-50 to-white relative cursor-pointer">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-emerald-600">
-               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-emerald-800 uppercase tracking-wider">{dict.monthly_revenue}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-emerald-600 tracking-tight">{monthlyRevenue.toLocaleString()} <span className="text-lg font-semibold opacity-70">RUB</span></div>
-            </CardContent>
-          </Card>
-        </Link>
-        
-        <Link href="/orders?paymentStatus=pending" className="block transition-transform hover:scale-105 active:scale-95">
-          <Card className="h-full border-0 shadow-lg shadow-rose-500/10 ring-1 ring-rose-100 rounded-3xl overflow-hidden bg-gradient-to-br from-rose-50 to-white relative cursor-pointer">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-rose-600">
-               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-rose-800 uppercase tracking-wider">{dict.pending_payments}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-rose-600">{pendingPayments}</div>
-            </CardContent>
-          </Card>
-        </Link>
-        
-        <Link href="/orders?status=active" className="block transition-transform hover:scale-105 active:scale-95">
-          <Card className="h-full border-0 shadow-lg shadow-blue-500/10 ring-1 ring-blue-100 rounded-3xl overflow-hidden bg-gradient-to-br from-blue-50 to-white relative cursor-pointer">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-blue-600">
-               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-blue-800 uppercase tracking-wider">{dict.active_orders}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-blue-600">{activeOrders}</div>
-            </CardContent>
-          </Card>
-        </Link>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <MetricCard 
+          title="Оборот" 
+          value={currentMetrics.revenue} 
+          prevValue={prevMetrics.revenue}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.revenue, prevMetrics.revenue)} 
+          colorScheme="emerald"
+          icon={<DollarSign className="w-12 h-12" />}
+        />
+        <MetricCard 
+          title="Расход" 
+          value={currentMetrics.expenses} 
+          prevValue={prevMetrics.expenses}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.expenses, prevMetrics.expenses)} 
+          colorScheme="rose"
+          icon={<DollarSign className="w-12 h-12" />}
+        />
+        <MetricCard 
+          title="Доход" 
+          value={currentMetrics.profit} 
+          prevValue={prevMetrics.profit}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.profit, prevMetrics.profit)} 
+          colorScheme={currentMetrics.profit >= 0 ? "cyan" : "orange"}
+          icon={<HandCoins className="w-12 h-12" />}
+        />
+      </div>
 
-        <Link href="/finance" className="block transition-transform hover:scale-105 active:scale-95">
-          <Card className="h-full border-0 shadow-lg shadow-red-500/10 ring-1 ring-red-100 rounded-3xl overflow-hidden bg-gradient-to-br from-red-50 to-white relative cursor-pointer">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-red-600">
-               <TrendingDown className="w-12 h-12" />
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-red-800 uppercase tracking-wider">{dict.monthly_expenses || "Monthly Expenses"}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-red-600 tracking-tight">{monthlyExpenses.toLocaleString()} <span className="text-lg font-semibold opacity-70">RUB</span></div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/finance" className="block transition-transform hover:scale-105 active:scale-95">
-          <Card className={`h-full border-0 shadow-lg ring-1 rounded-3xl overflow-hidden relative cursor-pointer ${monthlyProfit >= 0 ? "shadow-cyan-500/10 ring-cyan-100 bg-gradient-to-br from-cyan-50 to-white" : "shadow-orange-500/10 ring-orange-100 bg-gradient-to-br from-orange-50 to-white"}`}>
-            <div className={`absolute top-0 right-0 p-4 opacity-10 ${monthlyProfit >= 0 ? "text-cyan-600" : "text-orange-600"}`}>
-               <DollarSign className="w-12 h-12" />
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className={`text-xs font-bold uppercase tracking-wider ${monthlyProfit >= 0 ? "text-cyan-800" : "text-orange-800"}`}>{dict.monthly_profit || "Monthly Profit"}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-3xl font-extrabold tracking-tight ${monthlyProfit >= 0 ? "text-cyan-600" : "text-orange-600"}`}>{monthlyProfit.toLocaleString()} <span className="text-lg font-semibold opacity-70">RUB</span></div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/clients" className="block transition-transform hover:scale-105 active:scale-95">
-          <Card className="h-full border-0 shadow-lg shadow-purple-500/10 ring-1 ring-purple-100 rounded-3xl overflow-hidden bg-gradient-to-br from-purple-50 to-white relative cursor-pointer">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-purple-600">
-               <Users className="w-12 h-12" />
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-purple-800 uppercase tracking-wider">{dict.total_clients || "Total Clients"}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-purple-600">{totalClientsCount}</div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/drivers" className="block transition-transform hover:scale-105 active:scale-95">
-          <Card className="h-full border-0 shadow-lg shadow-amber-500/10 ring-1 ring-amber-100 rounded-3xl overflow-hidden bg-gradient-to-br from-amber-50 to-white relative cursor-pointer">
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-amber-600">
-               <Truck className="w-12 h-12" />
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-amber-800 uppercase tracking-wider">{dict.total_drivers || "Total Drivers"}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-amber-600">{totalDriversCount}</div>
-            </CardContent>
-          </Card>
-        </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <MetricCard 
+          title="Диспетчеры" 
+          value={currentMetrics.dispatcherOrders} 
+          prevValue={prevMetrics.dispatcherOrders}
+          unit="зак." 
+          trend={calcTrend(currentMetrics.dispatcherOrders, prevMetrics.dispatcherOrders)} 
+          colorScheme="indigo"
+          icon={<Briefcase className="w-8 h-8" />}
+        />
+        <MetricCard 
+          title="Топливо" 
+          value={currentMetrics.fuel} 
+          prevValue={prevMetrics.fuel}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.fuel, prevMetrics.fuel)} 
+          colorScheme="amber"
+          icon={<Fuel className="w-8 h-8" />}
+        />
+        <MetricCard 
+          title="ГАИ" 
+          value={currentMetrics.gai} 
+          prevValue={prevMetrics.gai}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.gai, prevMetrics.gai)} 
+          colorScheme="rose"
+          icon={<FileWarning className="w-8 h-8" />}
+        />
+        <MetricCard 
+          title="Свалка" 
+          value={currentMetrics.utilizationM3} 
+          prevValue={prevMetrics.utilizationM3}
+          unit="м³" 
+          trend={calcTrend(currentMetrics.utilizationM3, prevMetrics.utilizationM3)} 
+          colorScheme="purple"
+          icon={<Recycle className="w-8 h-8" />}
+        />
+        <MetricCard 
+          title="Запчасти" 
+          value={currentMetrics.spareParts} 
+          prevValue={prevMetrics.spareParts}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.spareParts, prevMetrics.spareParts)} 
+          colorScheme="slate"
+          icon={<Wrench className="w-8 h-8" />}
+        />
+        <MetricCard 
+          title="Зарплата вод." 
+          value={currentMetrics.driverSalary} 
+          prevValue={prevMetrics.driverSalary}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.driverSalary, prevMetrics.driverSalary)} 
+          colorScheme="blue"
+          icon={<CarFront className="w-8 h-8" />}
+        />
       </div>
 
       <DashboardCharts 
@@ -270,8 +321,16 @@ export default async function DashboardPage() {
       />
       
       <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden">
-        <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100">
+        <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100 flex flex-row items-center justify-between">
           <CardTitle>{dict.recent_orders}</CardTitle>
+          <div className="flex gap-4">
+            <Link href="/orders?status=active" className="text-sm font-medium text-blue-600 hover:underline">
+              Активные ({activeOrders})
+            </Link>
+            <Link href="/orders?paymentStatus=pending" className="text-sm font-medium text-rose-600 hover:underline">
+              Неоплаченные ({pendingPayments})
+            </Link>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>

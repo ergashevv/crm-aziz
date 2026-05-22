@@ -98,6 +98,13 @@ function getWorkflowRank(status: string): number {
   return WORKFLOW_RANK[status] ?? -1;
 }
 
+const PaymentTypeIcon = ({ type, size = 16, color = '#64748b' }: { type: string, size?: number, color?: string }) => {
+  if (type === 'cash') return <Banknote size={size} color={color} />;
+  if (type === 'card') return <CreditCard size={size} color={color} />;
+  if (type === 'online') return <Smartphone size={size} color={color} />;
+  return null;
+};
+
 function filterActiveOrders(list: Order[]): Order[] {
   return list.filter(o => o.status !== 'completed');
 }
@@ -1034,7 +1041,13 @@ function AppInner() {
               <MapPin size={14} color="#94a3b8" style={{ marginTop: 2, marginRight: 4 }} />
               <Text style={styles.orderAddress} numberOfLines={2}>{formatAddressDisplay(order.address, locale)}</Text>
             </View>
-            <Text style={styles.orderMeta}>{order.clientName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+              <Text style={styles.orderMeta}>{order.clientName}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f1f5f9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                <PaymentTypeIcon type={order.paymentType} size={14} color="#475569" />
+                <Text style={{ fontSize: 12, color: '#475569', fontWeight: '500' }}>{getPaymentLabel(locale, order.paymentType)}</Text>
+              </View>
+            </View>
           </View>
           <ChevronRight size={20} color="#cbd5e1" />
         </TouchableOpacity>
@@ -1084,6 +1097,16 @@ function AppInner() {
             {locale === 'uz' ? 'Navigatsiya' : 'Навигация'}
           </Text>
         </TouchableOpacity>
+        <View style={styles.heroTimeRow}>
+          <Clock size={16} color="#64748b" style={{ marginRight: 6 }} />
+          <Text style={styles.heroTime}>{timeOnly}</Text>
+          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#cbd5e1', marginHorizontal: 8 }} />
+          <Text style={styles.heroClient}>{order.clientName}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, backgroundColor: '#f1f5f9', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+          <PaymentTypeIcon type={order.paymentType} size={16} color="#475569" />
+          <Text style={{ fontSize: 13, color: '#475569', fontWeight: '600' }}>{getPaymentLabel(locale, order.paymentType)}: {order.paymentAmount.toLocaleString()} {t(locale, 'currency')}</Text>
+        </View>
         <View style={styles.heroClientRow}>
           <Text style={styles.heroClient}>{order.clientName}</Text>
           <TouchableOpacity style={styles.heroCallBtn} onPress={() => callClient(order.clientPhone)}>
@@ -1532,9 +1555,12 @@ function AppInner() {
                       <Text style={styles.detailsLine}>
                         {t(locale, 'duration')}: {getRentalLabel(locale, order.rentalDuration)}
                       </Text>
-                      <Text style={styles.detailsLine}>
-                        {order.paymentAmount.toLocaleString()} {t(locale, 'currency')} · {getPaymentLabel(locale, order.paymentType)}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <PaymentTypeIcon type={order.paymentType} size={16} color="#475569" />
+                        <Text style={[styles.detailsLine, { marginTop: 0 }]}>
+                          {order.paymentAmount.toLocaleString()} {t(locale, 'currency')} · {getPaymentLabel(locale, order.paymentType)}
+                        </Text>
+                      </View>
                     </View>
                   )}
 

@@ -9,6 +9,8 @@ import { getDictionary } from '@/lib/dictionaries';
 import { TableRowLink } from '@/components/TableRowLink';
 import { ClipboardList, Phone } from 'lucide-react';
 import { SearchAndFilter } from '@/components/SearchAndFilter';
+import { StatusTabs } from '@/components/StatusTabs';
+import { AutoRefresh } from '@/components/AutoRefresh';
 import { OrderForm } from '@/components/forms/OrderForm';
 import { ExportButton } from '@/components/ExportButton';
 
@@ -103,11 +105,10 @@ export default async function OrdersPage({
         </div>
       </div>
 
-      <SearchAndFilter
-        dict={dict}
-        defaultFilter="active"
-        filterPlaceholder={lang === 'uz' ? 'Faol buyurtmalar' : 'Активные заказы'}
-        filterOptions={[
+      <AutoRefresh intervalMs={10000} />
+
+      <StatusTabs 
+        options={[
           { value: 'active', label: lang === 'uz' ? 'Faol (tugallanmagan)' : 'Активные' },
           { value: 'all', label: lang === 'uz' ? 'Barchasi' : 'Все' },
           { value: 'new', label: dict.new },
@@ -117,6 +118,12 @@ export default async function OrdersPage({
           { value: 'picked_up', label: dict.picked_up },
           { value: 'completed', label: dict.completed },
         ]}
+        defaultFilter="active"
+      />
+
+      <SearchAndFilter
+        dict={dict}
+        hideFilter={true}
       />
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">

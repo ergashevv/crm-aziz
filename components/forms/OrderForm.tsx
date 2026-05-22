@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { createOrder, updateOrder } from '@/app/actions/entities';
-import { Plus, Edit2, MapPin, ExternalLink, Phone, User, Package, Clock, CreditCard, Truck, Navigation, Map as MapIcon } from 'lucide-react';
+import { Plus, Edit2, MapPin, ExternalLink, Phone, User, Package, Clock, CreditCard, Truck, Navigation, Map as MapIcon, Banknote, Smartphone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { YMaps, Map as YandexMap, Placemark, SearchControl, ZoomControl } from '@pbe/react-yandex-maps';
 
@@ -35,9 +35,9 @@ const CONTAINER_SIZES = [8, 20, 27];
 const RENTAL_PRESETS = ['2 часа', '24 часа', '1 день', '1 неделя', '1 месяц'];
 
 const PAYMENT_TYPES = [
-  { val: 'cash',   emoji: '💵', label: 'Нал.' },
-  { val: 'online', emoji: '📱', label: 'Онлайн' },
-  { val: 'card',   emoji: '💳', label: 'Безнал' },
+  { val: 'cash',   icon: Banknote,   label: 'Нал.' },
+  { val: 'online', icon: Smartphone, label: 'Онлайн' },
+  { val: 'card',   icon: CreditCard, label: 'Безнал' },
 ];
 
 interface Client     { id: number; name: string; phone: string; address: string; mapUrl?: string | null; }
@@ -393,14 +393,14 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
             <div>
               <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Тип оплаты *</Label>
               <div className="grid grid-cols-3 gap-1.5 h-9">
-                {PAYMENT_TYPES.map(({ val, emoji, label }) => (
+                {PAYMENT_TYPES.map(({ val, icon: Icon, label }) => (
                   <button key={val} type="button" onClick={() => set('paymentType', val)}
-                    className={`h-full rounded-xl text-xs font-bold border transition-all ${
+                    className={`h-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold border transition-all ${
                       form.paymentType === val
                         ? 'bg-primary text-white border-primary shadow-sm'
                         : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary'
                     }`}>
-                    {emoji} {label}
+                    <Icon className="h-4 w-4" /> {label}
                   </button>
                 ))}
               </div>

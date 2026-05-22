@@ -472,7 +472,7 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
             <DialogTitle className="text-lg font-bold">Выберите местоположение</DialogTitle>
           </DialogHeader>
           <div className="flex-1 relative">
-            <YMaps query={{ apikey: 'd6b97705-cb47-41ab-85a7-d8c7c93cb4a0', lang: 'ru_RU' }}>
+            <YMaps query={{ apikey: 'd6b97705-cb47-41ab-85a7-d8c7c93cb4a0', lang: 'ru_RU', load: 'package.full' }}>
               <YandexMap
                 defaultState={{ center: [41.2995, 69.2401], zoom: 12, controls: [] }}
                 width="100%"

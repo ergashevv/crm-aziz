@@ -700,18 +700,26 @@ function AppInner() {
     setNavModalOrder(order);
   };
 
+  function extractCoordinates(text: string): { lat: string, lon: string } | null {
+    if (!text) return null;
+    const ptMatch = text.match(/(?:pt|ll|whatshere%5Bpoint%5D|whatshere\[point\])=([\-0-9.]+)(?:,|%2C)([\-0-9.]+)/);
+    if (ptMatch) return { lon: ptMatch[1], lat: ptMatch[2] };
+    const googleMatch = text.match(/@([\-0-9.]+)(?:,|%2C)([\-0-9.]+)/);
+    if (googleMatch) return { lat: googleMatch[1], lon: googleMatch[2] };
+    const qMatch = text.match(/(?:query|q)=([\-0-9.]+)(?:,|%2C)([\-0-9.]+)/);
+    if (qMatch) return { lat: qMatch[1], lon: qMatch[2] };
+    return null;
+  }
+
   const openMapApp = (app: 'yandex' | 'google', order: Order) => {
     setNavModalOrder(null);
     let lat: string | null = null;
     let lon: string | null = null;
 
-    if (order.mapUrl) {
-      // Yandex link format: ?pt=lon,lat
-      const ptMatch = order.mapUrl.match(/pt=([0-9.]+),([0-9.]+)/);
-      if (ptMatch) {
-        lon = ptMatch[1];
-        lat = ptMatch[2];
-      }
+    const coords = extractCoordinates(order.mapUrl || '') || extractCoordinates(order.address || '');
+    if (coords) {
+      lat = coords.lat;
+      lon = coords.lon;
     }
 
     if (app === 'yandex') {
@@ -721,10 +729,10 @@ function AppInner() {
             Linking.openURL(`https://yandex.ru/maps/?pt=${lon},${lat}&z=18`);
           });
         });
-      } else if (order.mapUrl && order.mapUrl.includes('yandex')) {
-        Linking.openURL(order.mapUrl).catch(() => {
-          Linking.openURL(`yandexnavi://build_route_on_map?text=${encodeURIComponent(order.address)}`);
-        });
+      } else if (order.mapUrl && order.mapUrl.startsWith('http')) {
+        Linking.openURL(order.mapUrl);
+      } else if (order.address && order.address.startsWith('http')) {
+        Linking.openURL(order.address);
       } else {
         Linking.openURL(`yandexnavi://build_route_on_map?text=${encodeURIComponent(order.address)}`).catch(() => {
           Linking.openURL(`https://yandex.ru/maps/?text=${encodeURIComponent(order.address)}`);
@@ -735,10 +743,10 @@ function AppInner() {
         Linking.openURL(`google.navigation:q=${lat},${lon}`).catch(() => {
           Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`);
         });
-      } else if (order.mapUrl && order.mapUrl.includes('google')) {
-        Linking.openURL(order.mapUrl).catch(() => {
-          Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`);
-        });
+      } else if (order.mapUrl && order.mapUrl.startsWith('http')) {
+        Linking.openURL(order.mapUrl);
+      } else if (order.address && order.address.startsWith('http')) {
+        Linking.openURL(order.address);
       } else {
         Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`);
       }

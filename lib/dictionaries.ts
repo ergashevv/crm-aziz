@@ -147,6 +147,9 @@ export const dictionaries = {
     no_income_found: "Доходы не найдены.",
     clear_filters: "Сбросить фильтры",
     filtered_total: "Итого по фильтру",
+    last_6_months: "6 месяцев",
+    all_time: "Все время",
+    no_expenses: "Расходы отсутствуют",
   },
   uz: {
     dashboard: "Asosiy",
@@ -296,6 +299,9 @@ export const dictionaries = {
     no_income_found: "Daromadlar topilmadi.",
     clear_filters: "Filtrlarni tozalash",
     filtered_total: "Filtr bo'yicha jami",
+    last_6_months: "6 oy",
+    all_time: "Barcha vaqt",
+    no_expenses: "Xarajatlar topilmadi",
   }
 };
 

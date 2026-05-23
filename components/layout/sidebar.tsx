@@ -34,18 +34,18 @@ export function Sidebar({
 
   const routes = [
     { label: dict.dashboard,                     icon: LayoutDashboard, href: "/dashboard",  color: "text-blue-400" },
-    { label: dict.live_tracking || "Онлайн карта", icon: Map,             href: "/map",         color: "text-cyan-400" },
+    { label: dict.live_tracking,                      icon: Map,             href: "/map",         color: "text-cyan-400" },
     { label: dict.orders,                        icon: ClipboardList,    href: "/orders",      color: "text-indigo-400" },
     { label: dict.clients,                       icon: Users,            href: "/clients",     color: "text-violet-400" },
     { label: dict.drivers,                       icon: Car,              href: "/drivers",     color: "text-amber-400" },
-    { label: (dict as any).management_panel || "Панель управления", icon: Sliders, href: "/management", color: "text-pink-400" },
+    { label: dict.management_panel, icon: Sliders, href: "/management", color: "text-pink-400" },
     { label: dict.finance,                       icon: Wallet,           href: "/finance",     color: "text-emerald-400" },
     { label: dict.fuel_logs,                     icon: Fuel,             href: "/fuel",        color: "text-orange-400" },
     { label: dict.warehouse,                     icon: Warehouse,        href: "/warehouse",   color: "text-rose-400" },
   ];
 
   if (userRole === 'admin') {
-    routes.push({ label: (dict as any).operators || "Operatorlar", icon: UserCog, href: "/operators", color: "text-teal-400" });
+    routes.push({ label: dict.operators_menu || (lang === 'uz' ? 'Operatorlar' : 'Операторы'), icon: UserCog, href: "/operators", color: "text-teal-400" });
   }
 
   return (
@@ -62,7 +62,7 @@ export function Sidebar({
           {!isCollapsed && (
             <div>
               <h1 className="text-[17px] font-black tracking-tight text-white leading-none">Adminka</h1>
-              <p className="text-[10px] text-slate-500 font-medium mt-0.5">CRM системаси</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{lang === 'uz' ? 'CRM tizimi' : 'CRM система'}</p>
             </div>
           )}
         </Link>

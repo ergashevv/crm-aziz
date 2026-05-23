@@ -54,9 +54,9 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{dict.order} #{order.id}</h1>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-muted-foreground">{dict.manage_orders}</p>
-            {order.clientCategory === 'dispatcher' && (
+            {dispatcher && (
               <span className="inline-flex items-center gap-1 text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded-full">
-                <Phone className="h-3 w-3" /> Диспетчер
+                <Phone className="h-3 w-3" /> {lang === 'uz' ? 'Dispetcher' : 'Диспетчер'}
               </span>
             )}
           </div>
@@ -92,8 +92,8 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
             <CardTitle className="flex items-center gap-2">
               {dict.client}
-              {order.clientCategory === 'dispatcher' && (
-                <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Диспетчер</span>
+              {dispatcher && (
+                <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{lang === 'uz' ? 'Dispetcher' : 'Диспетчер'}</span>
               )}
               {order.isExternalVehicle && (
                 <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
@@ -118,21 +118,21 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               <>
                 <div>
                   <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.name}</p>
-                  <p className="font-extrabold text-xl">{client?.name || 'N/A'}</p>
+                  <p className="font-extrabold text-xl">{client?.name || (lang === 'uz' ? 'Ma\'lumot yo\'q' : 'Нет данных')}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.phone}</p>
-                  <a href={`tel:${client?.phone}`} className="font-bold text-lg text-primary hover:underline">{client?.phone || 'N/A'}</a>
+                  <a href={`tel:${client?.phone}`} className="font-bold text-lg text-primary hover:underline">{client?.phone || (lang === 'uz' ? 'Telefon yo\'q' : 'Нет телефона')}</a>
                 </div>
                 {/* Dispatcher info */}
-                {order.clientCategory === 'dispatcher' && dispatcher && (
+                {dispatcher && (
                   <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100 space-y-1">
-                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Диспетчер</p>
+                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">{lang === 'uz' ? 'Dispetcher' : 'Диспетчер'}</p>
                     <p className="font-bold text-slate-800">{dispatcher.name}</p>
                     <a href={`tel:${dispatcher.phone}`} className="text-sm font-semibold text-indigo-600 hover:underline">{dispatcher.phone}</a>
                     {order.dispatcherFee && (
                       <p className="text-sm font-bold text-slate-700 pt-1">
-                        Услуга: <span className="text-indigo-700">{order.dispatcherFee.toLocaleString()} RUB</span>
+                        {lang === 'uz' ? 'Xizmat:' : 'Услуга:'} <span className="text-indigo-700">{order.dispatcherFee.toLocaleString()} RUB</span>
                       </p>
                     )}
                   </div>
@@ -163,7 +163,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                   className="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-bold bg-blue-600 text-white px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors shadow-sm"
                 >
                   <MapPin className="h-3.5 w-3.5" />
-                  Навигация
+                  {lang === 'uz' ? 'Navigatsiya' : 'Навигация'}
                   <ExternalLink className="h-3 w-3 opacity-70" />
                 </a>
               </div>
@@ -200,7 +200,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{lang === 'uz' ? 'Operator' : 'Оператор'}</p>
-                <p className="font-bold text-lg text-slate-700">{operator?.name || <span className="text-slate-400 italic">N/A</span>}</p>
+                <p className="font-bold text-lg text-slate-700">{operator?.name || <span className="text-slate-400 italic">{lang === 'uz' ? 'Noma\'lum' : 'Неизвестно'}</span>}</p>
               </div>
             </div>
 
@@ -231,7 +231,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               </div>
               {order.dispatcherFee ? (
                 <div>
-                  <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">Услуга диспетчера</p>
+                  <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{lang === 'uz' ? 'Dispetcher xizmati' : 'Услуга диспетчера'}</p>
                   <p className="font-bold text-xl text-indigo-600">{order.dispatcherFee.toLocaleString()} <span className="text-sm opacity-70">RUB</span></p>
                 </div>
               ) : null}

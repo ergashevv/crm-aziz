@@ -120,10 +120,10 @@ export default async function FinancePage({
         sourceKey: o.isExternalVehicle ? 'external_vehicle_rental' : 'client_payment',
         sourceLabel: o.isExternalVehicle 
           ? (lang === 'uz' ? 'Begona moshina' : 'Сторонняя машина') 
-          : (dict.client_payment || 'Оплата клиента'),
+          : dict.client_payment,
         clientName: o.isExternalVehicle 
           ? (o.externalDriverName || (lang === 'uz' ? 'Begona haydovchi' : 'Сторонний водитель')) 
-          : (client?.name || dict.client || 'Client'),
+          : (client?.name || dict.client),
         note: o.operatorNote || '',
         address: o.isExternalVehicle ? 'База' : o.address
       });

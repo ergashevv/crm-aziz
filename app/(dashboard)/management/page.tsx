@@ -37,8 +37,8 @@ export default async function ManagementPage() {
             <Sliders className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.management_panel || "Boshqaruv paneli"}</h1>
-            <p className="text-slate-500 mt-1 font-medium">Ma'lumotlarni ko'chirish va biriktirish</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.management_panel}</h1>
+            <p className="text-slate-500 mt-1 font-medium">{lang === 'uz' ? 'Ma\'lumotlarni ko\'chirish va biriktirish' : 'Перенос и переназначение данных'}</p>
           </div>
         </div>
       </div>
@@ -46,8 +46,8 @@ export default async function ManagementPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
           <CardHeader className="bg-slate-50/80 border-b border-slate-100">
-            <CardTitle>Ommaviy ko'chirish (Bulk Reassign)</CardTitle>
-            <CardDescription>Bitta operatordagi barcha buyurtmalar, moliya va ombor kirimlarini boshqa operatorga to'liq o'tkazish.</CardDescription>
+            <CardTitle>{lang === 'uz' ? 'Ommaviy ko\'chirish' : 'Массовое переназначение'}</CardTitle>
+            <CardDescription>{lang === 'uz' ? 'Bitta operatordagi barcha buyurtmalar, moliya va ombor kirimlarini boshqa operatorga to\'liq o\'tkazish.' : 'Перенос всех заказов, финансов и доходов склада одного оператора на другого.'}</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <BulkReassignForm users={allUsers} dict={dict} />
@@ -56,8 +56,8 @@ export default async function ManagementPage() {
 
         <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
           <CardHeader className="bg-slate-50/80 border-b border-slate-100">
-            <CardTitle>Bitta buyurtmani ko'chirish</CardTitle>
-            <CardDescription>Alohida bir buyurtmani qaysidir xodimga (operatorga) biriktirish.</CardDescription>
+            <CardTitle>{lang === 'uz' ? 'Bitta buyurtmani ko\'chirish' : 'Переназначить один заказ'}</CardTitle>
+            <CardDescription>{lang === 'uz' ? 'Alohida bir buyurtmani qaysidir xodimga (operatorga) biriktirish.' : 'Переназначить отдельный заказ конкретному сотруднику (оператору).'}</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <SingleOrderReassignForm users={allUsers} allOrders={allOrders} dict={dict} />

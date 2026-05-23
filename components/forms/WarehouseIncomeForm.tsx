@@ -12,14 +12,32 @@ import { Plus, Edit2 } from 'lucide-react';
 
 const INCOME_SOURCES = ['client_payment', 'external_vehicle_rental'];
 
+const formatNum = (val: string | number) => {
+  const n = String(val).replace(/\D/g, '');
+  if (!n) return '';
+  return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
+};
+
 export function WarehouseIncomeForm({ dict, income }: { dict: any, income?: any }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(income || {
+  const [formData, setFormData] = useState(income ? {
+    source: income.source || '',
+    amountRub: String(income.amountRub || ''),
+    note: income.note || ''
+  } : {
     source: '',
     amountRub: '',
     note: ''
   });
+
+  const [amt, setAmt] = useState(income ? formatNum(income.amountRub) : '');
+
+  const handleAmtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    setAmt(raw ? formatNum(raw) : '');
+    setFormData({ ...formData, amountRub: raw });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +49,10 @@ export function WarehouseIncomeForm({ dict, income }: { dict: any, income?: any 
         await createWarehouseIncome(formData);
       }
       setOpen(false);
-      if (!income) setFormData({ source: '', amountRub: '', note: '' });
+      if (!income) {
+        setFormData({ source: '', amountRub: '', note: '' });
+        setAmt('');
+      }
     } finally {
       setLoading(false);
     }
@@ -70,7 +91,15 @@ export function WarehouseIncomeForm({ dict, income }: { dict: any, income?: any 
           </div>
           <div className="space-y-2">
             <Label htmlFor="amountRub">{dict.amount} (RUB)</Label>
-            <Input id="amountRub" type="number" value={formData.amountRub} onChange={e => setFormData({...formData, amountRub: e.target.value})} required />
+            <Input 
+              id="amountRub" 
+              type="text" 
+              inputMode="numeric"
+              value={amt} 
+              onChange={handleAmtChange} 
+              required 
+              placeholder="0"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="note">{dict.note}</Label>

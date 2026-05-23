@@ -50,8 +50,13 @@ export default async function OrdersPage({
   const statusParam = typeof searchParams.status === 'string' ? searchParams.status : '';
   const status = statusParam || 'active';
 
-  const allFetchedOrders = await getOrders(status === 'overdue_containers' ? 'all' : status, q);
-  const activeOrders = await getOrders('active', '');
+  const [allFetchedOrders, activeOrders, clients, drivers, dispatchers] = await Promise.all([
+    getOrders(status === 'overdue_containers' ? 'all' : status, q),
+    getOrders('active', ''),
+    getClients(),
+    getDrivers(),
+    getDispatchers(),
+  ]);
   const activeCount = activeOrders.length;
   
   // Filter for overdue if needed
@@ -59,9 +64,7 @@ export default async function OrdersPage({
     ? allFetchedOrders.filter((o) => isOverdue(o.order))
     : allFetchedOrders;
 
-  const clients = await getClients();
-  const drivers = await getDrivers();
-  const dispatchers = await getDispatchers();
+
 
   const exportOrdersData = allOrders.map(({ order, client, driver }) => ({
     id: `#${order.id}`,
@@ -83,7 +86,7 @@ export default async function OrdersPage({
     { key: 'date', label: dict.scheduled_date },
     { key: 'driver', label: dict.driver },
     { key: 'status', label: dict.status },
-    { key: 'payment_status', label: dict.payment_status || "To'lov" },
+    { key: 'payment_status', label: dict.payment_status },
     { key: 'amount', label: dict.amount }
   ];
 
@@ -160,7 +163,7 @@ export default async function OrdersPage({
                   <TableCell className="font-medium text-slate-500">
                     <div>#{order.id}</div>
                     {operator && (
-                      <div className="text-[9px] text-slate-400 font-bold mt-0.5 truncate max-w-[85px]" title={`Operator: ${operator.name}`}>
+                      <div className="text-[9px] text-slate-400 font-bold mt-0.5 truncate max-w-[85px]" title={`${lang === 'uz' ? 'Operator' : 'Оператор'}: ${operator.name}`}>
                         {operator.name}
                       </div>
                     )}
@@ -176,7 +179,7 @@ export default async function OrdersPage({
                     ) : (
                       <>
                         <div className="font-semibold">{client?.name}</div>
-                        {order.clientCategory === 'dispatcher' && dispatcher && (
+                        {dispatcher && (
                           <div className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 mt-0.5">
                             <Phone className="h-2.5 w-2.5" />
                             {dispatcher.name}

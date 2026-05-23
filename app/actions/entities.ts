@@ -84,18 +84,19 @@ export async function updateDriver(id: number, data: any) {
 export async function createFuelLog(data: any) {
   const user = await getCurrentUser();
   await db.transaction(async (tx) => {
+    const cleanPrice = parseInt(String(data.priceRub).replace(/\D/g, '')) || 0;
     await tx.insert(fuelLogs).values({
       driverId: parseInt(data.driverId),
       stationName: data.stationName,
       liters: parseInt(data.liters),
-      priceRub: parseInt(data.priceRub),
+      priceRub: cleanPrice,
       vehicle: data.vehicle,
       operatorId: user ? user.id : null,
     });
 
     await tx.insert(expenses).values({
       category: 'fuel',
-      amountRub: parseInt(data.priceRub),
+      amountRub: cleanPrice,
       note: `Автоматически добавлено из заправки: ${data.vehicle} (${data.liters}L) - ${data.stationName}`,
       operatorId: user ? user.id : null,
     });
@@ -112,7 +113,7 @@ export async function updateFuelLog(id: number, data: any) {
     driverId: parseInt(data.driverId),
     stationName: data.stationName,
     liters: parseInt(data.liters),
-    priceRub: parseInt(data.priceRub),
+    priceRub: parseInt(String(data.priceRub).replace(/\D/g, '')) || 0,
     vehicle: data.vehicle,
   }).where(eq(fuelLogs.id, id));
   revalidateTag('fuelLogs');
@@ -124,7 +125,7 @@ export async function createExpense(data: any) {
   const user = await getCurrentUser();
   await db.insert(expenses).values({
     category: data.category,
-    amountRub: parseInt(data.amountRub),
+    amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
     note: data.note,
     operatorId: user ? user.id : null,
   });
@@ -136,7 +137,7 @@ export async function createExpense(data: any) {
 export async function updateExpense(id: number, data: any) {
   await db.update(expenses).set({
     category: data.category,
-    amountRub: parseInt(data.amountRub),
+    amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
     note: data.note,
   }).where(eq(expenses.id, id));
   revalidateTag('expenses');
@@ -149,7 +150,7 @@ export async function createWarehouseIncome(data: any) {
   const user = await getCurrentUser();
   await db.insert(warehouseIncome).values({
     source: data.source,
-    amountRub: parseInt(data.amountRub),
+    amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
     note: data.note,
     operatorId: user ? user.id : null,
   });
@@ -161,7 +162,7 @@ export async function createWarehouseIncome(data: any) {
 export async function updateWarehouseIncome(id: number, data: any) {
   await db.update(warehouseIncome).set({
     source: data.source,
-    amountRub: parseInt(data.amountRub),
+    amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
     note: data.note,
   }).where(eq(warehouseIncome.id, id));
   revalidateTag('warehouse');
@@ -204,7 +205,7 @@ export async function createOrder(data: any) {
   try {
     const isExternalVehicle = !!data.isExternalVehicle;
     const containerSizeM3 = isExternalVehicle ? 8 : parseInt(data.containerSizeM3);
-    const paymentAmount = parseInt(data.paymentAmount);
+    const paymentAmount = parseInt(String(data.paymentAmount).replace(/\D/g, '')) || 0;
     const clientCategory = isExternalVehicle ? 'direct' : (data.clientCategory || 'direct');
 
     // --- Resolve clientId (upsert inline if needed) ---
@@ -279,7 +280,7 @@ export async function createOrder(data: any) {
     }
 
     const newPaymentStatus = isExternalVehicle ? 'entered' : (data.paymentStatus || 'pending');
-    const dispatcherFee = isExternalVehicle ? null : (data.dispatcherFee ? parseInt(data.dispatcherFee) : null);
+    const dispatcherFee = isExternalVehicle ? null : (data.dispatcherFee ? parseInt(String(data.dispatcherFee).replace(/\D/g, '')) : null);
     
     // --- Driver Availability Check ---
     const parsedScheduledAt = parseDate(data.scheduledAt);
@@ -382,7 +383,7 @@ export async function updateOrder(id: number, data: any) {
     const user = await getCurrentUser();
     const isExternalVehicle = !!data.isExternalVehicle;
     const containerSizeM3 = isExternalVehicle ? 8 : parseInt(data.containerSizeM3);
-    const paymentAmount = parseInt(data.paymentAmount);
+    const paymentAmount = parseInt(String(data.paymentAmount).replace(/\D/g, '')) || 0;
     const clientCategory = isExternalVehicle ? 'direct' : (data.clientCategory || 'direct');
 
     // --- Resolve clientId (upsert inline if needed) ---
@@ -478,7 +479,7 @@ export async function updateOrder(id: number, data: any) {
 
     const previousPaymentStatus = order.paymentStatus;
     const newPaymentStatus = isExternalVehicle ? 'entered' : data.paymentStatus;
-    const dispatcherFee = isExternalVehicle ? null : (data.dispatcherFee ? parseInt(data.dispatcherFee) : null);
+    const dispatcherFee = isExternalVehicle ? null : (data.dispatcherFee ? parseInt(String(data.dispatcherFee).replace(/\D/g, '')) : null);
     const status = isExternalVehicle ? 'completed' : data.status;
     const isClosed = isExternalVehicle ? true : data.isClosed;
     const address = isExternalVehicle ? (data.address || 'База') : data.address;

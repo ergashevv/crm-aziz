@@ -77,10 +77,10 @@ export function DriverForm({ dict, driver }: { dict: any, driver?: any }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">{dict.password} ({dict.optional || "Optional"})</Label>
-            <Input id="password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+            <Input id="password" type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? '...' : driver ? (dict.save || 'Save') : (dict.create || 'Create')}
+            {loading ? '...' : driver ? dict.save : dict.create}
           </Button>
         </form>
       </DialogContent>

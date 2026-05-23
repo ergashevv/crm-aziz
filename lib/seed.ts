@@ -314,6 +314,17 @@ async function seed() {
       });
     }
 
+    // GAI (fines and compliance) every 7 days
+    if (daysBack % 7 === 2) {
+      await db.insert(expenses).values({
+        category: 'gai',
+        amountRub: 15000 + (daysBack % 4) * 5000, // 15,000 - 30,000
+        note: `Штраф ГАИ / Оплата техосмотра и разрешений для ТС ${activeDriver.vehiclePlate}`,
+        operatorId: opUser.id,
+        recordedAt: expenseDate
+      });
+    }
+
     // Other general daily expenses
     if (daysBack % 4 === 1) {
       await db.insert(expenses).values({

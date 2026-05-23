@@ -9,10 +9,23 @@ import { createExpense } from '@/app/actions/entities';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
+const formatNum = (val: string | number) => {
+  const n = String(val).replace(/\D/g, '');
+  if (!n) return '';
+  return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
+};
+
 export function QuickExpenseForm({ dict, category }: { dict: any, category: string }) {
   const [loading, setLoading] = useState(false);
   const [amountRub, setAmountRub] = useState('');
+  const [amt, setAmt] = useState('');
   const [note, setNote] = useState('');
+
+  const handleAmtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    setAmt(raw ? formatNum(raw) : '');
+    setAmountRub(raw);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,10 +37,11 @@ export function QuickExpenseForm({ dict, category }: { dict: any, category: stri
         note
       });
       setAmountRub('');
+      setAmt('');
       setNote('');
-      toast.success(dict.save || 'Saved');
+      toast.success(dict.save);
     } catch (err: any) {
-      toast.error(err.message || 'Error saving expense');
+      toast.error(err.message || (dict.error || 'Xatolik'));
     } finally {
       setLoading(false);
     }
@@ -38,9 +52,10 @@ export function QuickExpenseForm({ dict, category }: { dict: any, category: stri
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-500 uppercase">{dict.amount} (RUB)</Label>
         <Input 
-          type="number" 
-          value={amountRub} 
-          onChange={e => setAmountRub(e.target.value)} 
+          type="text" 
+          inputMode="numeric"
+          value={amt} 
+          onChange={handleAmtChange} 
           required 
           placeholder="0"
           className="font-bold text-lg"
@@ -59,7 +74,7 @@ export function QuickExpenseForm({ dict, category }: { dict: any, category: stri
         {loading ? '...' : (
           <>
             <Plus className="h-4 w-4 mr-2" />
-            {dict.add_expense || "Add Expense"}
+            {dict.add_expense}
           </>
         )}
       </Button>

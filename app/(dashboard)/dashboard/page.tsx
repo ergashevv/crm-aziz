@@ -37,11 +37,13 @@ export default async function DashboardPage({
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
 
-  const allOrders = await getDashboardData();
-  const { allExpenses, allWarehouseIncome } = await getFinanceData();
-  const allClients = await getClients();
-  const allDrivers = await getDrivers();
-  const user = await getCurrentUser();
+  const [allOrders, { allExpenses, allWarehouseIncome }, allClients, allDrivers, user] = await Promise.all([
+    getDashboardData(),
+    getFinanceData(),
+    getClients(),
+    getDrivers(),
+    getCurrentUser()
+  ]);
   const isOperator = user?.role === 'operator';
   const currentUserId = user?.id;
 
@@ -265,7 +267,7 @@ export default async function DashboardPage({
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.dashboard}</h1>
-            <p className="text-slate-500 mt-1 font-medium">Мониторинг основных показателей</p>
+            <p className="text-slate-500 mt-1 font-medium">{lang === 'uz' ? "Asosiy ko'rsatkichlar monitoringi" : "Мониторинг основных показателей"}</p>
           </div>
         </div>
         <DashboardDatePicker />
@@ -273,7 +275,7 @@ export default async function DashboardPage({
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard 
-          title="Оборот" 
+          title={lang === 'uz' ? 'Aylanma' : 'Оборот'} 
           value={currentMetrics.revenue} 
           prevValue={prevMetrics.revenue}
           unit="RUB" 
@@ -283,7 +285,7 @@ export default async function DashboardPage({
           href={`/dashboard/revenue?from=${fromParam || ''}&to=${toParam || ''}`}
         />
         <MetricCard 
-          title="Расход" 
+          title={dict.expenses || 'Расход'} 
           value={currentMetrics.expenses} 
           prevValue={prevMetrics.expenses}
           unit="RUB" 
@@ -293,7 +295,7 @@ export default async function DashboardPage({
           href={`/finance?tab=expenses&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
         />
         <MetricCard 
-          title="Доход" 
+          title={dict.net_profit || 'Чистая прибыль'} 
           value={currentMetrics.profit} 
           prevValue={prevMetrics.profit}
           unit="RUB" 
@@ -306,17 +308,17 @@ export default async function DashboardPage({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <MetricCard 
-          title="Диспетчеры" 
+          title={lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры'} 
           value={currentMetrics.dispatcherOrders} 
           prevValue={prevMetrics.dispatcherOrders}
-          unit="зак." 
+          unit={lang === 'uz' ? 'ta' : 'зак.'} 
           trend={calcTrend(currentMetrics.dispatcherOrders, prevMetrics.dispatcherOrders)} 
           colorScheme="indigo"
           icon={<Briefcase className="w-8 h-8" />}
           href="/orders"
         />
         <MetricCard 
-          title="Топливо" 
+          title={dict.fuel || 'Топливо'} 
           value={currentMetrics.fuel} 
           prevValue={prevMetrics.fuel}
           unit="RUB" 
@@ -326,7 +328,7 @@ export default async function DashboardPage({
           href="/fuel"
         />
         <MetricCard 
-          title="ГАИ" 
+          title={dict.gai || 'ГАИ'} 
           value={currentMetrics.gai} 
           prevValue={prevMetrics.gai}
           unit="RUB" 
@@ -336,7 +338,7 @@ export default async function DashboardPage({
           href={`/finance?tab=expenses&category=gai&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
         />
         <MetricCard 
-          title="Свалка" 
+          title={lang === 'uz' ? 'Svalka' : 'Свалка'} 
           value={currentMetrics.utilizationM3} 
           prevValue={prevMetrics.utilizationM3}
           unit="м³" 
@@ -346,7 +348,7 @@ export default async function DashboardPage({
           href="/warehouse"
         />
         <MetricCard 
-          title="Запчасти" 
+          title={dict.spare_parts || 'Запчасти'} 
           value={currentMetrics.spareParts} 
           prevValue={prevMetrics.spareParts}
           unit="RUB" 
@@ -356,7 +358,7 @@ export default async function DashboardPage({
           href={`/finance?tab=expenses&category=spare_parts&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
         />
         <MetricCard 
-          title="Зарплата вод." 
+          title={lang === 'uz' ? 'Haydovchilar' : 'Зарплата вод.'} 
           value={currentMetrics.driverSalary} 
           prevValue={prevMetrics.driverSalary}
           unit="RUB" 
@@ -451,14 +453,14 @@ export default async function DashboardPage({
           <CardTitle>{dict.recent_orders}</CardTitle>
           <div className="flex gap-4">
             <Link href="/orders?status=active" className="text-sm font-medium text-blue-600 hover:underline">
-              Активные ({activeOrders})
+              {lang === 'uz' ? 'Faollar' : 'Активные'} ({activeOrders})
             </Link>
             <Link href="/orders?status=pending_confirmation" className="text-sm font-medium text-amber-600 hover:underline">
-              Ждут подтверждения ({pendingConfirmation})
+              {lang === 'uz' ? 'Tasdiqlash kutilmoqda' : 'Ждут подтверждения'} ({pendingConfirmation})
             </Link>
             {overdueContainers > 0 && (
               <Link href="/orders?status=overdue_containers" className="text-sm font-medium text-rose-600 hover:underline">
-                Просрочены ({overdueContainers})
+                {lang === 'uz' ? "Muddati o'tganlar" : 'Просрочены'} ({overdueContainers})
               </Link>
             )}
           </div>

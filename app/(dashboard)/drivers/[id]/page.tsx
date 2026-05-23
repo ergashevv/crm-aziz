@@ -61,6 +61,18 @@ export default async function DriverDetailPage({ params }: { params: { id: strin
               <p className="text-sm text-muted-foreground">{dict.joined_date}</p>
               <p className="font-medium">{format(new Date(driver.createdAt), 'dd.MM.yyyy')}</p>
             </div>
+            {driver.username && (
+              <div>
+                <p className="text-sm text-muted-foreground">{dict.username}</p>
+                <p className="font-medium text-slate-700 font-mono">{driver.username}</p>
+              </div>
+            )}
+            {driver.password && (
+              <div>
+                <p className="text-sm text-muted-foreground">{dict.password}</p>
+                <p className="font-medium text-slate-700 font-mono">{driver.password}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

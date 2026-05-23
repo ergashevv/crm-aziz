@@ -79,7 +79,7 @@ export function ClientForm({ dict, client }: { dict: any, client?: any }) {
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? '...' : client ? (dict.save || 'Save') : (dict.create || 'Create')}
+            {loading ? '...' : client ? dict.save : dict.create}
           </Button>
         </form>
       </DialogContent>

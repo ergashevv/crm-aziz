@@ -365,14 +365,14 @@ function AppInner() {
   }, []);
 
   const validateDriverSession = useCallback(
-    async (driverId: number, apiUrl: string): Promise<boolean> => {
+    async (driverId: number, apiUrl: string): Promise<boolean | null> => {
       try {
         const res = await fetch(`${apiUrl}/driver/validate?driverId=${driverId}&t=${Date.now()}`);
         if (res.status === 404) return true;
         const data = await res.json();
         return res.ok && data.valid === true;
       } catch {
-        return false;
+        return null;
       }
     },
     []
@@ -408,7 +408,7 @@ function AppInner() {
               : `http://${savedIp ?? 'crm-aziz.vercel.app'}${savedPort ? `:${savedPort}` : ''}/api`;
 
           const valid = await validateDriverSession(parsed.id, apiBase);
-          if (!valid) {
+          if (valid === false) {
             await clearSession();
             showAlert(t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpired'), t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpiredMessage'));
             return;
@@ -613,7 +613,7 @@ function AppInner() {
 
       if (data.length === 0) {
         const valid = await validateDriverSession(driver.id, getApiUrl());
-        if (!valid) {
+        if (valid === false) {
           await clearSession();
           showAlert(t(locale, 'sessionExpired'), t(locale, 'sessionExpiredMessage'));
           return;

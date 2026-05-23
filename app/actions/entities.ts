@@ -237,7 +237,7 @@ export async function createOrder(data: any) {
         }
       }
       if (isNaN(clientId)) {
-        return { success: false, error: "Пожалуйста, выберите клиента / Iltimos, mijozni tanlang" };
+        return { success: false, error: "Пожалуйста, выберите клиента" };
       }
     }
 
@@ -269,14 +269,14 @@ export async function createOrder(data: any) {
 
     if (!isExternalVehicle) {
       if (!data.address || data.address.trim() === '') {
-        return { success: false, error: "Пожалуйста, укажите адрес / Iltimos, manzilni kiriting" };
+        return { success: false, error: "Пожалуйста, укажите адрес" };
       }
       if (isNaN(containerSizeM3)) {
-        return { success: false, error: "Пожалуйста, укажите корректный размер контейнера / Iltimos, to'g'ri konteyner hajmini kiriting" };
+        return { success: false, error: "Пожалуйста, укажите корректный размер контейнера" };
       }
     }
     if (isNaN(paymentAmount)) {
-      return { success: false, error: "Пожалуйста, укажите корректную сумму оплаты / Iltimos, to'g'ri to'lov summasini kiriting" };
+      return { success: false, error: "Пожалуйста, укажите корректную сумму оплаты" };
     }
 
     const newPaymentStatus = isExternalVehicle ? 'entered' : (data.paymentStatus || 'pending');
@@ -294,7 +294,7 @@ export async function createOrder(data: any) {
         if (ao.status === 'completed') continue;
         const aoTime = new Date(ao.scheduledAt).getTime();
         if (Math.abs(aoTime - scheduledTime) <= BUFFER) {
-          return { success: false, error: "Xatolik: Haydovchi bu vaqtda band (±3 soat)! Iltimos, boshqa vaqt yoki haydovchi tanlang." };
+          return { success: false, error: "Ошибка: Водитель занят в это время (±3 часа)! Пожалуйста, выберите другое время или водителя." };
         }
       }
     }
@@ -441,17 +441,17 @@ export async function updateOrder(id: number, data: any) {
 
     if (!isExternalVehicle) {
       if (isNaN(clientId!)) {
-        return { success: false, error: "Пожалуйста, выберите клиента / Iltimos, mijozni tanlang" };
+        return { success: false, error: "Пожалуйста, выберите клиента" };
       }
       if (!data.address || data.address.trim() === '') {
-        return { success: false, error: "Пожалуйста, укажите адрес / Iltimos, manzilni kiriting" };
+        return { success: false, error: "Пожалуйста, укажите адрес" };
       }
       if (isNaN(containerSizeM3)) {
-        return { success: false, error: "Пожалуйста, укажите корректный размер контейнера / Iltimos, to'g'ri konteyner hajmini kiriting" };
+        return { success: false, error: "Пожалуйста, укажите корректный размер контейнера" };
       }
     }
     if (isNaN(paymentAmount)) {
-      return { success: false, error: "Пожалуйста, укажите корректную сумму оплаты / Iltimos, to'g'ri to'lov summasini kiriting" };
+      return { success: false, error: "Пожалуйста, укажите корректную сумму оплаты" };
     }
 
     // get order first
@@ -472,7 +472,7 @@ export async function updateOrder(id: number, data: any) {
         if (ao.status === 'completed' || ao.id === id) continue;
         const aoTime = new Date(ao.scheduledAt).getTime();
         if (Math.abs(aoTime - scheduledTime) <= BUFFER) {
-          return { success: false, error: "Xatolik: Haydovchi bu vaqtda band (±3 soat)! Iltimos, boshqa vaqt yoki haydovchi tanlang." };
+          return { success: false, error: "Ошибка: Водитель занят в это время (±3 часа)! Пожалуйста, выберите другое время или водителя." };
         }
       }
     }

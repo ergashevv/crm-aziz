@@ -1,7 +1,7 @@
 import { db } from './db';
 import { orders, clients, drivers, fuelLogs, expenses, warehouseIncome, dispatchers, users } from './schema';
 import { unstable_cache } from 'next/cache';
-import { desc, eq, and, or, ilike, ne } from 'drizzle-orm';
+import { desc, eq, and, or, ilike, ne, asc, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth';
 
 export const getOperators = unstable_cache(
@@ -30,6 +30,7 @@ export const getOrders = async (status?: string, q?: string) => {
 
     if (status === 'active') {
       conditions.push(eq(orders.isClosed, false));
+      conditions.push(ne(orders.status, 'completed'));
     } else if (status === 'pending_confirmation') {
       conditions.push(eq(orders.isClosed, false));
       conditions.push(or(eq(orders.status, 'completed'), eq(orders.paymentStatus, 'received')));
@@ -71,9 +72,13 @@ export const getOrders = async (status?: string, q?: string) => {
     .leftJoin(dispatchers, eq(orders.dispatcherId, dispatchers.id))
     .leftJoin(users, eq(orders.operatorId, users.id));
 
+    const orderByClause = status === 'active'
+      ? [sql`CASE WHEN ${orders.status} = 'in_progress' THEN 1 ELSE 2 END`, asc(orders.createdAt)]
+      : [desc(orders.createdAt)];
+
     return await (conditions.length > 0 
-      ? query.where(and(...conditions)).orderBy(desc(orders.createdAt))
-      : query.orderBy(desc(orders.createdAt)));
+      ? query.where(and(...conditions)).orderBy(...orderByClause)
+      : query.orderBy(...orderByClause));
   };
 
 export const getClients = unstable_cache(

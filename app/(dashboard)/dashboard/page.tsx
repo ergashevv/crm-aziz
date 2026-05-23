@@ -106,7 +106,7 @@ export default async function DashboardPage({
     }
 
     // Revenue
-    if (order.paymentStatus === 'entered' || order.paymentStatus === 'received') {
+    if (order.paymentStatus === 'entered') {
       const amt = order.paymentAmount;
       const isExt = order.isExternalVehicle;
       if (isCurrent(orderDate)) {
@@ -142,7 +142,7 @@ export default async function DashboardPage({
     // Active & Pending status counts for quick links (ignoring date)
     // Operators might want to see all active orders so they can pick them up.
     if (order.paymentStatus === 'pending') pendingPayments++;
-    if (!order.isClosed) activeOrders++;
+    if (!order.isClosed && order.status !== 'completed') activeOrders++;
   }
 
   for (const w of allWarehouseIncome) {
@@ -198,7 +198,7 @@ export default async function DashboardPage({
   const totalDriversCount = allDrivers.length;
 
   const recentOrders = allOrders
-    .filter(o => !o.isClosed && (!isOperator || o.operatorId === currentUserId))
+    .filter(o => !o.isClosed && o.status !== 'completed' && (!isOperator || o.operatorId === currentUserId))
     .slice(0, 8);
 
   // Generate last 7 days list for charts

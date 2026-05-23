@@ -18,9 +18,9 @@ export async function POST(request: Request) {
       const user = userResult[0];
       const sessionId = generateSessionId();
 
-      // Expire in 7 days
+      // Expire in 10 years
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
+      expiresAt.setFullYear(expiresAt.getFullYear() + 10);
 
       await db.insert(sessions).values({
         id: sessionId,
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 60 * 60 * 24 * 7, // 1 week
+        maxAge: 60 * 60 * 24 * 365 * 10, // 10 years
       });
       return response;
     }

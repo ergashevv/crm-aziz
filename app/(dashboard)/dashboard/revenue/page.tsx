@@ -69,7 +69,7 @@ export default async function RevenueDetailPage({
   for (const order of allOrders) {
     const orderDate = new Date(order.createdAt);
     
-    if (order.paymentStatus === 'entered' || order.paymentStatus === 'received') {
+    if (order.paymentStatus === 'entered') {
       const amt = order.paymentAmount;
       const isExt = order.isExternalVehicle;
       

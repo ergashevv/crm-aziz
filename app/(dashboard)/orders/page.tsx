@@ -13,6 +13,7 @@ import { StatusTabs } from '@/components/StatusTabs';
 import { AutoRefresh } from '@/components/AutoRefresh';
 import { OrderForm } from '@/components/forms/OrderForm';
 import { ExportButton } from '@/components/ExportButton';
+import { ConfirmPaymentButton } from '@/components/ConfirmPaymentButton';
 import { isOverdue } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -222,7 +223,8 @@ export default async function OrdersPage({
                   <TableCell className="text-right font-bold text-slate-700">
                     {order.paymentAmount.toLocaleString()} <span className="text-xs text-slate-400 font-medium">RUB</span>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right flex items-center justify-end">
+                    <ConfirmPaymentButton orderId={order.id} currentStatus={order.paymentStatus} />
                     <OrderForm dict={dict} order={order} clients={clients} drivers={drivers} dispatchers={dispatchers} activeOrders={activeOrders} />
                   </TableCell>
                 </TableRowLink>

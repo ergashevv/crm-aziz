@@ -27,6 +27,8 @@ async function run() {
   console.log('currentFrom:', currentFrom.toString());
   console.log('currentTo:', currentTo.toString());
 
+  const isCurrent = (d: Date) => d >= currentFrom && d <= currentTo;
+
   for (const o of allOrders) {
     const oDate = new Date(o.createdAt);
     if (isCurrent(oDate)) {

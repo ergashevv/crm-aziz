@@ -1,6 +1,6 @@
 import React from 'react';
 import { db } from '@/lib/db';
-import { orders, clients, drivers, dispatchers } from '@/lib/schema';
+import { orders, clients, drivers, dispatchers, users } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
@@ -27,17 +27,19 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     client: clients,
     driver: drivers,
     dispatcher: dispatchers,
+    operator: users,
   })
   .from(orders)
   .leftJoin(clients, eq(orders.clientId, clients.id))
   .leftJoin(drivers, eq(orders.driverId, drivers.id))
   .leftJoin(dispatchers, eq(orders.dispatcherId, dispatchers.id))
+  .leftJoin(users, eq(orders.operatorId, users.id))
   .where(eq(orders.id, orderId))
   .limit(1);
 
   if (!orderData) return notFound();
 
-  const { order, client, driver, dispatcher } = orderData;
+  const { order, client, driver, dispatcher, operator } = orderData;
 
   const addressMapUrl = order.mapUrl ||
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`;
@@ -61,11 +63,25 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </div>
       </div>
 
-      <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl mb-8">
-        <CardContent className="p-8">
-          <OrderStatusUpdater orderId={order.id} currentStatus={order.status} dict={dict} />
-        </CardContent>
-      </Card>
+      {order.isExternalVehicle ? (
+        <div className="bg-orange-50/50 border border-orange-200/60 p-6 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/80 backdrop-blur-xl mb-8">
+          <div>
+            <h3 className="text-lg font-bold text-orange-900">{lang === 'uz' ? 'Tashqi mashina buyurtmasi' : 'Заказ сторонней машины'}</h3>
+            <p className="text-slate-500 text-sm mt-0.5">
+              {lang === 'uz' ? 'Bu buyurtma avtomatik ravishda yakunlangan, kiritilgan va yopilgan.' : 'Этот заказ автоматически завершен, внесен и закрыт.'}
+            </p>
+          </div>
+          <span className="inline-flex items-center text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-4 py-1.5 self-start sm:self-auto">
+            {dict.completed}
+          </span>
+        </div>
+      ) : (
+        <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl mb-8">
+          <CardContent className="p-8">
+            <OrderStatusUpdater orderId={order.id} currentStatus={order.status} dict={dict} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Client Card */}
@@ -79,29 +95,49 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               {order.clientCategory === 'dispatcher' && (
                 <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Диспетчер</span>
               )}
+              {order.isExternalVehicle && (
+                <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                  {lang === 'uz' ? 'Begona mashina' : 'Сторонняя машина'}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 pt-6 relative z-10">
-            <div>
-              <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.name}</p>
-              <p className="font-extrabold text-xl">{client?.name || 'N/A'}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.phone}</p>
-              <a href={`tel:${client?.phone}`} className="font-bold text-lg text-primary hover:underline">{client?.phone || 'N/A'}</a>
-            </div>
-            {/* Dispatcher info */}
-            {order.clientCategory === 'dispatcher' && dispatcher && (
-              <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100 space-y-1">
-                <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Диспетчер</p>
-                <p className="font-bold text-slate-800">{dispatcher.name}</p>
-                <a href={`tel:${dispatcher.phone}`} className="text-sm font-semibold text-indigo-600 hover:underline">{dispatcher.phone}</a>
-                {order.dispatcherFee && (
-                  <p className="text-sm font-bold text-slate-700 pt-1">
-                    Услуга: <span className="text-indigo-700">{order.dispatcherFee.toLocaleString()} RUB</span>
-                  </p>
+            {order.isExternalVehicle ? (
+              <>
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.driver}</p>
+                  <p className="font-extrabold text-xl text-orange-600">{order.externalDriverName || (lang === 'uz' ? 'Noma\'lum' : 'Неизвестно')}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{lang === 'uz' ? 'Mashina turi' : 'Тип автомобиля'}</p>
+                  <p className="font-bold text-lg text-slate-700">{lang === 'uz' ? 'Begona mashina' : 'Сторонняя машина'}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.name}</p>
+                  <p className="font-extrabold text-xl">{client?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.phone}</p>
+                  <a href={`tel:${client?.phone}`} className="font-bold text-lg text-primary hover:underline">{client?.phone || 'N/A'}</a>
+                </div>
+                {/* Dispatcher info */}
+                {order.clientCategory === 'dispatcher' && dispatcher && (
+                  <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100 space-y-1">
+                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Диспетчер</p>
+                    <p className="font-bold text-slate-800">{dispatcher.name}</p>
+                    <a href={`tel:${dispatcher.phone}`} className="text-sm font-semibold text-indigo-600 hover:underline">{dispatcher.phone}</a>
+                    {order.dispatcherFee && (
+                      <p className="text-sm font-bold text-slate-700 pt-1">
+                        Услуга: <span className="text-indigo-700">{order.dispatcherFee.toLocaleString()} RUB</span>
+                      </p>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -154,7 +190,17 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.driver}</p>
-                <p className="font-bold text-lg text-primary">{driver?.name || <span className="text-slate-400 italic">{dict.unassigned}</span>}</p>
+                <p className="font-bold text-lg text-primary">
+                  {order.isExternalVehicle ? (
+                    <span className="text-orange-600 font-bold">{order.externalDriverName || (lang === 'uz' ? 'Begona' : 'Сторонняя')}</span>
+                  ) : (
+                    driver?.name || <span className="text-slate-400 italic">{dict.unassigned}</span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{lang === 'uz' ? 'Operator' : 'Оператор'}</p>
+                <p className="font-bold text-lg text-slate-700">{operator?.name || <span className="text-slate-400 italic">N/A</span>}</p>
               </div>
             </div>
 
@@ -191,7 +237,13 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               ) : null}
               <div>
                 <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">{dict.payment_status}</p>
-                <PaymentStatusUpdater orderId={order.id} currentStatus={order.paymentStatus} dict={dict} />
+                {order.isExternalVehicle ? (
+                  <span className="inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 bg-emerald-50 text-emerald-700 border-emerald-200">
+                    {dict.entered}
+                  </span>
+                ) : (
+                  <PaymentStatusUpdater orderId={order.id} currentStatus={order.paymentStatus} dict={dict} />
+                )}
               </div>
             </div>
           </CardContent>

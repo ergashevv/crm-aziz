@@ -12,6 +12,8 @@ import { LayoutDashboard, Users, Truck, DollarSign, Fuel, CarFront, FileWarning,
 import { DashboardCharts } from '@/components/DashboardCharts';
 import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { MetricCard } from '@/components/MetricCard';
+import { getCurrentUser } from '@/lib/auth';
+import { isOverdue } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +41,9 @@ export default async function DashboardPage({
   const { allExpenses, allWarehouseIncome } = await getFinanceData();
   const allClients = await getClients();
   const allDrivers = await getDrivers();
+  const user = await getCurrentUser();
+  const isOperator = user?.role === 'operator';
+  const currentUserId = user?.id;
 
   // Date Parsing Logic
   const todayDate = new Date();
@@ -68,6 +73,7 @@ export default async function DashboardPage({
 
   let currentMetrics = {
     revenue: 0, expenses: 0, profit: 0,
+    revenueOwn: 0, revenueExternal: 0,
     dispatcherOrders: 0, dispatcherFee: 0, dispatcherSalary: 0,
     fuel: 0, gai: 0, utilizationM3: 0, utilizationExpense: 0,
     spareParts: 0, driverSalary: 0
@@ -75,6 +81,7 @@ export default async function DashboardPage({
 
   let prevMetrics = {
     revenue: 0, expenses: 0, profit: 0,
+    revenueOwn: 0, revenueExternal: 0,
     dispatcherOrders: 0, dispatcherFee: 0, dispatcherSalary: 0,
     fuel: 0, gai: 0, utilizationM3: 0, utilizationExpense: 0,
     spareParts: 0, driverSalary: 0
@@ -82,14 +89,34 @@ export default async function DashboardPage({
 
   let pendingPayments = 0;
   let activeOrders = 0;
+  let pendingConfirmation = 0;
+  let overdueContainers = 0;
 
   for (const order of allOrders) {
+    if (isOperator && order.operatorId !== currentUserId) continue;
+
     const orderDate = new Date(order.createdAt);
     
+    // Check overdue
+    if (isOverdue(order)) overdueContainers++;
+    if (!order.isClosed && (order.status === 'completed' || order.paymentStatus === 'received')) {
+      pendingConfirmation++;
+    }
+
     // Revenue
     if (order.paymentStatus === 'entered' || order.paymentStatus === 'received') {
-      if (isCurrent(orderDate)) currentMetrics.revenue += order.paymentAmount;
-      if (isPrev(orderDate)) prevMetrics.revenue += order.paymentAmount;
+      const amt = order.paymentAmount;
+      const isExt = order.isExternalVehicle;
+      if (isCurrent(orderDate)) {
+        currentMetrics.revenue += amt;
+        if (isExt) currentMetrics.revenueExternal += amt;
+        else currentMetrics.revenueOwn += amt;
+      }
+      if (isPrev(orderDate)) {
+        prevMetrics.revenue += amt;
+        if (isExt) prevMetrics.revenueExternal += amt;
+        else prevMetrics.revenueOwn += amt;
+      }
     }
 
     // Dispatcher
@@ -111,18 +138,29 @@ export default async function DashboardPage({
     }
 
     // Active & Pending status counts for quick links (ignoring date)
+    // Operators might want to see all active orders so they can pick them up.
     if (order.paymentStatus === 'pending') pendingPayments++;
-    if (order.status !== 'completed') activeOrders++;
+    if (!order.isClosed) activeOrders++;
   }
 
   for (const w of allWarehouseIncome) {
      if (w.source === 'client_payment') continue;
+     if (isOperator && w.operatorId !== currentUserId) continue;
+
      const wDate = new Date(w.recordedAt);
-     if (isCurrent(wDate)) currentMetrics.revenue += w.amountRub;
-     if (isPrev(wDate)) prevMetrics.revenue += w.amountRub;
+     if (isCurrent(wDate)) {
+       currentMetrics.revenue += w.amountRub;
+       currentMetrics.revenueExternal += w.amountRub;
+     }
+     if (isPrev(wDate)) {
+       prevMetrics.revenue += w.amountRub;
+       prevMetrics.revenueExternal += w.amountRub;
+     }
   }
 
   for (const e of allExpenses) {
+    if (isOperator && e.operatorId !== currentUserId) continue;
+
     const eDate = new Date(e.recordedAt);
     const amt = e.amountRub;
     
@@ -157,7 +195,9 @@ export default async function DashboardPage({
   const totalClientsCount = allClients.length;
   const totalDriversCount = allDrivers.length;
 
-  const recentOrders = allOrders.filter(o => o.status !== 'completed').slice(0, 8);
+  const recentOrders = allOrders
+    .filter(o => !o.isClosed && (!isOperator || o.operatorId === currentUserId))
+    .slice(0, 8);
 
   // Generate last 7 days list for charts
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -173,15 +213,17 @@ export default async function DashboardPage({
     let expenses = 0;
 
     allOrders.forEach(order => {
+      if (isOperator && order.operatorId !== currentUserId) return;
       const orderDate = new Date(order.createdAt);
       orderDate.setHours(0, 0, 0, 0);
-      if (orderDate.getTime() === date.getTime() && (order.paymentStatus === 'entered' || order.paymentStatus === 'received')) {
+      if (orderDate.getTime() === date.getTime() && order.paymentStatus === 'entered') {
         income += order.paymentAmount;
       }
     });
 
     allWarehouseIncome.forEach(w => {
       if (w.source === 'client_payment') return;
+      if (isOperator && w.operatorId !== currentUserId) return;
       const wDate = new Date(w.recordedAt);
       wDate.setHours(0, 0, 0, 0);
       if (wDate.getTime() === date.getTime()) {
@@ -190,6 +232,7 @@ export default async function DashboardPage({
     });
 
     allExpenses.forEach(e => {
+      if (isOperator && e.operatorId !== currentUserId) return;
       const eDate = new Date(e.recordedAt);
       eDate.setHours(0, 0, 0, 0);
       if (eDate.getTime() === date.getTime()) {
@@ -202,6 +245,7 @@ export default async function DashboardPage({
 
   const expensesMap: Record<string, number> = {};
   allExpenses.forEach(e => {
+    if (isOperator && e.operatorId !== currentUserId) return;
     if (isCurrent(new Date(e.recordedAt))) {
       expensesMap[e.category] = (expensesMap[e.category] || 0) + e.amountRub;
     }
@@ -236,6 +280,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.revenue, prevMetrics.revenue)} 
           colorScheme="emerald"
           icon={<DollarSign className="w-12 h-12" />}
+          href={`/dashboard/revenue?from=${fromParam || ''}&to=${toParam || ''}`}
         />
         <MetricCard 
           title="Расход" 
@@ -245,6 +290,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.expenses, prevMetrics.expenses)} 
           colorScheme="rose"
           icon={<DollarSign className="w-12 h-12" />}
+          href={`/finance?tab=expenses&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
         />
         <MetricCard 
           title="Доход" 
@@ -254,6 +300,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.profit, prevMetrics.profit)} 
           colorScheme={currentMetrics.profit >= 0 ? "cyan" : "orange"}
           icon={<HandCoins className="w-12 h-12" />}
+          href={`/finance?tab=income&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
         />
       </div>
 
@@ -266,6 +313,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.dispatcherOrders, prevMetrics.dispatcherOrders)} 
           colorScheme="indigo"
           icon={<Briefcase className="w-8 h-8" />}
+          href="/orders"
         />
         <MetricCard 
           title="Топливо" 
@@ -275,6 +323,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.fuel, prevMetrics.fuel)} 
           colorScheme="amber"
           icon={<Fuel className="w-8 h-8" />}
+          href="/fuel"
         />
         <MetricCard 
           title="ГАИ" 
@@ -284,6 +333,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.gai, prevMetrics.gai)} 
           colorScheme="rose"
           icon={<FileWarning className="w-8 h-8" />}
+          href={`/finance?tab=expenses&category=gai&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
         />
         <MetricCard 
           title="Свалка" 
@@ -293,6 +343,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.utilizationM3, prevMetrics.utilizationM3)} 
           colorScheme="purple"
           icon={<Recycle className="w-8 h-8" />}
+          href="/warehouse"
         />
         <MetricCard 
           title="Запчасти" 
@@ -302,6 +353,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.spareParts, prevMetrics.spareParts)} 
           colorScheme="slate"
           icon={<Wrench className="w-8 h-8" />}
+          href={`/finance?tab=expenses&category=spare_parts&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
         />
         <MetricCard 
           title="Зарплата вод." 
@@ -311,6 +363,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.driverSalary, prevMetrics.driverSalary)} 
           colorScheme="blue"
           icon={<CarFront className="w-8 h-8" />}
+          href="/drivers"
         />
       </div>
 
@@ -319,6 +372,79 @@ export default async function DashboardPage({
         expensesByCategory={chartExpensesByCategory} 
         dict={dict} 
       />
+
+      {/* Revenue Allocation Analysis */}
+      {currentMetrics.revenue > 0 && (
+        <Card className="border border-slate-200/60 shadow-sm rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 px-6 py-5">
+            <CardTitle className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              📊 {lang === 'uz' ? 'Tushum taqsimoti tahlili' : 'Анализ распределения выручки'}
+            </CardTitle>
+            <p className="text-slate-400 text-xs mt-0.5">
+              {lang === 'uz' 
+                ? `Jami tushgan pulni qaysi sohalarga va necha foizi sarflanganligi (Jami tushum: ${currentMetrics.revenue.toLocaleString()} RUB)`
+                : `Какая часть выручки пошла на прибыль, а какая — на расходы (Всего получено: ${currentMetrics.revenue.toLocaleString()} RUB)`}
+            </p>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            {/* Split Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
+                <span>{lang === 'uz' ? 'Sof foyda' : 'Чистая прибыль'}: {Math.max(0, Math.round((currentMetrics.profit / currentMetrics.revenue) * 100))}%</span>
+                <span>{lang === 'uz' ? 'Xarajatlar' : 'Расходы'}: {Math.round((currentMetrics.expenses / currentMetrics.revenue) * 100)}%</span>
+              </div>
+              <div className="h-4.5 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                <div 
+                  style={{ width: `${Math.max(0, Math.round((currentMetrics.profit / currentMetrics.revenue) * 100))}%` }} 
+                  className="bg-emerald-500 h-full transition-all duration-500" 
+                />
+                <div 
+                  style={{ width: `${Math.round((currentMetrics.expenses / currentMetrics.revenue) * 100)}%` }} 
+                  className="bg-rose-500 h-full transition-all duration-500" 
+                />
+              </div>
+            </div>
+
+            {/* Expenses Category Breakdowns as % of Revenue */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                {lang === 'uz' ? 'Xarajat toifalari kesimida (Tushumga nisbatan %)' : 'Расходы по категориям (% от выручки)'}
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { key: 'fuel', label: dict.fuel || 'Топливо', color: 'bg-amber-500', value: currentMetrics.fuel },
+                  { key: 'driver_salary', label: dict.driver_salary || 'Зарплата водителя', color: 'bg-blue-500', value: currentMetrics.driverSalary },
+                  { key: 'dispatcher_salary', label: dict.dispatcher_salary || 'Зарплата диспетчера', color: 'bg-indigo-500', value: currentMetrics.dispatcherSalary },
+                  { key: 'utilization', label: dict.utilization || 'Утилизация', color: 'bg-purple-500', value: currentMetrics.utilizationExpense },
+                  { key: 'spare_parts', label: dict.spare_parts || 'Запчасти', color: 'bg-slate-500', value: currentMetrics.spareParts },
+                  { key: 'gai', label: dict.gai || 'ГАИ', color: 'bg-rose-500', value: currentMetrics.gai },
+                ]
+                .filter(item => item.value > 0)
+                .map(item => {
+                  const pct = Math.round((item.value / currentMetrics.revenue) * 100);
+                  return (
+                    <div key={item.key} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className={`w-2.5 h-2.5 rounded-full ${item.color} inline-block`} />
+                          {item.label}
+                        </span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div style={{ width: `${pct}%` }} className={`h-full ${item.color} rounded-full`} />
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 block">
+                        {item.value.toLocaleString()} RUB
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden">
         <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100 flex flex-row items-center justify-between">
@@ -327,9 +453,14 @@ export default async function DashboardPage({
             <Link href="/orders?status=active" className="text-sm font-medium text-blue-600 hover:underline">
               Активные ({activeOrders})
             </Link>
-            <Link href="/orders?paymentStatus=pending" className="text-sm font-medium text-rose-600 hover:underline">
-              Неоплаченные ({pendingPayments})
+            <Link href="/orders?status=pending_confirmation" className="text-sm font-medium text-amber-600 hover:underline">
+              Ждут подтверждения ({pendingConfirmation})
             </Link>
+            {overdueContainers > 0 && (
+              <Link href="/orders?status=overdue_containers" className="text-sm font-medium text-rose-600 hover:underline">
+                Просрочены ({overdueContainers})
+              </Link>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">

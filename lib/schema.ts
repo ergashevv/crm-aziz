@@ -4,8 +4,9 @@ export const rentalDurationEnum = pgEnum('rental_duration', ['1_day', '1_week', 
 export const orderStatusEnum = pgEnum('status', ['new', 'assigned', 'in_progress', 'container_placed', 'picked_up', 'completed']);
 export const paymentTypeEnum = pgEnum('payment_type', ['cash', 'card', 'online']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'received', 'entered']);
-export const expenseCategoryEnum = pgEnum('expense_category', ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other']);
+export const expenseCategoryEnum = pgEnum('expense_category', ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other', 'master_fee']);
 export const incomeSourceEnum = pgEnum('income_source', ['client_payment', 'external_vehicle_rental']);
+export const usersRoleEnum = pgEnum('user_role', ['admin', 'operator']);
 
 export const clients = pgTable('clients', {
   id: serial('id').primaryKey(),
@@ -23,6 +24,22 @@ export const dispatchers = pgTable('dispatchers', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  password: text('password').notNull(),
+  name: text('name').notNull(),
+  phone: text('phone'),
+  role: usersRoleEnum('role').default('operator').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const sessions = pgTable('sessions', {
+  id: text('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+});
+
 export const drivers = pgTable('drivers', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
@@ -38,7 +55,7 @@ export const drivers = pgTable('drivers', {
 
 export const orders = pgTable('orders', {
   id: serial('id').primaryKey(),
-  clientId: integer('client_id').references(() => clients.id).notNull(),
+  clientId: integer('client_id').references(() => clients.id),
   driverId: integer('driver_id').references(() => drivers.id),
   operatorNote: text('operator_note'),
   address: text('address').notNull(),
@@ -56,6 +73,10 @@ export const orders = pgTable('orders', {
   dispatcherFee: integer('dispatcher_fee'),
   referralName: text('referral_name'),
   referralPercent: integer('referral_percent'),
+  isClosed: boolean('is_closed').default(false).notNull(),
+  operatorId: integer('operator_id').references(() => users.id),
+  isExternalVehicle: boolean('is_external_vehicle').default(false).notNull(),
+  externalDriverName: text('external_driver_name'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -67,6 +88,7 @@ export const fuelLogs = pgTable('fuel_logs', {
   liters: integer('liters').notNull(),
   priceRub: integer('price_rub').notNull(),
   vehicle: text('vehicle').notNull(),
+  operatorId: integer('operator_id').references(() => users.id),
   loggedAt: timestamp('logged_at').defaultNow().notNull(),
 });
 
@@ -75,6 +97,7 @@ export const expenses = pgTable('expenses', {
   category: expenseCategoryEnum('category').notNull(),
   amountRub: integer('amount_rub').notNull(),
   note: text('note'),
+  operatorId: integer('operator_id').references(() => users.id),
   recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 });
 
@@ -83,5 +106,6 @@ export const warehouseIncome = pgTable('warehouse_income', {
   source: incomeSourceEnum('source').notNull(),
   amountRub: integer('amount_rub').notNull(),
   note: text('note'),
+  operatorId: integer('operator_id').references(() => users.id),
   recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 });

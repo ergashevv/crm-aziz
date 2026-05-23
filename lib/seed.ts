@@ -1,9 +1,8 @@
 import { db } from './db';
-import { clients, drivers, orders, expenses, fuelLogs, warehouseIncome } from './schema';
+import { clients, drivers, orders, expenses, fuelLogs, warehouseIncome, users, sessions, dispatchers } from './schema';
 
 type OrderStatus = 'new' | 'assigned' | 'in_progress' | 'container_placed' | 'picked_up' | 'completed';
 
-/** Local midnight for today + offset days (0 = today, 1 = tomorrow, -1 = yesterday). */
 function dayOffset(offset: number): Date {
   const d = new Date();
   d.setDate(d.getDate() + offset);
@@ -17,207 +16,322 @@ function atTimeOnDay(day: Date, hours: number, minutes = 0): Date {
   return d;
 }
 
-function formatDay(d: Date): string {
-  return d.toLocaleDateString('uz-UZ', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 async function seed() {
-  console.log('Starting realistic seed...');
-
+  console.log('Clearing all tables...');
+  await db.delete(sessions);
   await db.delete(orders);
   await db.delete(fuelLogs);
   await db.delete(expenses);
   await db.delete(warehouseIncome);
   await db.delete(clients);
+  await db.delete(dispatchers);
   await db.delete(drivers);
+  await db.delete(users);
 
-  const driverData = [
-    { name: 'Polat', phone: '+998901234567', vehiclePlate: '01 A 123 AA', username: 'driver', password: 'driver123' },
-    { name: 'Aziz', phone: '+998902345678', vehiclePlate: '01 B 234 BB', username: 'aziz', password: 'password123' },
-    { name: 'Sardor', phone: '+998903456789', vehiclePlate: '01 C 345 CC', username: 'sardor', password: 'password123' },
-    { name: 'Farrux', phone: '+998904567890', vehiclePlate: '01 D 456 DD', username: 'farrux', password: 'password123' },
-    { name: 'Jasur', phone: '+998905678901', vehiclePlate: '01 E 567 EE', username: 'jasur', password: 'password123' },
-  ];
-  const insertedDrivers = await db.insert(drivers).values(driverData).returning();
-  const polat = insertedDrivers[0]; // mobil test — seed buyurtma bermaydi, dashboarddan qo'shiladi
-  const aziz = insertedDrivers[1];
-  const seedDrivers = insertedDrivers.filter((d) => d.id !== polat.id);
-  const sardor = insertedDrivers[2];
-  const farrux = insertedDrivers[3];
-  const jasur = insertedDrivers[4];
+  console.log('Inserting users (1 Admin, 1 Operator)...');
+  const [adminUser] = await db.insert(users).values({
+    username: 'admin',
+    password: 'admin1234',
+    name: 'Admin Axror',
+    role: 'admin',
+  }).returning();
 
-  const clientData = Array.from({ length: 10 }).map((_, i) => ({
-    name: `Mijoz ${i + 1}`,
-    phone: `+99893${1000000 + i}`,
-    address: `Toshkent, Chilonzor ${i + 1}-kvartal`,
-  }));
-  const insertedClients = await db.insert(clients).values(clientData).returning();
+  const [operatorUser] = await db.insert(users).values({
+    username: 'operator',
+    password: 'op1234',
+    name: 'Operator Aziz',
+    role: 'operator',
+  }).returning();
 
-  const durations = ['1_day', '1_week', '1_month'] as const;
-  const payTypes = ['cash', 'card', 'online'] as const;
-  const expCategories = ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'driver_salary', 'other'] as const;
+  console.log('Inserting 3 drivers...');
+  const insertedDrivers = await db.insert(drivers).values([
+    { name: 'Farhod', phone: '+998901111111', vehiclePlate: '01A111AA', username: 'farhod', password: '123' },
+    { name: 'Jasur', phone: '+998902222222', vehiclePlate: '01B222BB', username: 'jasur', password: '123' },
+    { name: 'Sherzod', phone: '+998903333333', vehiclePlate: '01C333CC', username: 'sherzod', password: '123' },
+  ]).returning();
 
-  const orderData: Array<{
-    clientId: number;
-    driverId: number;
-    address: string;
-    scheduledAt: Date;
-    createdAt: Date;
-    containerSizeM3: number;
-    rentalDuration: (typeof durations)[number];
-    status: OrderStatus;
-    paymentAmount: number;
-    paymentType: (typeof payTypes)[number];
-    paymentStatus: 'pending' | 'received' | 'entered';
-    operatorNote?: string;
-  }> = [];
+  console.log('Inserting 5 clients...');
+  const insertedClients = await db.insert(clients).values([
+    { name: 'OOO PromWaste', phone: '+998931234567', address: 'Ташкент, Яккасарайский р-н' },
+    { name: 'OOO EcoClean', phone: '+998947654321', address: 'Ташкент, Мирзо-Улугбекский р-н' },
+    { name: 'OOO BioTrash', phone: '+998959998877', address: 'Ташкент, Чиланзарский р-н' },
+    { name: 'OOO GreenCity', phone: '+998908887766', address: 'Ташкент, Юнусабадский р-н' },
+    { name: 'Chilonzor Savdo', phone: '+998912223344', address: 'Ташкент, Учтепинский р-н' },
+  ]).returning();
 
-  let orderSeq = 0;
-  const pickClient = () => insertedClients[orderSeq++ % insertedClients.length];
-  const amount = () => 150000 + Math.floor(Math.random() * 8) * 10000;
+  console.log('Inserting 2 dispatchers...');
+  const insertedDispatchers = await db.insert(dispatchers).values([
+    { name: 'Dilshod Dispatcher', phone: '+998904444444' },
+    { name: 'Malika Dispatcher', phone: '+998905555555' },
+  ]).returning();
 
-  const today = dayOffset(0);
-  const tomorrow = dayOffset(1);
+  const externalDriverNames = ['Баходир', 'Сарвар', 'Жамшид', 'Мурод', 'Хуршид', 'Анвар'];
+  const containerSizes = [8, 20, 27];
+  const paymentTypes = ['cash', 'card', 'online'] as const;
 
-  console.log(`Bugun: ${formatDay(today)}`);
-  console.log(`Ertaga: ${formatDay(tomorrow)}`);
+  console.log('Generating realistic 30-day transactional history...');
+  
+  // Keep order counter for deterministic generation
+  let counter = 0;
 
-  // --- O'tgan 14 kun: har kuni 2-4 ta buyurtma, HAMMASI completed ---
-  for (let daysBack = 14; daysBack >= 1; daysBack--) {
+  for (let daysBack = 30; daysBack >= 0; daysBack--) {
     const day = dayOffset(-daysBack);
-    const ordersToday = 2 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < ordersToday; i++) {
-      const client = pickClient();
-      const driver = seedDrivers[(daysBack + i) % seedDrivers.length];
-      const hour = 8 + i * 3 + Math.floor(Math.random() * 2);
-      orderData.push({
-        clientId: client.id,
-        driverId: driver.id,
-        address: client.address,
-        scheduledAt: atTimeOnDay(day, hour, 30),
-        createdAt: atTimeOnDay(day, hour, 0),
-        containerSizeM3: 8,
-        rentalDuration: durations[i % durations.length],
-        status: 'completed',
-        paymentAmount: amount(),
-        paymentType: payTypes[i % payTypes.length],
-        paymentStatus: 'received',
-      });
+    // 2 to 4 entries per day
+    const entriesToday = 2 + (counter % 3);
+    
+    for (let i = 0; i < entriesToday; i++) {
+      counter++;
+      const hour = 8 + i * 3 + (counter % 2);
+      const scheduledAt = atTimeOnDay(day, hour, 0);
+      const createdAt = atTimeOnDay(day, hour - 1, 0);
+      const opUser = (counter % 2 === 0) ? adminUser : operatorUser;
+      const isExternal = (counter % 4 === 0); // 25% of orders are external vehicles
+
+      if (isExternal) {
+        // External vehicle dump arrival
+        const paymentAmount = 100000 + (counter % 5) * 20000; // 100k - 180k
+        const extDriverName = externalDriverNames[counter % externalDriverNames.length];
+        const payType = paymentTypes[counter % paymentTypes.length];
+
+        const [order] = await db.insert(orders).values({
+          clientId: null,
+          driverId: null,
+          operatorNote: `Сброс мусора (Внешний авто) - Водитель: ${extDriverName}`,
+          address: 'База',
+          mapUrl: null,
+          scheduledAt,
+          containerSizeM3: 8,
+          containerNumber: null,
+          rentalDuration: '1 день',
+          status: 'completed',
+          paymentAmount,
+          paymentType: payType,
+          paymentStatus: 'entered',
+          clientCategory: 'direct',
+          dispatcherId: null,
+          dispatcherFee: null,
+          referralName: null,
+          referralPercent: null,
+          isExternalVehicle: true,
+          externalDriverName: extDriverName,
+          isClosed: true,
+          operatorId: opUser.id,
+          createdAt,
+          updatedAt: createdAt
+        }).returning();
+
+        // Warehouse income for this arrival
+        await db.insert(warehouseIncome).values({
+          source: 'client_payment',
+          amountRub: paymentAmount,
+          note: `Оплата стороннего авто (Водитель: ${extDriverName})`,
+          operatorId: opUser.id,
+          recordedAt: createdAt
+        });
+
+      } else {
+        // Standard order flow
+        const client = insertedClients[counter % insertedClients.length];
+        const driver = insertedDrivers[counter % insertedDrivers.length];
+        const containerSizeM3 = containerSizes[counter % containerSizes.length];
+        const isDispatcher = (counter % 5 === 2); // 20% are dispatchers
+        const isReferral = (counter % 5 === 3);   // 20% have referrals
+        const payType = paymentTypes[counter % paymentTypes.length];
+        
+        let paymentAmount = 180000 + (counter % 6) * 30000; // 180k - 330k
+        let dispatcherId = null;
+        let dispatcherFee = null;
+        let referralName = null;
+        let referralPercent = null;
+
+        if (isDispatcher) {
+          dispatcherId = insertedDispatchers[counter % insertedDispatchers.length].id;
+          dispatcherFee = 30000 + (counter % 3) * 10000; // 30k - 50k
+          paymentAmount += dispatcherFee; // higher amount to cover dispatcher fee
+        } else if (isReferral) {
+          referralName = 'Брокер Музаффар';
+          referralPercent = 10; // 10% referral fee
+        }
+
+        // Realistic status distribution:
+        // Everything in the past (daysBack > 1) is completed/closed.
+        // Orders today/yesterday (daysBack <= 1) have mixed active statuses.
+        let status: OrderStatus = 'completed';
+        let paymentStatus: 'pending' | 'received' | 'entered' = 'entered';
+        let isClosed = true;
+
+        if (daysBack <= 1) {
+          const statusCycle = counter % 6;
+          if (statusCycle === 0) {
+            status = 'new';
+            paymentStatus = 'pending';
+            isClosed = false;
+          } else if (statusCycle === 1) {
+            status = 'assigned';
+            paymentStatus = 'pending';
+            isClosed = false;
+          } else if (statusCycle === 2) {
+            status = 'in_progress';
+            paymentStatus = 'pending';
+            isClosed = false;
+          } else if (statusCycle === 3) {
+            status = 'container_placed';
+            paymentStatus = 'pending';
+            isClosed = false;
+          } else if (statusCycle === 4) {
+            status = 'picked_up';
+            paymentStatus = 'received';
+            isClosed = false;
+          } else {
+            status = 'completed';
+            paymentStatus = 'entered';
+            isClosed = true;
+          }
+        }
+
+        const [order] = await db.insert(orders).values({
+          clientId: client.id,
+          driverId: driver.id,
+          operatorNote: `Стандартный вывоз контейнера ${containerSizeM3}м3`,
+          address: client.address,
+          mapUrl: `https://yandex.ru/maps/?pt=69.2401,41.2995&z=12`,
+          scheduledAt,
+          containerSizeM3,
+          containerNumber: `КТ-${100 + counter}`,
+          rentalDuration: (counter % 3 === 0) ? '1 день' : (counter % 3 === 1 ? '1 неделя' : '1 месяц'),
+          status,
+          paymentAmount,
+          paymentType: payType,
+          paymentStatus,
+          clientCategory: isDispatcher ? 'dispatcher' : 'direct',
+          dispatcherId,
+          dispatcherFee,
+          referralName,
+          referralPercent,
+          isExternalVehicle: false,
+          externalDriverName: null,
+          isClosed,
+          operatorId: opUser.id,
+          createdAt,
+          updatedAt: createdAt
+        }).returning();
+
+        // If payment has been completed / processed
+        if (paymentStatus === 'entered' || paymentStatus === 'received') {
+          // Log warehouse income
+          await db.insert(warehouseIncome).values({
+            source: 'client_payment',
+            amountRub: paymentAmount,
+            note: `Оплата за заказ #${order.id}`,
+            operatorId: opUser.id,
+            recordedAt: createdAt
+          });
+
+          // Dispatcher Fee Expense
+          if (dispatcherFee && dispatcherFee > 0) {
+            await db.insert(expenses).values({
+              category: 'dispatcher_salary',
+              amountRub: dispatcherFee,
+              note: `Услуга диспетчера за заказ #${order.id}`,
+              operatorId: opUser.id,
+              recordedAt: createdAt
+            });
+          }
+
+          // Referral Fee Expense
+          if (referralPercent && referralPercent > 0) {
+            const referralAmount = Math.round((paymentAmount * referralPercent) / 100);
+            await db.insert(expenses).values({
+              category: 'referral_fee',
+              amountRub: referralAmount,
+              note: `Процент для 3-го лица (${referralName}) за заказ #${order.id}`,
+              operatorId: opUser.id,
+              recordedAt: createdAt
+            });
+          }
+        }
+      }
     }
-  }
 
-  // --- BUGUN: har haydovchida 0-2 ta FAOL buyurtma (Polat — dashboarddan qo'shiladi) ---
-  orderData.push({
-    clientId: insertedClients[2].id,
-    driverId: aziz.id,
-    address: insertedClients[2].address,
-    scheduledAt: atTimeOnDay(today, 11, 0),
-    createdAt: atTimeOnDay(today, 10, 0),
-    containerSizeM3: 8,
-    rentalDuration: '1_day',
-    status: 'new',
-    paymentAmount: amount(),
-    paymentType: 'online',
-    paymentStatus: 'pending',
-  });
+    // Daily expenses & driver fuel logs
+    const opUser = (daysBack % 2 === 0) ? adminUser : operatorUser;
+    const expenseDate = atTimeOnDay(day, 18, 0);
 
-  orderData.push({
-    clientId: insertedClients[3].id,
-    driverId: sardor.id,
-    address: insertedClients[3].address,
-    scheduledAt: atTimeOnDay(today, 9, 0),
-    createdAt: atTimeOnDay(today, 8, 0),
-    containerSizeM3: 8,
-    rentalDuration: '1_month',
-    status: 'container_placed',
-    paymentAmount: amount(),
-    paymentType: 'cash',
-    paymentStatus: 'pending',
-  });
+    // Fuel log for a driver every day
+    const activeDriver = insertedDrivers[daysBack % insertedDrivers.length];
+    const fuelLiters = 40 + (daysBack % 5) * 10; // 40L - 80L
+    const fuelCost = fuelLiters * 110; // 4400 - 8800 RUB
 
-  orderData.push({
-    clientId: insertedClients[4].id,
-    driverId: farrux.id,
-    address: insertedClients[4].address,
-    scheduledAt: atTimeOnDay(today, 14, 0),
-    createdAt: atTimeOnDay(today, 13, 0),
-    containerSizeM3: 8,
-    rentalDuration: '1_week',
-    status: 'picked_up',
-    paymentAmount: amount(),
-    paymentType: 'card',
-    paymentStatus: 'pending',
-    operatorNote: 'To\'lovni oling',
-  });
-
-  // Jasur bugun buyurtmasiz (bo'sh haydovchi)
-
-  // --- ERTAGA: jadval uchun kelajak buyurtma ---
-  orderData.push({
-    clientId: insertedClients[6].id,
-    driverId: jasur.id,
-    address: insertedClients[6].address,
-    scheduledAt: atTimeOnDay(tomorrow, 12, 0),
-    createdAt: atTimeOnDay(today, 12, 0),
-    containerSizeM3: 8,
-    rentalDuration: '1_week',
-    status: 'assigned',
-    paymentAmount: amount(),
-    paymentType: 'online',
-    paymentStatus: 'pending',
-  });
-
-  // --- Xarajatlar, yoqilg'i, ombor (14 kun) ---
-  const fuelData = [];
-  const expenseData = [];
-  const warehouseData = [];
-
-  for (let d = 14; d >= 0; d--) {
-    const date = dayOffset(-d);
-    expenseData.push({
-      category: expCategories[d % expCategories.length],
-      amountRub: Math.floor(10000 + Math.random() * 20000),
-      note: `Kunlik xarajat`,
-      recordedAt: atTimeOnDay(date, 18, 0),
+    await db.insert(fuelLogs).values({
+      driverId: activeDriver.id,
+      stationName: `АЗС Мустанг-${(daysBack % 3) + 1}`,
+      liters: fuelLiters,
+      priceRub: fuelCost,
+      vehicle: activeDriver.vehiclePlate,
+      operatorId: opUser.id,
+      loggedAt: expenseDate
     });
-    if (d % 2 === 0) {
-      const driver = insertedDrivers[d % insertedDrivers.length];
-      const liters = Math.floor(30 + Math.random() * 40);
-      fuelData.push({
-        driverId: driver.id,
-        stationName: `Yoqilg'i ${(d % 3) + 1}`,
-        liters,
-        priceRub: liters * 100,
-        vehicle: driver.vehiclePlate,
-        loggedAt: atTimeOnDay(date, 17, 0),
+
+    // Auto generated fuel expense
+    await db.insert(expenses).values({
+      category: 'fuel',
+      amountRub: fuelCost,
+      note: `Автоматически добавлено из заправки: ${activeDriver.vehiclePlate} (${fuelLiters}L)`,
+      operatorId: opUser.id,
+      recordedAt: expenseDate
+    });
+
+    // Driver salary payout once a week
+    if (daysBack % 7 === 0) {
+      await db.insert(expenses).values({
+        category: 'driver_salary',
+        amountRub: 150000,
+        note: `Зарплата водителя ${activeDriver.name} за неделю`,
+        operatorId: opUser.id,
+        recordedAt: expenseDate
       });
     }
-    if (d % 2 === 1) {
-      warehouseData.push({
-        source: (d % 3 === 0 ? 'client_payment' : 'external_vehicle_rental') as 'client_payment' | 'external_vehicle_rental',
-        amountRub: Math.floor(20000 + Math.random() * 50000),
-        note: `Ombor daromadi`,
-        recordedAt: atTimeOnDay(date, 19, 0),
+
+    // Base Rent once a month
+    if (daysBack === 15) {
+      await db.insert(expenses).values({
+        category: 'base_rent',
+        amountRub: 500000,
+        note: `Ежемесячная аренда базы заезда`,
+        operatorId: opUser.id,
+        recordedAt: expenseDate
+      });
+    }
+
+    // Utilization fee every 3 days
+    if (daysBack % 3 === 0) {
+      await db.insert(expenses).values({
+        category: 'utilization',
+        amountRub: 120000,
+        note: `Оплата за свалку / утилизацию отходов`,
+        operatorId: opUser.id,
+        recordedAt: expenseDate
+      });
+    }
+
+    // Other general daily expenses
+    if (daysBack % 4 === 1) {
+      await db.insert(expenses).values({
+        category: 'spare_parts',
+        amountRub: 25000 + (daysBack % 3) * 15000,
+        note: `Закупка расходников и запчастей для автомобилей`,
+        operatorId: opUser.id,
+        recordedAt: expenseDate
       });
     }
   }
 
-  await db.insert(orders).values(orderData);
-  await db.insert(fuelLogs).values(fuelData);
-  await db.insert(expenses).values(expenseData);
-  await db.insert(warehouseIncome).values(warehouseData);
-
-  console.log(`Seed done: ${orderData.length} orders total`);
-  for (const dr of insertedDrivers) {
-    const count = orderData.filter((o) => o.driverId === dr.id).length;
-    const active = orderData.filter((o) => o.driverId === dr.id && o.status !== 'completed').length;
-    console.log(`  ${dr.name}: ${count} jami, ${active} faol`);
-  }
-
-  console.log(`\n${polat.name} (${polat.username}): seed buyurtmasiz — dashboarddan qo'shing.`);
+  console.log('Seeding process completed successfully!');
+  console.log(`Admin User: admin / admin1234`);
+  console.log(`Operator User: operator / op1234`);
 }
 
 seed().catch((err) => {
-  console.error('Seed error:', err);
+  console.error('Seed execution error:', err);
   process.exit(1);
 });

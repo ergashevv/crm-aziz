@@ -37,9 +37,11 @@ export default async function ClientsPage({
 
   const statsByClient: Record<number, { count: number, spent: number }> = {};
   allOrders.forEach(o => {
-    if (!statsByClient[o.clientId]) statsByClient[o.clientId] = { count: 0, spent: 0 };
-    statsByClient[o.clientId].count++;
-    statsByClient[o.clientId].spent += o.paymentAmount;
+    if (o.clientId !== null) {
+      if (!statsByClient[o.clientId]) statsByClient[o.clientId] = { count: 0, spent: 0 };
+      statsByClient[o.clientId].count++;
+      statsByClient[o.clientId].spent += o.paymentAmount;
+    }
   });
 
   const exportClientsData = filteredClients.map(c => ({

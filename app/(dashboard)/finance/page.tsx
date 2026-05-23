@@ -11,6 +11,8 @@ import { FinanceCharts } from '@/components/FinanceCharts';
 import { ExportButton } from '@/components/ExportButton';
 import { FinanceFilter } from '@/components/FinanceFilter';
 
+import { getCurrentUser } from '@/lib/auth';
+
 export default async function FinancePage({
   searchParams,
 }: {
@@ -23,6 +25,10 @@ export default async function FinancePage({
   const { allOrders, allExpenses, allWarehouseIncome } = await getFinanceData();
   const allClients = await getClients();
   const clientMap = new Map(allClients.map(c => [c.id, c]));
+
+  const user = await getCurrentUser();
+  const isOperator = user?.role === 'operator';
+  const currentUserId = user?.id;
 
   // Read search & filter parameters
   const currentTab = typeof searchParams.tab === 'string' ? searchParams.tab : 'expenses';
@@ -41,6 +47,10 @@ export default async function FinancePage({
 
   // ================= EXPENSES SECTION =================
   let filteredExpenses = allExpenses;
+
+  if (isOperator) {
+    filteredExpenses = filteredExpenses.filter(e => e.operatorId === currentUserId);
+  }
 
   if (categoryFilter && categoryFilter !== 'all') {
     filteredExpenses = filteredExpenses.filter(e => e.category === categoryFilter);
@@ -99,26 +109,30 @@ export default async function FinancePage({
 
   // 1. Client payments from completed/entered orders
   allOrders.forEach(o => {
-    if (o.paymentStatus === 'entered' || o.paymentStatus === 'received') {
-      const client = clientMap.get(o.clientId);
+    if ((o.paymentStatus === 'entered' || o.paymentStatus === 'received') && (!isOperator || o.operatorId === currentUserId)) {
+      const client = o.isExternalVehicle ? null : clientMap.get(o.clientId!);
       combinedIncomes.push({
         id: `order-${o.id}`,
         type: 'order',
         rawId: o.id,
         date: new Date(o.createdAt),
         amount: o.paymentAmount,
-        sourceKey: 'client_payment',
-        sourceLabel: dict.client_payment || 'Оплата клиента',
-        clientName: client?.name || dict.client || 'Client',
+        sourceKey: o.isExternalVehicle ? 'external_vehicle_rental' : 'client_payment',
+        sourceLabel: o.isExternalVehicle 
+          ? (lang === 'uz' ? 'Begona moshina' : 'Сторонняя машина') 
+          : (dict.client_payment || 'Оплата клиента'),
+        clientName: o.isExternalVehicle 
+          ? (o.externalDriverName || (lang === 'uz' ? 'Begona haydovchi' : 'Сторонний водитель')) 
+          : (client?.name || dict.client || 'Client'),
         note: o.operatorNote || '',
-        address: o.address
+        address: o.isExternalVehicle ? 'База' : o.address
       });
     }
   });
 
   // 2. Warehouse incomes excluding client_payment source to prevent double-counting
   allWarehouseIncome.forEach(w => {
-    if (w.source !== 'client_payment') {
+    if (w.source !== 'client_payment' && (!isOperator || w.operatorId === currentUserId)) {
       combinedIncomes.push({
         id: `warehouse-${w.id}`,
         type: 'warehouse',
@@ -192,6 +206,7 @@ export default async function FinancePage({
     let expenses = 0;
 
     allOrders.forEach(order => {
+      if (isOperator && order.operatorId !== currentUserId) return;
       const orderDate = new Date(order.createdAt);
       if (orderDate.getMonth() === date.getMonth() && orderDate.getFullYear() === date.getFullYear() && (order.paymentStatus === 'entered' || order.paymentStatus === 'received')) {
         income += order.paymentAmount;
@@ -200,6 +215,7 @@ export default async function FinancePage({
 
     allWarehouseIncome.forEach(w => {
       if (w.source === 'client_payment') return;
+      if (isOperator && w.operatorId !== currentUserId) return;
       const wDate = new Date(w.recordedAt);
       if (wDate.getMonth() === date.getMonth() && wDate.getFullYear() === date.getFullYear()) {
         income += w.amountRub;
@@ -207,6 +223,7 @@ export default async function FinancePage({
     });
 
     allExpenses.forEach(e => {
+      if (isOperator && e.operatorId !== currentUserId) return;
       const eDate = new Date(e.recordedAt);
       if (eDate.getMonth() === date.getMonth() && eDate.getFullYear() === date.getFullYear()) {
         expenses += e.amountRub;

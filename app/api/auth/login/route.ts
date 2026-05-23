@@ -1,20 +1,47 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { users, sessions } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
+import { generateSessionId } from '@/lib/auth';
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { username, password } = body;
+  try {
+    const body = await request.json();
+    const { username, password } = body;
 
-  if (username === 'admin' && password === 'admin1234') {
-    const response = NextResponse.json({ success: true });
-    response.cookies.set('auth-token', 'authenticated', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-    });
-    return response;
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.username, username), eq(users.password, password)));
+
+    if (userResult.length === 1) {
+      const user = userResult[0];
+      const sessionId = generateSessionId();
+
+      // Expire in 7 days
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      await db.insert(sessions).values({
+        id: sessionId,
+        userId: user.id,
+        expiresAt,
+      });
+
+      const response = NextResponse.json({ success: true, role: user.role });
+      response.cookies.set('auth-session', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+      });
+      return response;
+    }
+
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+  } catch (error) {
+    console.error('Login error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
 }

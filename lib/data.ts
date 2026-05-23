@@ -1,7 +1,16 @@
 import { db } from './db';
-import { orders, clients, drivers, fuelLogs, expenses, warehouseIncome, dispatchers } from './schema';
+import { orders, clients, drivers, fuelLogs, expenses, warehouseIncome, dispatchers, users } from './schema';
 import { unstable_cache } from 'next/cache';
 import { desc, eq, and, or, ilike, ne } from 'drizzle-orm';
+import { getCurrentUser } from '@/lib/auth';
+
+export const getOperators = unstable_cache(
+  async () => {
+    return await db.select().from(users).where(eq(users.role, 'operator')).orderBy(desc(users.createdAt));
+  },
+  ['operators-list'],
+  { revalidate: 30, tags: ['users'] }
+);
 
 export const getDashboardData = unstable_cache(
   async () => {
@@ -11,12 +20,21 @@ export const getDashboardData = unstable_cache(
   { revalidate: 30, tags: ['orders'] }
 );
 
-export const getOrders = unstable_cache(
-  async (status?: string, q?: string) => {
+export const getOrders = async (status?: string, q?: string) => {
+    const user = await getCurrentUser();
     let conditions = [];
     
+    if (user?.role === 'operator') {
+      conditions.push(eq(orders.operatorId, user.id));
+    }
+
     if (status === 'active') {
-      conditions.push(ne(orders.status, 'completed'));
+      conditions.push(eq(orders.isClosed, false));
+    } else if (status === 'pending_confirmation') {
+      conditions.push(eq(orders.isClosed, false));
+      conditions.push(or(eq(orders.status, 'completed'), eq(orders.paymentStatus, 'received')));
+    } else if (status === 'closed') {
+      conditions.push(eq(orders.isClosed, true));
     } else if (status && status !== 'all') {
       conditions.push(eq(orders.status, status as any));
     }
@@ -45,19 +63,18 @@ export const getOrders = unstable_cache(
       client: clients,
       driver: drivers,
       dispatcher: dispatchers,
+      operator: users,
     })
     .from(orders)
     .leftJoin(clients, eq(orders.clientId, clients.id))
     .leftJoin(drivers, eq(orders.driverId, drivers.id))
-    .leftJoin(dispatchers, eq(orders.dispatcherId, dispatchers.id));
+    .leftJoin(dispatchers, eq(orders.dispatcherId, dispatchers.id))
+    .leftJoin(users, eq(orders.operatorId, users.id));
 
     return await (conditions.length > 0 
       ? query.where(and(...conditions)).orderBy(desc(orders.createdAt))
       : query.orderBy(desc(orders.createdAt)));
-  },
-  ['orders-list'],
-  { revalidate: 30, tags: ['orders'] }
-);
+  };
 
 export const getClients = unstable_cache(
   async () => {

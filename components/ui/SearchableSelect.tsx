@@ -7,6 +7,7 @@ interface Option {
   value: string;
   label: string;
   sub?: string;
+  disabled?: boolean;
 }
 
 interface SearchableSelectProps {
@@ -129,12 +130,14 @@ export function SearchableSelect({
                 <button
                   key={o.value}
                   type="button"
-                  onClick={() => handleSelect(o.value)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-primary/5
+                  disabled={o.disabled}
+                  onClick={() => !o.disabled && handleSelect(o.value)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors
+                    ${o.disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-primary/5'}
                     ${o.value === value ? 'bg-primary/10 text-primary font-semibold' : 'text-slate-700'}
                   `}
                 >
-                  <span className="flex-1 truncate">{o.label}</span>
+                  <span className={`flex-1 truncate ${o.disabled ? 'text-slate-400' : ''}`}>{o.label}</span>
                   {o.sub && <span className="text-xs text-slate-400 flex-shrink-0">{o.sub}</span>}
                 </button>
               ))

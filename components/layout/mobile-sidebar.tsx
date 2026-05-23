@@ -3,25 +3,27 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  ClipboardList, 
-  Users, 
-  Car, 
-  Wallet, 
-  Fuel, 
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Wallet,
   Warehouse,
   LogOut,
   Menu,
   X,
-  Map
+  Map,
+  UserCog,
+  Fuel,
+  Users,
+  Car,
+  Sliders
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./lang-switcher";
 import { getDictionary } from "@/lib/dictionaries";
 import { RefreshDataButton } from "@/components/RefreshDataButton";
 
-export function MobileSidebar({ lang = 'ru' }: { lang?: string }) {
+export function MobileSidebar({ lang = 'ru', userRole }: { lang?: string, userRole?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const dict = getDictionary(lang);
@@ -37,10 +39,15 @@ export function MobileSidebar({ lang = 'ru' }: { lang?: string }) {
     { label: dict.orders, icon: ClipboardList, href: "/orders" },
     { label: dict.clients, icon: Users, href: "/clients" },
     { label: dict.drivers, icon: Car, href: "/drivers" },
+    { label: dict.management_panel || "Панель управления", icon: Sliders, href: "/management" },
     { label: dict.finance, icon: Wallet, href: "/finance" },
     { label: dict.fuel_logs, icon: Fuel, href: "/fuel" },
     { label: dict.warehouse, icon: Warehouse, href: "/warehouse" },
   ];
+
+  if (userRole === 'admin') {
+    routes.push({ label: (dict as any).operators || "Operatorlar", icon: UserCog, href: "/operators" });
+  }
 
   return (
     <>
@@ -54,7 +61,7 @@ export function MobileSidebar({ lang = 'ru' }: { lang?: string }) {
           >
             <Menu className="h-6 w-6" />
           </button>
-          
+
           <Link href="/dashboard" className="flex items-center">
             <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center mr-2.5 shadow-md shadow-primary/25">
               <Warehouse className="h-4.5 w-4.5 text-white" />
@@ -73,14 +80,14 @@ export function MobileSidebar({ lang = 'ru' }: { lang?: string }) {
 
       {/* Drawer Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[90] md:hidden transition-all duration-300 animate-in fade-in"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Drawer Content */}
-      <div 
+      <div
         className={cn(
           "fixed top-0 bottom-0 left-0 w-64 bg-[#0B0F19] text-white z-[100] md:hidden flex flex-col h-full shadow-2xl transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "-translate-x-full"
@@ -127,7 +134,7 @@ export function MobileSidebar({ lang = 'ru' }: { lang?: string }) {
         </div>
 
         <div className="px-3 py-4 border-t border-slate-800/60">
-          <button 
+          <button
             onClick={async () => {
               await fetch('/api/auth/logout', { method: 'POST' });
               window.location.href = '/login';

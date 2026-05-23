@@ -9,9 +9,11 @@ import { RefreshDataButton } from '@/components/RefreshDataButton';
 
 export function SidebarWrapper({ 
   lang, 
+  userRole,
   children 
 }: { 
   lang: string; 
+  userRole?: string;
   children: React.ReactNode;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -35,7 +37,7 @@ export function SidebarWrapper({
     return (
     <div className="h-full relative bg-mesh min-h-screen font-sans antialiased">
         <div className="hidden h-full md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-[80]">
-          <Sidebar lang={lang} isCollapsed={false} />
+          <Sidebar lang={lang} isCollapsed={false} userRole={userRole} />
         </div>
         <main className="md:pl-64 h-full relative z-10 pt-16 md:pt-0">
           <div className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -54,14 +56,14 @@ export function SidebarWrapper({
       <div className="absolute top-0 left-0 right-0 h-72 bg-gradient-to-b from-blue-50/40 to-transparent pointer-events-none z-0" />
       
       {/* Mobile Sidebar & Header */}
-      <MobileSidebar lang={lang} />
+      <MobileSidebar lang={lang} userRole={userRole} />
 
       {/* Desktop Sidebar */}
       <div className={cn(
         "hidden h-full md:flex md:flex-col md:fixed md:inset-y-0 z-[80] transition-all duration-300 ease-in-out",
         isCollapsed ? "md:w-20" : "md:w-64"
       )}>
-        <Sidebar lang={lang} isCollapsed={isCollapsed} />
+        <Sidebar lang={lang} isCollapsed={isCollapsed} userRole={userRole} />
         
         {/* Toggle Collapse Button */}
         <button

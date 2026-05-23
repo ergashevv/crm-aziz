@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import { WarehouseIncomeForm } from '@/components/forms/WarehouseIncomeForm';
+import { getCurrentUser } from '@/lib/auth';
 
 export default async function WarehousePage({
   searchParams,
@@ -17,6 +18,8 @@ export default async function WarehousePage({
 }) {
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
+  const user = await getCurrentUser();
+  const isOperator = user?.role === 'operator';
 
   const { allIncomes: incomes } = await getWarehouseData();
 
@@ -24,6 +27,10 @@ export default async function WarehousePage({
   const sourceFilter = typeof searchParams.source === 'string' ? searchParams.source : '';
 
   let filteredIncomes = incomes;
+  if (isOperator) {
+    filteredIncomes = filteredIncomes.filter(i => i.operatorId === user?.id);
+  }
+
   if (sourceFilter && sourceFilter !== 'all') {
     filteredIncomes = filteredIncomes.filter(i => i.source === sourceFilter);
   }

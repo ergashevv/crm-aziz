@@ -21,7 +21,12 @@ export async function PUT(
     const updateData: any = {};
     if (status) updateData.status = status;
     if (paymentType) updateData.paymentType = paymentType;
-    if (paymentStatus) updateData.paymentStatus = paymentStatus;
+    if (paymentStatus) {
+      if (paymentStatus === 'entered') {
+        return NextResponse.json({ error: 'Drivers cannot confirm payment receipt' }, { status: 400 });
+      }
+      updateData.paymentStatus = paymentStatus;
+    }
     
     updateData.updatedAt = new Date();
 

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { getDictionary } from '@/lib/dictionaries';
 import { FuelForm } from '@/components/forms/FuelForm';
 import { getDrivers } from '@/lib/data';
+import { getCurrentUser } from '@/lib/auth';
 
 export default async function FuelPage({
   searchParams,
@@ -17,6 +18,8 @@ export default async function FuelPage({
 }) {
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
+  const user = await getCurrentUser();
+  const isOperator = user?.role === 'operator';
 
   const allLogs = await getFuelLogs();
   const drivers = await getDrivers();
@@ -24,6 +27,10 @@ export default async function FuelPage({
   const q = typeof searchParams.q === 'string' ? searchParams.q.toLowerCase() : '';
   
   let filteredLogs = allLogs;
+  if (isOperator) {
+    filteredLogs = filteredLogs.filter(l => l.log.operatorId === user?.id);
+  }
+
   if (q) {
     filteredLogs = allLogs.filter(({ log, driver }) => 
       log.stationName.toLowerCase().includes(q) || 

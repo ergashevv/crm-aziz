@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { orders, warehouseIncome, expenses } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function updateOrderStatus(orderId: number, status: any) {
   await db.update(orders).set({ status }).where(eq(orders.id, orderId));
@@ -21,15 +22,29 @@ export async function updateOrderPayment(orderId: number, paymentStatus: any) {
   const previousStatus = order.paymentStatus;
   
   // Update order
-  await db.update(orders).set({ paymentStatus }).where(eq(orders.id, orderId));
+  const updateData: any = { paymentStatus };
+  
+  if (paymentStatus === 'entered' && previousStatus !== 'entered') {
+    const user = await getCurrentUser();
+    if (user && user.role === 'operator') {
+      updateData.operatorId = user.id;
+    } else if (user) {
+      updateData.operatorId = user.id; // Or leave null if admin? Let's assign it anyway
+    }
+    updateData.isClosed = true;
+  }
+
+  await db.update(orders).set(updateData).where(eq(orders.id, orderId));
 
   // If transitioned to 'entered'
   if (paymentStatus === 'entered' && previousStatus !== 'entered') {
+    const user = await getCurrentUser();
     // 1. Add to warehouse income
     await db.insert(warehouseIncome).values({
       source: 'client_payment',
       amountRub: order.paymentAmount,
       note: `Оплата за заказ #${order.id}`,
+      operatorId: user ? user.id : undefined,
     });
 
     // 2. Add referral fee to expenses if there's a percentage
@@ -39,6 +54,7 @@ export async function updateOrderPayment(orderId: number, paymentStatus: any) {
         category: 'referral_fee',
         amountRub: Math.round(feeAmount),
         note: `Процент для 3-го лица (${order.referralName || 'Аноним'}) за заказ #${order.id}`,
+        operatorId: user ? user.id : undefined,
       });
     }
   }

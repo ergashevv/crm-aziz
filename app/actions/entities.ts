@@ -12,6 +12,7 @@ import {
 } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { getCurrentUser } from '@/lib/auth';
 
 // Clients
 export async function createClient(data: any) {
@@ -81,6 +82,7 @@ export async function updateDriver(id: number, data: any) {
 
 // Fuel
 export async function createFuelLog(data: any) {
+  const user = await getCurrentUser();
   await db.transaction(async (tx) => {
     await tx.insert(fuelLogs).values({
       driverId: parseInt(data.driverId),
@@ -88,12 +90,14 @@ export async function createFuelLog(data: any) {
       liters: parseInt(data.liters),
       priceRub: parseInt(data.priceRub),
       vehicle: data.vehicle,
+      operatorId: user ? user.id : null,
     });
 
     await tx.insert(expenses).values({
       category: 'fuel',
       amountRub: parseInt(data.priceRub),
       note: `Автоматически добавлено из заправки: ${data.vehicle} (${data.liters}L) - ${data.stationName}`,
+      operatorId: user ? user.id : null,
     });
   });
 
@@ -117,10 +121,12 @@ export async function updateFuelLog(id: number, data: any) {
 
 // Expenses
 export async function createExpense(data: any) {
+  const user = await getCurrentUser();
   await db.insert(expenses).values({
     category: data.category,
     amountRub: parseInt(data.amountRub),
     note: data.note,
+    operatorId: user ? user.id : null,
   });
   revalidateTag('expenses');
   revalidatePath('/finance');
@@ -140,10 +146,12 @@ export async function updateExpense(id: number, data: any) {
 
 // Warehouse Income
 export async function createWarehouseIncome(data: any) {
+  const user = await getCurrentUser();
   await db.insert(warehouseIncome).values({
     source: data.source,
     amountRub: parseInt(data.amountRub),
     note: data.note,
+    operatorId: user ? user.id : null,
   });
   revalidateTag('warehouse');
   revalidatePath('/warehouse');
@@ -194,41 +202,47 @@ function parseDate(dateStr: any): Date {
 // Orders
 export async function createOrder(data: any) {
   try {
-    const containerSizeM3 = parseInt(data.containerSizeM3);
+    const isExternalVehicle = !!data.isExternalVehicle;
+    const containerSizeM3 = isExternalVehicle ? 8 : parseInt(data.containerSizeM3);
     const paymentAmount = parseInt(data.paymentAmount);
-    const clientCategory = data.clientCategory || 'direct';
+    const clientCategory = isExternalVehicle ? 'direct' : (data.clientCategory || 'direct');
 
     // --- Resolve clientId (upsert inline if needed) ---
-    let clientId: number;
-    if (data.clientId === 'new' || !data.clientId) {
-      if (!data.clientName || !data.clientPhone) {
-        return { success: false, error: "Пожалуйста, укажите имя и телефон клиента" };
-      }
-      const [newClient] = await db.insert(clients).values({
-        name: data.clientName,
-        phone: data.clientPhone,
-        address: data.clientAddress || data.address,
-        mapUrl: data.clientMapUrl || null,
-      }).returning();
-      clientId = newClient.id;
-      revalidateTag('clients');
-    } else {
-      clientId = parseInt(data.clientId);
-      // Update client if inline fields changed
-      if (data.clientName || data.clientPhone) {
-        await db.update(clients).set({
+    let clientId: number | null = null;
+    if (!isExternalVehicle) {
+      if (data.clientId === 'new' || !data.clientId) {
+        if (!data.clientName || !data.clientPhone) {
+          return { success: false, error: "Пожалуйста, укажите имя и телефон клиента" };
+        }
+        const [newClient] = await db.insert(clients).values({
           name: data.clientName,
           phone: data.clientPhone,
           address: data.clientAddress || data.address,
           mapUrl: data.clientMapUrl || null,
-        }).where(eq(clients.id, clientId));
+        }).returning();
+        clientId = newClient.id;
         revalidateTag('clients');
+      } else {
+        clientId = parseInt(data.clientId);
+        // Update client if inline fields changed
+        if (data.clientName || data.clientPhone) {
+          await db.update(clients).set({
+            name: data.clientName,
+            phone: data.clientPhone,
+            address: data.clientAddress || data.address,
+            mapUrl: data.clientMapUrl || null,
+          }).where(eq(clients.id, clientId));
+          revalidateTag('clients');
+        }
+      }
+      if (isNaN(clientId)) {
+        return { success: false, error: "Пожалуйста, выберите клиента / Iltimos, mijozni tanlang" };
       }
     }
 
     // --- Resolve dispatcherId (upsert inline if needed) ---
     let dispatcherId: number | null = null;
-    if (clientCategory === 'dispatcher') {
+    if (!isExternalVehicle && clientCategory === 'dispatcher') {
       if (data.dispatcherId === 'new' || !data.dispatcherId) {
         if (!data.dispatcherName || !data.dispatcherPhone) {
           return { success: false, error: "Пожалуйста, укажите имя и телефон диспетчера" };
@@ -252,41 +266,66 @@ export async function createOrder(data: any) {
       }
     }
 
-    if (isNaN(clientId)) {
-      return { success: false, error: "Пожалуйста, выберите клиента / Iltimos, mijozni tanlang" };
-    }
-    if (!data.address || data.address.trim() === '') {
-      return { success: false, error: "Пожалуйста, укажите адрес / Iltimos, manzilni kiriting" };
-    }
-    if (isNaN(containerSizeM3)) {
-      return { success: false, error: "Пожалуйста, укажите корректный размер контейнера / Iltimos, to'g'ri konteyner hajmini kiriting" };
+    if (!isExternalVehicle) {
+      if (!data.address || data.address.trim() === '') {
+        return { success: false, error: "Пожалуйста, укажите адрес / Iltimos, manzilni kiriting" };
+      }
+      if (isNaN(containerSizeM3)) {
+        return { success: false, error: "Пожалуйста, укажите корректный размер контейнера / Iltimos, to'g'ri konteyner hajmini kiriting" };
+      }
     }
     if (isNaN(paymentAmount)) {
       return { success: false, error: "Пожалуйста, укажите корректную сумму оплаты / Iltimos, to'g'ri to'lov summasini kiriting" };
     }
 
-    const newPaymentStatus = data.paymentStatus || 'pending';
-    const dispatcherFee = data.dispatcherFee ? parseInt(data.dispatcherFee) : null;
+    const newPaymentStatus = isExternalVehicle ? 'entered' : (data.paymentStatus || 'pending');
+    const dispatcherFee = isExternalVehicle ? null : (data.dispatcherFee ? parseInt(data.dispatcherFee) : null);
+    
+    // --- Driver Availability Check ---
+    const parsedScheduledAt = parseDate(data.scheduledAt);
+    if (!isExternalVehicle && data.driverId) {
+      const driverIdInt = parseInt(data.driverId);
+      const scheduledTime = parsedScheduledAt.getTime();
+      const BUFFER = 3 * 60 * 60 * 1000;
+      
+      const driverActiveOrders = await db.select().from(orders).where(eq(orders.driverId, driverIdInt));
+      for (const ao of driverActiveOrders) {
+        if (ao.status === 'completed') continue;
+        const aoTime = new Date(ao.scheduledAt).getTime();
+        if (Math.abs(aoTime - scheduledTime) <= BUFFER) {
+          return { success: false, error: "Xatolik: Haydovchi bu vaqtda band (±3 soat)! Iltimos, boshqa vaqt yoki haydovchi tanlang." };
+        }
+      }
+    }
+
+    const user = await getCurrentUser();
+    const status = isExternalVehicle ? 'completed' : (data.status || 'new');
+    const address = isExternalVehicle ? (data.address || 'База') : data.address;
+    const isClosed = isExternalVehicle ? true : false;
 
     const [newOrder] = await db.insert(orders).values({
       clientId,
-      driverId: data.driverId ? parseInt(data.driverId) : null,
+      driverId: (!isExternalVehicle && data.driverId) ? parseInt(data.driverId) : null,
       operatorNote: data.operatorNote,
-      address: data.address,
-      mapUrl: data.mapUrl || null,
+      address,
+      mapUrl: isExternalVehicle ? null : (data.mapUrl || null),
       scheduledAt: parseDate(data.scheduledAt),
       containerSizeM3,
-      containerNumber: data.containerNumber || null,
-      rentalDuration: data.rentalDuration,
-      status: data.status || 'new',
+      containerNumber: isExternalVehicle ? null : (data.containerNumber || null),
+      rentalDuration: isExternalVehicle ? '1 день' : data.rentalDuration,
+      status,
       paymentAmount,
       paymentType: data.paymentType,
       paymentStatus: newPaymentStatus,
       clientCategory,
       dispatcherId,
       dispatcherFee,
-      referralName: data.referralName,
-      referralPercent: data.referralPercent ? parseInt(data.referralPercent) : null,
+      referralName: isExternalVehicle ? null : data.referralName,
+      referralPercent: isExternalVehicle ? null : (data.referralPercent ? parseInt(data.referralPercent) : null),
+      operatorId: user ? user.id : null,
+      isExternalVehicle,
+      externalDriverName: isExternalVehicle ? data.externalDriverName : null,
+      isClosed,
     }).returning();
 
     // If created with 'entered' status directly
@@ -294,7 +333,10 @@ export async function createOrder(data: any) {
       await db.insert(warehouseIncome).values({
         source: 'client_payment',
         amountRub: paymentAmount,
-        note: `Оплата за заказ #${newOrder.id}`,
+        note: isExternalVehicle 
+          ? `Оплата стороннего авто (Водитель: ${data.externalDriverName || 'Неизвестно'})` 
+          : `Оплата за заказ #${newOrder.id}`,
+        operatorId: user ? user.id : null,
       });
 
       // Dispatcher fee as expense
@@ -303,6 +345,7 @@ export async function createOrder(data: any) {
           category: 'dispatcher_salary',
           amountRub: dispatcherFee,
           note: `Услуга диспетчера за заказ #${newOrder.id}`,
+          operatorId: user ? user.id : null,
         });
       }
 
@@ -314,6 +357,7 @@ export async function createOrder(data: any) {
           category: 'referral_fee',
           amountRub: Math.round(feeAmount),
           note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${newOrder.id}`,
+          operatorId: user ? user.id : null,
         });
       }
     }
@@ -335,40 +379,44 @@ export async function createOrder(data: any) {
 
 export async function updateOrder(id: number, data: any) {
   try {
-    const containerSizeM3 = parseInt(data.containerSizeM3);
+    const user = await getCurrentUser();
+    const isExternalVehicle = !!data.isExternalVehicle;
+    const containerSizeM3 = isExternalVehicle ? 8 : parseInt(data.containerSizeM3);
     const paymentAmount = parseInt(data.paymentAmount);
-    const clientCategory = data.clientCategory || 'direct';
+    const clientCategory = isExternalVehicle ? 'direct' : (data.clientCategory || 'direct');
 
     // --- Resolve clientId (upsert inline if needed) ---
-    let clientId: number;
-    if (data.clientId === 'new' || !data.clientId) {
-      if (!data.clientName || !data.clientPhone) {
-        return { success: false, error: "Пожалуйста, укажите имя и телефон клиента" };
-      }
-      const [newClient] = await db.insert(clients).values({
-        name: data.clientName,
-        phone: data.clientPhone,
-        address: data.clientAddress || data.address,
-        mapUrl: data.clientMapUrl || null,
-      }).returning();
-      clientId = newClient.id;
-      revalidateTag('clients');
-    } else {
-      clientId = parseInt(data.clientId);
-      if (data.clientName || data.clientPhone) {
-        await db.update(clients).set({
+    let clientId: number | null = null;
+    if (!isExternalVehicle) {
+      if (data.clientId === 'new' || !data.clientId) {
+        if (!data.clientName || !data.clientPhone) {
+          return { success: false, error: "Пожалуйста, укажите имя и телефон клиента" };
+        }
+        const [newClient] = await db.insert(clients).values({
           name: data.clientName,
           phone: data.clientPhone,
           address: data.clientAddress || data.address,
           mapUrl: data.clientMapUrl || null,
-        }).where(eq(clients.id, clientId));
+        }).returning();
+        clientId = newClient.id;
         revalidateTag('clients');
+      } else {
+        clientId = parseInt(data.clientId);
+        if (data.clientName || data.clientPhone) {
+          await db.update(clients).set({
+            name: data.clientName,
+            phone: data.clientPhone,
+            address: data.clientAddress || data.address,
+            mapUrl: data.clientMapUrl || null,
+          }).where(eq(clients.id, clientId));
+          revalidateTag('clients');
+        }
       }
     }
 
     // --- Resolve dispatcherId ---
     let dispatcherId: number | null = null;
-    if (clientCategory === 'dispatcher') {
+    if (!isExternalVehicle && clientCategory === 'dispatcher') {
       if (data.dispatcherId === 'new' || !data.dispatcherId) {
         if (data.dispatcherName && data.dispatcherPhone) {
           const [newDisp] = await db.insert(dispatchers).values({
@@ -390,14 +438,16 @@ export async function updateOrder(id: number, data: any) {
       }
     }
 
-    if (isNaN(clientId)) {
-      return { success: false, error: "Пожалуйста, выберите клиента / Iltimos, mijozni tanlang" };
-    }
-    if (!data.address || data.address.trim() === '') {
-      return { success: false, error: "Пожалуйста, укажите адрес / Iltimos, manzilni kiriting" };
-    }
-    if (isNaN(containerSizeM3)) {
-      return { success: false, error: "Пожалуйста, укажите корректный размер контейнера / Iltimos, to'g'ri konteyner hajmini kiriting" };
+    if (!isExternalVehicle) {
+      if (isNaN(clientId!)) {
+        return { success: false, error: "Пожалуйста, выберите клиента / Iltimos, mijozni tanlang" };
+      }
+      if (!data.address || data.address.trim() === '') {
+        return { success: false, error: "Пожалуйста, укажите адрес / Iltimos, manzilni kiriting" };
+      }
+      if (isNaN(containerSizeM3)) {
+        return { success: false, error: "Пожалуйста, укажите корректный размер контейнера / Iltimos, to'g'ri konteyner hajmini kiriting" };
+      }
     }
     if (isNaN(paymentAmount)) {
       return { success: false, error: "Пожалуйста, укажите корректную сумму оплаты / Iltimos, to'g'ri to'lov summasini kiriting" };
@@ -409,29 +459,52 @@ export async function updateOrder(id: number, data: any) {
       return { success: false, error: "Заказ не найден / Buyurtma topilmadi" };
     }
 
+    // --- Driver Availability Check ---
+    const parsedScheduledAt = parseDate(data.scheduledAt);
+    if (!isExternalVehicle && data.driverId) {
+      const driverIdInt = parseInt(data.driverId);
+      const scheduledTime = parsedScheduledAt.getTime();
+      const BUFFER = 3 * 60 * 60 * 1000;
+      
+      const driverActiveOrders = await db.select().from(orders).where(eq(orders.driverId, driverIdInt));
+      for (const ao of driverActiveOrders) {
+        if (ao.status === 'completed' || ao.id === id) continue;
+        const aoTime = new Date(ao.scheduledAt).getTime();
+        if (Math.abs(aoTime - scheduledTime) <= BUFFER) {
+          return { success: false, error: "Xatolik: Haydovchi bu vaqtda band (±3 soat)! Iltimos, boshqa vaqt yoki haydovchi tanlang." };
+        }
+      }
+    }
+
     const previousPaymentStatus = order.paymentStatus;
-    const newPaymentStatus = data.paymentStatus;
-    const dispatcherFee = data.dispatcherFee ? parseInt(data.dispatcherFee) : null;
+    const newPaymentStatus = isExternalVehicle ? 'entered' : data.paymentStatus;
+    const dispatcherFee = isExternalVehicle ? null : (data.dispatcherFee ? parseInt(data.dispatcherFee) : null);
+    const status = isExternalVehicle ? 'completed' : data.status;
+    const isClosed = isExternalVehicle ? true : data.isClosed;
+    const address = isExternalVehicle ? (data.address || 'База') : data.address;
 
     await db.update(orders).set({
       clientId,
-      driverId: data.driverId ? parseInt(data.driverId) : null,
+      driverId: (!isExternalVehicle && data.driverId) ? parseInt(data.driverId) : null,
       operatorNote: data.operatorNote,
-      address: data.address,
-      mapUrl: data.mapUrl || null,
+      address,
+      mapUrl: isExternalVehicle ? null : (data.mapUrl || null),
       scheduledAt: parseDate(data.scheduledAt),
       containerSizeM3,
-      containerNumber: data.containerNumber || null,
-      rentalDuration: data.rentalDuration,
-      status: data.status,
+      containerNumber: isExternalVehicle ? null : (data.containerNumber || null),
+      rentalDuration: isExternalVehicle ? '1 день' : data.rentalDuration,
+      status,
       paymentAmount,
       paymentType: data.paymentType,
-      paymentStatus: data.paymentStatus,
+      paymentStatus: newPaymentStatus,
       clientCategory,
       dispatcherId,
       dispatcherFee,
-      referralName: data.referralName,
-      referralPercent: data.referralPercent ? parseInt(data.referralPercent) : null,
+      referralName: isExternalVehicle ? null : data.referralName,
+      referralPercent: isExternalVehicle ? null : (data.referralPercent ? parseInt(data.referralPercent) : null),
+      isExternalVehicle,
+      externalDriverName: isExternalVehicle ? data.externalDriverName : null,
+      isClosed,
     }).where(eq(orders.id, id));
 
     // If transitioned to 'entered'
@@ -439,7 +512,10 @@ export async function updateOrder(id: number, data: any) {
       await db.insert(warehouseIncome).values({
         source: 'client_payment',
         amountRub: paymentAmount,
-        note: `Оплата за заказ #${id}`,
+        note: isExternalVehicle
+          ? `Оплата стороннего авто (Водитель: ${data.externalDriverName || 'Неизвестно'})`
+          : `Оплата за заказ #${id}`,
+        operatorId: user ? user.id : null,
       });
 
       // Dispatcher fee as expense
@@ -448,6 +524,7 @@ export async function updateOrder(id: number, data: any) {
           category: 'dispatcher_salary',
           amountRub: dispatcherFee,
           note: `Услуга диспетчера за заказ #${id}`,
+          operatorId: user ? user.id : null,
         });
       }
 
@@ -459,6 +536,7 @@ export async function updateOrder(id: number, data: any) {
           category: 'referral_fee',
           amountRub: Math.round(feeAmount),
           note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${id}`,
+          operatorId: user ? user.id : null,
         });
       }
     }

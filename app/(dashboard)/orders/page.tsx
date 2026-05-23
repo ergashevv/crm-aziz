@@ -13,6 +13,7 @@ import { StatusTabs } from '@/components/StatusTabs';
 import { AutoRefresh } from '@/components/AutoRefresh';
 import { OrderForm } from '@/components/forms/OrderForm';
 import { ExportButton } from '@/components/ExportButton';
+import { isOverdue } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,18 +50,27 @@ export default async function OrdersPage({
   const statusParam = typeof searchParams.status === 'string' ? searchParams.status : '';
   const status = statusParam || 'active';
 
-  const allOrders = await getOrders(status, q);
-  const activeCount = (await getOrders('active', '')).length;
+  const allFetchedOrders = await getOrders(status === 'overdue_containers' ? 'all' : status, q);
+  const activeOrders = await getOrders('active', '');
+  const activeCount = activeOrders.length;
+  
+  // Filter for overdue if needed
+  const allOrders = status === 'overdue_containers' 
+    ? allFetchedOrders.filter((o) => isOverdue(o.order))
+    : allFetchedOrders;
+
   const clients = await getClients();
   const drivers = await getDrivers();
   const dispatchers = await getDispatchers();
 
   const exportOrdersData = allOrders.map(({ order, client, driver }) => ({
     id: `#${order.id}`,
-    client: client?.name || '-',
+    client: order.isExternalVehicle 
+      ? (lang === 'uz' ? `Begona: ${order.externalDriverName || ''}` : `Сторонняя: ${order.externalDriverName || ''}`) 
+      : (client?.name || '-'),
     address: order.address,
     date: format(new Date(order.scheduledAt), 'dd.MM.yyyy'),
-    driver: driver?.name || '-',
+    driver: order.isExternalVehicle ? (order.externalDriverName || '-') : (driver?.name || '-'),
     status: dict[order.status] || order.status,
     payment_status: dict[order.paymentStatus] || order.paymentStatus,
     amount: `${order.paymentAmount.toLocaleString()} RUB`
@@ -101,7 +111,7 @@ export default async function OrdersPage({
             title={lang === 'uz' ? "Buyurtmalar Ro'yxati" : "Список заказов"} 
             dict={dict} 
           />
-          <OrderForm dict={dict} clients={clients} drivers={drivers} dispatchers={dispatchers} />
+          <OrderForm dict={dict} clients={clients} drivers={drivers} dispatchers={dispatchers} activeOrders={activeOrders} />
         </div>
       </div>
 
@@ -110,6 +120,8 @@ export default async function OrdersPage({
       <StatusTabs 
         options={[
           { value: 'active', label: lang === 'uz' ? 'Faol (tugallanmagan)' : 'Активные' },
+          { value: 'pending_confirmation', label: lang === 'uz' ? 'Tasdiqlash kutilmoqda' : 'Ожидает подтверждения' },
+          { value: 'overdue_containers', label: lang === 'uz' ? 'Muddati o\'tgan konteynerlar' : 'Просроченные контейнеры' },
           { value: 'all', label: lang === 'uz' ? 'Barchasi' : 'Все' },
           { value: 'new', label: dict.new },
           { value: 'assigned', label: dict.assigned },
@@ -143,16 +155,34 @@ export default async function OrdersPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {allOrders.map(({ order, client, driver, dispatcher }) => (
+              {allOrders.map(({ order, client, driver, dispatcher, operator }) => (
                 <TableRowLink href={`/orders/${order.id}`} key={order.id}>
-                  <TableCell className="font-medium text-slate-500">#{order.id}</TableCell>
-                  <TableCell>
-                    <div className="font-semibold">{client?.name}</div>
-                    {order.clientCategory === 'dispatcher' && dispatcher && (
-                      <div className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 mt-0.5">
-                        <Phone className="h-2.5 w-2.5" />
-                        {dispatcher.name}
+                  <TableCell className="font-medium text-slate-500">
+                    <div>#{order.id}</div>
+                    {operator && (
+                      <div className="text-[9px] text-slate-400 font-bold mt-0.5 truncate max-w-[85px]" title={`Operator: ${operator.name}`}>
+                        {operator.name}
                       </div>
+                    )}
+                  </TableCell>
+                   <TableCell>
+                    {order.isExternalVehicle ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 border border-orange-200">
+                          {lang === 'uz' ? 'Begona' : 'Сторонняя'}
+                        </span>
+                        <span className="font-semibold text-slate-800">{order.externalDriverName || 'Сторонняя машина'}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="font-semibold">{client?.name}</div>
+                        {order.clientCategory === 'dispatcher' && dispatcher && (
+                          <div className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 mt-0.5">
+                            <Phone className="h-2.5 w-2.5" />
+                            {dispatcher.name}
+                          </div>
+                        )}
+                      </>
                     )}
                   </TableCell>
                   <TableCell>
@@ -169,7 +199,13 @@ export default async function OrdersPage({
                       {format(new Date(order.scheduledAt), 'HH:mm')}
                     </div>
                   </TableCell>
-                  <TableCell>{driver?.name || <span className="text-muted-foreground italic">{dict.unassigned}</span>}</TableCell>
+                  <TableCell>
+                    {order.isExternalVehicle ? (
+                      <span className="font-semibold text-orange-600">{order.externalDriverName || 'Сторонняя машина'}</span>
+                    ) : (
+                      driver?.name || <span className="text-muted-foreground italic">{dict.unassigned}</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 ${getStatusClasses(order.status)}`}>
                       {dict[order.status] || order.status.replace('_', ' ')}
@@ -184,7 +220,7 @@ export default async function OrdersPage({
                     {order.paymentAmount.toLocaleString()} <span className="text-xs text-slate-400 font-medium">RUB</span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <OrderForm dict={dict} order={order} clients={clients} drivers={drivers} dispatchers={dispatchers} />
+                    <OrderForm dict={dict} order={order} clients={clients} drivers={drivers} dispatchers={dispatchers} activeOrders={activeOrders} />
                   </TableCell>
                 </TableRowLink>
               ))}

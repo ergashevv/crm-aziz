@@ -13,17 +13,21 @@ import {
   LogOut,
   Map,
   ChevronRight,
+  UserCog,
+  Sliders,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./lang-switcher";
 import { getDictionary } from "@/lib/dictionaries";
 
-export function Sidebar({
-  lang = 'ru',
-  isCollapsed = false
-}: {
-  lang?: string;
+export function Sidebar({ 
+  lang = 'ru', 
+  isCollapsed = false,
+  userRole
+}: { 
+  lang?: string; 
   isCollapsed?: boolean;
+  userRole?: string;
 }) {
   const pathname = usePathname();
   const dict = getDictionary(lang);
@@ -34,10 +38,15 @@ export function Sidebar({
     { label: dict.orders,                        icon: ClipboardList,    href: "/orders",      color: "text-indigo-400" },
     { label: dict.clients,                       icon: Users,            href: "/clients",     color: "text-violet-400" },
     { label: dict.drivers,                       icon: Car,              href: "/drivers",     color: "text-amber-400" },
+    { label: (dict as any).management_panel || "Панель управления", icon: Sliders, href: "/management", color: "text-pink-400" },
     { label: dict.finance,                       icon: Wallet,           href: "/finance",     color: "text-emerald-400" },
     { label: dict.fuel_logs,                     icon: Fuel,             href: "/fuel",        color: "text-orange-400" },
     { label: dict.warehouse,                     icon: Warehouse,        href: "/warehouse",   color: "text-rose-400" },
   ];
+
+  if (userRole === 'admin') {
+    routes.push({ label: (dict as any).operators || "Operatorlar", icon: UserCog, href: "/operators", color: "text-teal-400" });
+  }
 
   return (
     <div className="flex flex-col h-full w-full overflow-y-auto overflow-x-hidden"

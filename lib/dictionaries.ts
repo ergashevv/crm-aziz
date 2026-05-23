@@ -1,6 +1,7 @@
 export const dictionaries = {
   ru: {
-    dashboard: "Панель управления",
+    dashboard: "Главная",
+    management_panel: "Панель управления",
     orders: "Заказы",
     clients: "Клиенты",
     drivers: "Водители",
@@ -102,6 +103,7 @@ export const dictionaries = {
     worker_salary: "Зарплата рабочего",
     dispatcher_salary: "Зарплата диспетчера",
     referral_fee: "Реферальные",
+    master_fee: "Мастер пули",
     other: "Другое",
     client_payment: "Оплата клиента",
     external_vehicle_rental: "Аренда стороннего авто",
@@ -147,7 +149,8 @@ export const dictionaries = {
     filtered_total: "Итого по фильтру",
   },
   uz: {
-    dashboard: "Boshqaruv paneli",
+    dashboard: "Asosiy",
+    management_panel: "Boshqaruv paneli",
     orders: "Buyurtmalar",
     clients: "Mijozlar",
     drivers: "Haydovchilar",
@@ -249,6 +252,7 @@ export const dictionaries = {
     worker_salary: "Ishchi maoshi",
     dispatcher_salary: "Dispetcher maoshi",
     referral_fee: "Referal to'lov",
+    master_fee: "Master puli",
     other: "Boshqa",
     client_payment: "Mijoz to'lovi",
     external_vehicle_rental: "Tashqi avto ijarasi",

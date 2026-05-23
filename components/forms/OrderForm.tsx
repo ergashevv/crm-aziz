@@ -44,12 +44,13 @@ interface Client     { id: number; name: string; phone: string; address: string;
 interface Dispatcher { id: number; name: string; phone: string; }
 interface Driver     { id: number; name: string; vehiclePlate: string; }
 
-export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
+export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOrders = [] }: {
   dict: any;
   order?: any;
   clients: Client[];
   drivers: Driver[];
   dispatchers: Dispatcher[];
+  activeOrders?: any[];
 }) {
   const [open, setOpen]     = useState(false);
   const [loading, setLoading] = useState(false);
@@ -90,6 +91,8 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
         dispatcherFee:   String(order.dispatcherFee || ''),
         referralName:    order.referralName    || '',
         referralPercent: String(order.referralPercent || ''),
+        isExternalVehicle: order.isExternalVehicle || false,
+        externalDriverName: order.externalDriverName || '',
       };
     }
     return {
@@ -103,6 +106,8 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
       clientCategory: 'direct',
       dispatcherId: '', dispatcherName: '', dispatcherPhone: '', dispatcherFee: '',
       referralName: '', referralPercent: '',
+      isExternalVehicle: false,
+      externalDriverName: '',
     };
   };
 
@@ -156,9 +161,40 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
 
   const clientOptions     = clients.map(c => ({ value: String(c.id), label: c.name, sub: c.phone }));
   const dispatcherOptions = dispatchers.map(d => ({ value: String(d.id), label: d.name, sub: d.phone }));
+  
+  // Calculate driver availability
+  const isDriverBusy = (dId: number) => {
+    if (!form.scheduledAt) return false;
+    const selectedTime = new Date(form.scheduledAt).getTime();
+    if (isNaN(selectedTime)) return false;
+
+    // Buffer: 3 hours in milliseconds
+    const BUFFER = 3 * 60 * 60 * 1000;
+
+    for (const ao of activeOrders) {
+      if (ao.order.driverId !== dId) continue;
+      // Skip the current order being edited
+      if (order && ao.order.id === order.id) continue;
+      
+      const orderTime = new Date(ao.order.scheduledAt).getTime();
+      if (Math.abs(orderTime - selectedTime) <= BUFFER) {
+        return true; // Conflict found
+      }
+    }
+    return false;
+  };
+
   const driverOptions     = [
     { value: 'none', label: dict.unassigned || 'Не назначен' },
-    ...drivers.map(d => ({ value: String(d.id), label: d.name, sub: d.vehiclePlate })),
+    ...drivers.map(d => {
+      const busy = isDriverBusy(d.id);
+      return { 
+        value: String(d.id), 
+        label: busy ? `${d.name} (Band / Занят)` : d.name, 
+        sub: d.vehiclePlate,
+        disabled: busy 
+      };
+    }),
   ];
   const isDispatcher = form.clientCategory === 'dispatcher';
 
@@ -200,229 +236,304 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers }: {
             </div>
           )}
 
-          {/* ══ CATEGORY TOGGLE ══ */}
+          {/* ══ VEHICLE TYPE TOGGLE ══ */}
           <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
-            {(['direct', 'dispatcher'] as const).map(cat => (
+            {([false, true] as const).map(isExt => (
               <button
-                key={cat}
+                key={String(isExt)}
                 type="button"
-                onClick={() => set('clientCategory', cat)}
+                onClick={() => setForm((p: any) => ({ ...p, isExternalVehicle: isExt }))}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                  form.clientCategory === cat
+                  form.isExternalVehicle === isExt
                     ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                {cat === 'direct'
-                  ? <><User className="h-4 w-4 text-blue-500" /> Прямой клиент</>
-                  : <><Phone className="h-4 w-4 text-indigo-500" /> Диспетчер</>}
+                {!isExt
+                  ? <><Truck className="h-4 w-4 text-emerald-500" /> Своя машина</>
+                  : <><Truck className="h-4 w-4 text-orange-500" /> Сторонняя машина</>}
               </button>
             ))}
           </div>
 
-          {/* ══ CLIENT ══ */}
-          <section className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
-            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5" /> Клиент
-            </p>
-            <SearchableSelect
-              options={clientOptions}
-              value={form.clientId === 'new' ? '' : form.clientId}
-              onChange={selectClient}
-              placeholder="Поиск по клиентам..."
-              addNewLabel="+ Новый клиент"
-              onAddNew={() => selectClient('new')}
-            />
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Имя *</Label>
-                <Input value={form.clientName} onChange={e => set('clientName', e.target.value)} placeholder="Имя клиента" required className="h-9 rounded-xl text-sm" />
-              </div>
-              <div>
-                <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Телефон *</Label>
-                <Input value={form.clientPhone} onChange={e => set('clientPhone', e.target.value)} placeholder="+998 90 000 00 00" required className="h-9 rounded-xl text-sm" />
-              </div>
-            </div>
-          </section>
+          {form.isExternalVehicle ? (
+            <>
+              {/* External Driver Name */}
+              <section className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5" /> Водитель сторонней машины
+                </p>
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Имя водителя *</Label>
+                  <Input value={form.externalDriverName} onChange={e => set('externalDriverName', e.target.value)} placeholder="Имя водителя" required={form.isExternalVehicle} className="h-9 rounded-xl text-sm" />
+                </div>
+              </section>
 
-          {/* ══ DISPATCHER (conditional) ══ */}
-          {isDispatcher && (
-            <section className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
-              <p className="text-[11px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5" /> Диспетчер
-              </p>
-              <SearchableSelect
-                options={dispatcherOptions}
-                value={form.dispatcherId === 'new' ? '' : form.dispatcherId}
-                onChange={selectDispatcher}
-                placeholder="Поиск диспетчера..."
-                addNewLabel="+ Новый диспетчер"
-                onAddNew={() => selectDispatcher('new')}
-              />
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block">Имя</Label>
-                  <Input value={form.dispatcherName} onChange={e => set('dispatcherName', e.target.value)} placeholder="Имя" className="h-9 rounded-xl text-sm" />
-                </div>
-                <div>
-                  <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block">Телефон</Label>
-                  <Input value={form.dispatcherPhone} onChange={e => set('dispatcherPhone', e.target.value)} placeholder="+998 90 000 00 00" className="h-9 rounded-xl text-sm" />
-                </div>
-              </div>
+              {/* Date and Time */}
               <div>
-                <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block flex items-center gap-1">
-                  <CreditCard className="h-3 w-3" /> Услуга диспетчера (сумма)
+                <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-amber-500" /> {dict.scheduled_date || 'Дата и время'} *
                 </Label>
-                <div className="relative">
-                  <Input type="text" inputMode="numeric" placeholder="0" value={dispAmt} onChange={onDispAmt}
-                    className="h-9 rounded-xl text-sm font-semibold pr-14 bg-white" />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
+                <Input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)}
+                  required className="h-9 rounded-xl text-sm" />
+              </div>
+
+              {/* Amount and Payment Type */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5 text-emerald-500" /> {dict.amount} *
+                  </Label>
+                  <div className="relative">
+                    <Input type="text" inputMode="numeric" placeholder="0" value={amt} onChange={onAmt}
+                      className="h-9 rounded-xl text-sm font-bold pr-14" required />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Тип оплаты *</Label>
+                  <div className="grid grid-cols-3 gap-1.5 h-9">
+                    {PAYMENT_TYPES.map(({ val, icon: Icon, label }) => (
+                      <button key={val} type="button" onClick={() => set('paymentType', val)}
+                        className={`h-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold border transition-all ${
+                          form.paymentType === val
+                            ? 'bg-primary text-white border-primary shadow-sm'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary'
+                        }`}>
+                        <Icon className="h-4 w-4" /> {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </section>
-          )}
-
-          {/* ══ ADDRESS + MAP ══ */}
-          <section className="space-y-2.5">
-            <div>
-              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-rose-500" /> {dict.address} *
-              </Label>
-              <Input value={form.address} onChange={e => set('address', e.target.value)}
-                placeholder="Адрес доставки" required className="h-9 rounded-xl text-sm" />
-            </div>
-            <div>
-              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Navigation className="h-3.5 w-3.5 text-blue-500" />
-                  Ссылка на карту
-                </span>
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={(e) => { e.preventDefault(); setMapOpen(true); }}
-                    className="text-emerald-600 text-[10px] font-bold hover:text-emerald-700 flex items-center gap-1">
-                    <MapIcon className="h-3.5 w-3.5" /> На карте
+            </>
+          ) : (
+            <>
+              {/* ══ CATEGORY TOGGLE ══ */}
+              <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
+                {(['direct', 'dispatcher'] as const).map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => set('clientCategory', cat)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                      form.clientCategory === cat
+                        ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {cat === 'direct'
+                      ? <><User className="h-4 w-4 text-blue-500" /> Прямой клиент</>
+                      : <><Phone className="h-4 w-4 text-indigo-500" /> Диспетчер</>}
                   </button>
-                  {form.mapUrl && (
-                    <a href={form.mapUrl} target="_blank" rel="noopener noreferrer"
-                      className="text-blue-500 text-[10px] font-bold hover:text-blue-700 flex items-center gap-0.5"
-                      onClick={e => e.stopPropagation()}>
-                      <ExternalLink className="h-3 w-3" /> Открыть
-                    </a>
+                ))}
+              </div>
+
+              {/* ══ CLIENT ══ */}
+              <section className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5" /> Клиент
+                </p>
+                <SearchableSelect
+                  options={clientOptions}
+                  value={form.clientId === 'new' ? '' : form.clientId}
+                  onChange={selectClient}
+                  placeholder="Поиск по клиентам..."
+                  addNewLabel="+ Новый клиент"
+                  onAddNew={() => selectClient('new')}
+                />
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Имя *</Label>
+                    <Input value={form.clientName} onChange={e => set('clientName', e.target.value)} placeholder="Имя клиента" required={!form.isExternalVehicle} className="h-9 rounded-xl text-sm" />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Телефон *</Label>
+                    <Input value={form.clientPhone} onChange={e => set('clientPhone', e.target.value)} placeholder="+998 90 000 00 00" required={!form.isExternalVehicle} className="h-9 rounded-xl text-sm" />
+                  </div>
+                </div>
+              </section>
+
+              {/* ══ DISPATCHER (conditional) ══ */}
+              {isDispatcher && (
+                <section className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
+                  <p className="text-[11px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" /> Диспетчер
+                  </p>
+                  <SearchableSelect
+                    options={dispatcherOptions}
+                    value={form.dispatcherId === 'new' ? '' : form.dispatcherId}
+                    onChange={selectDispatcher}
+                    placeholder="Поиск диспетчера..."
+                    addNewLabel="+ Новый диспетчер"
+                    onAddNew={() => selectDispatcher('new')}
+                  />
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block">Имя</Label>
+                      <Input value={form.dispatcherName} onChange={e => set('dispatcherName', e.target.value)} placeholder="Имя" className="h-9 rounded-xl text-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block">Телефон</Label>
+                      <Input value={form.dispatcherPhone} onChange={e => set('dispatcherPhone', e.target.value)} placeholder="+998 90 000 00 00" className="h-9 rounded-xl text-sm" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[11px] font-semibold text-indigo-500 mb-1 block flex items-center gap-1">
+                      <CreditCard className="h-3 w-3" /> Услуга диспетчера (сумма)
+                    </Label>
+                    <div className="relative">
+                      <Input type="text" inputMode="numeric" placeholder="0" value={dispAmt} onChange={onDispAmt}
+                        className="h-9 rounded-xl text-sm font-semibold pr-14 bg-white" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* ══ ADDRESS + MAP ══ */}
+              <section className="space-y-2.5">
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-rose-500" /> {dict.address} *
+                  </Label>
+                  <Input value={form.address} onChange={e => set('address', e.target.value)}
+                    placeholder="Адрес доставки" required={!form.isExternalVehicle} className="h-9 rounded-xl text-sm" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Navigation className="h-3.5 w-3.5 text-blue-500" />
+                      Ссылка на карту
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={(e) => { e.preventDefault(); setMapOpen(true); }}
+                        className="text-emerald-600 text-[10px] font-bold hover:text-emerald-700 flex items-center gap-1">
+                        <MapIcon className="h-3.5 w-3.5" /> На карте
+                      </button>
+                      {form.mapUrl && (
+                        <a href={form.mapUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-blue-500 text-[10px] font-bold hover:text-blue-700 flex items-center gap-0.5"
+                          onClick={e => e.stopPropagation()}>
+                          <ExternalLink className="h-3 w-3 opacity-70" /> {dict.open || 'Открыть'}
+                        </a>
+                      )}
+                    </div>
+                  </Label>
+                  <Input value={form.mapUrl} onChange={e => set('mapUrl', e.target.value)}
+                    placeholder="https://maps.google.com/... или yandex.ru/maps/..."
+                    className="h-9 rounded-xl text-sm" />
+                </div>
+              </section>
+
+              {/* ══ DATE + CONTAINER SIZE ══ */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-amber-500" /> {dict.scheduled_date} *
+                  </Label>
+                  <Input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)}
+                    required className="h-9 rounded-xl text-sm" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                    <Package className="h-3.5 w-3.5 text-orange-500" /> {dict.container_size} *
+                  </Label>
+                  <div className="grid grid-cols-3 gap-1.5 h-9">
+                    {CONTAINER_SIZES.map(s => (
+                      <button key={s} type="button" onClick={() => set('containerSizeM3', String(s))}
+                        className={`h-full rounded-xl text-sm font-bold border transition-all ${
+                          form.containerSizeM3 === String(s)
+                            ? 'bg-primary text-white border-primary shadow-sm shadow-primary/30'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary'
+                        }`}>
+                        {s}³
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ══ CONTAINER NUMBER + RENTAL ══ */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Номер контейнера</Label>
+                  <Input value={form.containerNumber} onChange={e => set('containerNumber', e.target.value)}
+                    placeholder="Напр. КТ-001" className="h-9 rounded-xl text-sm font-mono" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">{dict.rental_duration} *</Label>
+                  {!customRental ? (
+                    <Select value={form.rentalDuration} onValueChange={v => {
+                      if (v === '__custom__') { setCustomRental(true); set('rentalDuration', ''); }
+                      else { set('rentalDuration', v); }
+                    }}>
+                      <SelectTrigger className="h-9 rounded-xl text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {RENTAL_PRESETS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                        <SelectItem value="__custom__">✏️ Другое...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <Input value={form.rentalDuration} onChange={e => set('rentalDuration', e.target.value)}
+                        placeholder="напр. 3 дня" className="h-9 rounded-xl text-sm flex-1" required={!form.isExternalVehicle} autoFocus />
+                      <button type="button" onClick={() => { setCustomRental(false); set('rentalDuration', '1 день'); }}
+                        className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 bg-white text-lg flex-shrink-0">
+                        ×
+                      </button>
+                    </div>
                   )}
                 </div>
-              </Label>
-              <Input value={form.mapUrl} onChange={e => set('mapUrl', e.target.value)}
-                placeholder="https://maps.google.com/... или yandex.ru/maps/..."
-                className="h-9 rounded-xl text-sm" />
-            </div>
-          </section>
-
-          {/* ══ DATE + CONTAINER SIZE ══ */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-amber-500" /> {dict.scheduled_date} *
-              </Label>
-              <Input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)}
-                required className="h-9 rounded-xl text-sm" />
-            </div>
-            <div>
-              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-                <Package className="h-3.5 w-3.5 text-orange-500" /> {dict.container_size} *
-              </Label>
-              <div className="grid grid-cols-3 gap-1.5 h-9">
-                {CONTAINER_SIZES.map(s => (
-                  <button key={s} type="button" onClick={() => set('containerSizeM3', String(s))}
-                    className={`h-full rounded-xl text-sm font-bold border transition-all ${
-                      form.containerSizeM3 === String(s)
-                        ? 'bg-primary text-white border-primary shadow-sm shadow-primary/30'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary'
-                    }`}>
-                    {s}³
-                  </button>
-                ))}
               </div>
-            </div>
-          </div>
 
-          {/* ══ CONTAINER NUMBER + RENTAL ══ */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Номер контейнера</Label>
-              <Input value={form.containerNumber} onChange={e => set('containerNumber', e.target.value)}
-                placeholder="Напр. КТ-001" className="h-9 rounded-xl text-sm font-mono" />
-            </div>
-            <div>
-              <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">{dict.rental_duration} *</Label>
-              {!customRental ? (
-                <Select value={form.rentalDuration} onValueChange={v => {
-                  if (v === '__custom__') { setCustomRental(true); set('rentalDuration', ''); }
-                  else { set('rentalDuration', v); }
-                }}>
-                  <SelectTrigger className="h-9 rounded-xl text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {RENTAL_PRESETS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                    <SelectItem value="__custom__">✏️ Другое...</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="flex gap-1.5">
-                  <Input value={form.rentalDuration} onChange={e => set('rentalDuration', e.target.value)}
-                    placeholder="напр. 3 дня" className="h-9 rounded-xl text-sm flex-1" required autoFocus />
-                  <button type="button" onClick={() => { setCustomRental(false); set('rentalDuration', '1 день'); }}
-                    className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 bg-white text-lg flex-shrink-0">
-                    ×
-                  </button>
+              {/* ══ AMOUNT + PAYMENT TYPE ══ */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5 text-emerald-500" /> {dict.amount} *
+                  </Label>
+                  <div className="relative">
+                    <Input type="text" inputMode="numeric" placeholder="0" value={amt} onChange={onAmt}
+                      className="h-9 rounded-xl text-sm font-bold pr-14" required />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* ══ AMOUNT + PAYMENT TYPE ══ */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-                <CreditCard className="h-3.5 w-3.5 text-emerald-500" /> {dict.amount} *
-              </Label>
-              <div className="relative">
-                <Input type="text" inputMode="numeric" placeholder="0" value={amt} onChange={onAmt}
-                  className="h-9 rounded-xl text-sm font-bold pr-14" required />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Тип оплаты *</Label>
+                  <div className="grid grid-cols-3 gap-1.5 h-9">
+                    {PAYMENT_TYPES.map(({ val, icon: Icon, label }) => (
+                      <button key={val} type="button" onClick={() => set('paymentType', val)}
+                        className={`h-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold border transition-all ${
+                          form.paymentType === val
+                            ? 'bg-primary text-white border-primary shadow-sm'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary'
+                        }`}>
+                        <Icon className="h-4 w-4" /> {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Тип оплаты *</Label>
-              <div className="grid grid-cols-3 gap-1.5 h-9">
-                {PAYMENT_TYPES.map(({ val, icon: Icon, label }) => (
-                  <button key={val} type="button" onClick={() => set('paymentType', val)}
-                    className={`h-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold border transition-all ${
-                      form.paymentType === val
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:text-primary'
-                    }`}>
-                    <Icon className="h-4 w-4" /> {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          {/* ══ DRIVER ══ */}
-          <div>
-            <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-              <Truck className="h-3.5 w-3.5 text-slate-500" />
-              {dict.driver} <span className="text-slate-300">({dict.optional || 'необязательно'})</span>
-            </Label>
-            <SearchableSelect
-              options={driverOptions}
-              value={form.driverId || 'none'}
-              onChange={v => set('driverId', v === 'none' ? '' : v)}
-              placeholder="Выбрать водителя..."
-            />
-          </div>
+              {/* ══ DRIVER ══ */}
+              <div>
+                <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                  <Truck className="h-3.5 w-3.5 text-slate-500" />
+                  {dict.driver} <span className="text-slate-300">({dict.optional || 'необязательно'})</span>
+                </Label>
+                <SearchableSelect
+                  options={driverOptions}
+                  value={form.driverId || 'none'}
+                  onChange={v => set('driverId', v === 'none' ? '' : v)}
+                  placeholder="Выбрать водителя..."
+                />
+              </div>
+            </>
+          )}
 
           {/* ══ STATUS (edit only) ══ */}
-          {order && (
+          {!form.isExternalVehicle && order && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">{dict.status}</Label>

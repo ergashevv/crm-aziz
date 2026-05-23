@@ -1,8 +1,7 @@
-"use client";
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import Link from "next/link";
 
 interface MetricCardProps {
   title: string;
@@ -12,9 +11,10 @@ interface MetricCardProps {
   trend: number;
   icon?: React.ReactNode;
   colorScheme: "indigo" | "emerald" | "rose" | "blue" | "amber" | "purple" | "cyan" | "orange" | "slate";
+  href?: string;
 }
 
-export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme }: MetricCardProps) {
+export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href }: MetricCardProps) {
   const isPositive = trend > 0;
   const isNegative = trend < 0;
   const isNeutral = trend === 0;
@@ -33,8 +33,8 @@ export function MetricCard({ title, value, prevValue, unit, trend, icon, colorSc
 
   const iconBg = colorClasses[colorScheme] || colorClasses.slate;
 
-  return (
-    <Card className="h-full border border-slate-200/60 shadow-sm rounded-2xl overflow-hidden bg-white hover:shadow-md transition-shadow duration-200">
+  const cardContent = (
+    <Card className={`h-full border border-slate-200/60 shadow-sm rounded-2xl overflow-hidden bg-white transition-all duration-200 ${href ? 'hover:shadow-md hover:border-emerald-300 cursor-pointer active:scale-[0.99]' : 'hover:shadow-md'}`}>
       <CardHeader className="pb-2 pt-5 px-5 flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{title}</CardTitle>
         {icon && (
@@ -69,4 +69,14 @@ export function MetricCard({ title, value, prevValue, unit, trend, icon, colorSc
       </CardContent>
     </Card>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block h-full">
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 }

@@ -11,7 +11,7 @@ import {
   dispatchers,
   safeTransactions
 } from '@/lib/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -132,6 +132,7 @@ export async function createExpense(data: any) {
     note: data.note,
     orderId: data.orderId || null,
     driverId: data.driverId ? parseInt(data.driverId) : null,
+    dispatcherId: data.dispatcherId ? parseInt(data.dispatcherId) : null,
     liters: data.liters ? parseInt(data.liters) : null,
     operatorId: user ? user.id : null,
   });
@@ -147,6 +148,7 @@ export async function updateExpense(id: number, data: any) {
     note: data.note,
     orderId: data.orderId || null,
     driverId: data.driverId ? parseInt(data.driverId) : null,
+    dispatcherId: data.dispatcherId ? parseInt(data.dispatcherId) : null,
     liters: data.liters ? parseInt(data.liters) : null,
   }).where(eq(expenses.id, id));
   revalidateTag('expenses');
@@ -599,5 +601,26 @@ export async function updateOrder(id: number, data: any) {
   } catch (error: any) {
     console.error("Error updating order:", error);
     return { success: false, error: error.message || "Unknown database error occurred" };
+  }
+}
+
+export async function getRecentOrders() {
+  try {
+    const rows = await db.select({
+      id: orders.id,
+      address: orders.address,
+      paymentAmount: orders.paymentAmount,
+      isExternalVehicle: orders.isExternalVehicle,
+      externalDriverName: orders.externalDriverName,
+      clientName: clients.name,
+      createdAt: orders.createdAt,
+    })
+    .from(orders)
+    .leftJoin(clients, eq(orders.clientId, clients.id))
+    .orderBy(desc(orders.id));
+    return rows;
+  } catch (error) {
+    console.error("Error fetching recent orders:", error);
+    return [];
   }
 }

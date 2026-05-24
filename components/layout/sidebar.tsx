@@ -15,6 +15,7 @@ import {
   ChevronRight,
   UserCog,
   Sliders,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./lang-switcher";
@@ -38,6 +39,7 @@ export function Sidebar({
     { label: dict.orders,                        icon: ClipboardList,    href: "/orders",      color: "text-indigo-400" },
     { label: dict.clients,                       icon: Users,            href: "/clients",     color: "text-violet-400" },
     { label: dict.drivers,                       icon: Car,              href: "/drivers",     color: "text-amber-400" },
+    { label: lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры', icon: Phone, href: "/dispatchers", color: "text-teal-400" },
     { label: dict.management_panel, icon: Sliders, href: "/management", color: "text-pink-400" },
     { label: dict.finance,                       icon: Wallet,           href: "/finance",     color: "text-emerald-400" },
     { label: dict.fuel_logs,                     icon: Fuel,             href: "/fuel",        color: "text-orange-400" },

@@ -67,6 +67,8 @@ export function DriverGaiTracker({ dict, drivers, expenses }: DriverGaiTrackerPr
   });
 
   // Calculate overall metrics
+  const unassignedExpensesList = expenses.filter(exp => exp.driverId === null);
+  const unassignedCost = unassignedExpensesList.reduce((sum, exp) => sum + exp.amountRub, 0);
   const totalCostAll = expenses.reduce((sum, exp) => sum + exp.amountRub, 0);
 
   // Filtered master ledger expenses
@@ -199,9 +201,12 @@ export function DriverGaiTracker({ dict, drivers, expenses }: DriverGaiTrackerPr
 
                   <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
                     <div className="flex items-center gap-6">
-                      <div className="text-right">
+                      <div className="text-right flex flex-col items-end">
                         <span className="text-xs text-slate-400 font-semibold block">Сумма</span>
                         <span className="font-extrabold text-red-600">{stats.totalCost.toLocaleString()} RUB</span>
+                        <span className="inline-flex items-center text-[9px] font-extrabold text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded mt-1 shadow-sm">
+                          {totalCostAll > 0 ? Math.round((stats.totalCost / totalCostAll) * 100) : 0}% {dict.fuel === "Топливо" ? "от категории" : "bo'limdan"}
+                        </span>
                       </div>
                       <div className="text-right hidden md:block">
                         <span className="text-xs text-slate-400 font-semibold block">Штрафы</span>
@@ -285,6 +290,99 @@ export function DriverGaiTracker({ dict, drivers, expenses }: DriverGaiTrackerPr
               </Card>
             );
           })}
+
+          {unassignedExpensesList.length > 0 && (
+            <Card 
+              className={`border-0 shadow-sm ring-1 transition-all rounded-2xl overflow-hidden bg-white hover:ring-slate-300/80 ${
+                expandedDriverId === -1 ? 'ring-slate-300 shadow-md' : 'ring-slate-100'
+              }`}
+            >
+              {/* Unassigned summary bar */}
+              <div 
+                onClick={() => setExpandedDriverId(expandedDriverId === -1 ? null : -1)}
+                className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer select-none transition-colors hover:bg-slate-50/50"
+              >
+                <div className="flex items-center gap-4.5">
+                  <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 shadow-inner">
+                    <Layers className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-slate-700">Общие / Не распределено</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-slate-400 font-semibold">Общие корпоративные расходы</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="flex items-center gap-6">
+                    <div className="text-right flex flex-col items-end">
+                      <span className="text-xs text-slate-400 font-semibold block">Сумма</span>
+                      <span className="font-extrabold text-slate-700">{unassignedCost.toLocaleString()} RUB</span>
+                      <span className="inline-flex items-center text-[9px] font-extrabold text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded mt-1 shadow-sm">
+                        {totalCostAll > 0 ? Math.round((unassignedCost / totalCostAll) * 100) : 0}% {dict.fuel === "Топливо" ? "от категории" : "bo'limdan"}
+                      </span>
+                    </div>
+                    <div className="text-right hidden md:block">
+                      <span className="text-xs text-slate-400 font-semibold block">Записи</span>
+                      <span className="font-bold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full text-xs">{unassignedExpensesList.length}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="text-slate-400 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                    {expandedDriverId === -1 ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5" />}
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Ledger view */}
+              {expandedDriverId === -1 && (
+                <div className="border-t border-slate-100 bg-slate-50/40 p-4 sm:p-6 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">История нераспределенных штрафов ГАИ</h4>
+                    <span className="text-xs text-slate-400 font-medium">Всего {unassignedExpensesList.length} записей</span>
+                  </div>
+
+                  <div className="bg-white rounded-xl overflow-hidden ring-1 ring-slate-100 shadow-inner">
+                    <Table>
+                      <TableHeader className="bg-slate-50">
+                        <TableRow>
+                          <TableHead className="w-[120px]">Дата</TableHead>
+                          <TableHead className="w-[120px]">Категория</TableHead>
+                          <TableHead>Описание</TableHead>
+                          <TableHead className="text-right w-[150px]">Сумма</TableHead>
+                          <TableHead className="w-[60px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {unassignedExpensesList.map(exp => (
+                          <TableRow key={exp.id} className="hover:bg-slate-50/50">
+                            <TableCell className="text-xs text-slate-500 font-medium">
+                              {format(new Date(exp.recordedAt), 'dd.MM.yyyy HH:mm')}
+                            </TableCell>
+                            <TableCell>
+                              <span className="capitalize text-[10px] font-bold px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-md inline-flex">
+                                {dict[exp.category] || exp.category}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs font-semibold text-slate-700">
+                              {exp.note || '-'}
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-red-600 font-extrabold">
+                              -{exp.amountRub.toLocaleString()} RUB
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <ExpenseForm dict={dict} expense={exp} drivers={drivers} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
 
           {filteredDrivers.length === 0 && (
             <div className="bg-white p-12 rounded-2xl border-0 ring-1 ring-slate-100 text-center flex flex-col items-center justify-center">

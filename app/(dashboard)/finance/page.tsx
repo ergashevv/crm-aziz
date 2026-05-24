@@ -1,5 +1,4 @@
-import React from 'react';
-import { getFinanceData, getClients, getDispatchers, getDashboardData } from '@/lib/data';
+import { getFinanceData, getClients, getDispatchers, getDashboardData, getDrivers } from '@/lib/data';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -25,12 +24,13 @@ export default async function FinancePage({
   const dict = getDictionary(lang);
 
   // Fetch all database records
-  const [allOrders, { allExpenses, allWarehouseIncome }, user, allClients, allDispatchers] = await Promise.all([
+  const [allOrders, { allExpenses, allWarehouseIncome }, user, allClients, allDispatchers, allDrivers] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
     getCurrentUser(),
     getClients(),
-    getDispatchers()
+    getDispatchers(),
+    getDrivers()
   ]);
 
   const ordersMap = new Map(allOrders.map(o => [o.id, o]));
@@ -397,7 +397,7 @@ export default async function FinancePage({
             } 
             dict={dict} 
           />
-          <ExpenseForm dict={dict} />
+          <ExpenseForm dict={dict} drivers={allDrivers} dispatchers={allDispatchers} />
         </div>
       </div>
 
@@ -565,7 +565,7 @@ export default async function FinancePage({
                       </TableCell>
                       <TableCell className="text-right text-sm text-rose-600 font-extrabold">-{expense.amountRub.toLocaleString()}</TableCell>
                       <TableCell className="text-right">
-                        <ExpenseForm dict={dict} expense={expense} />
+                        <ExpenseForm dict={dict} expense={expense} drivers={allDrivers} dispatchers={allDispatchers} />
                       </TableCell>
                     </TableRow>
                   ))}

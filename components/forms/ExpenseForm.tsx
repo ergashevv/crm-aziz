@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { createExpense, updateExpense } from '@/app/actions/entities';
+import { createExpense, updateExpense, getRecentOrders } from '@/app/actions/entities';
 import { Plus, Edit2 } from 'lucide-react';
 
 const EXPENSE_CATEGORIES = ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other', 'tractor'];
@@ -18,7 +18,7 @@ const formatNum = (val: string | number) => {
   return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
 };
 
-export function ExpenseForm({ dict, expense, drivers = [] }: { dict: any, expense?: any, drivers?: any[] }) {
+export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: { dict: any, expense?: any, drivers?: any[], dispatchers?: any[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(expense ? {
@@ -27,6 +27,7 @@ export function ExpenseForm({ dict, expense, drivers = [] }: { dict: any, expens
     note: expense.note || '',
     orderId: expense.orderId || '',
     driverId: expense.driverId || '',
+    dispatcherId: expense.dispatcherId || '',
     liters: expense.liters || ''
   } : {
     category: '',
@@ -34,10 +35,20 @@ export function ExpenseForm({ dict, expense, drivers = [] }: { dict: any, expens
     note: '',
     orderId: '',
     driverId: '',
+    dispatcherId: '',
     liters: ''
   });
 
   const [amt, setAmt] = useState(expense ? formatNum(expense.amountRub) : '');
+  const [ordersList, setOrdersList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      getRecentOrders().then(data => {
+        setOrdersList(data);
+      });
+    }
+  }, [open]);
 
   const handleAmtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
@@ -56,7 +67,7 @@ export function ExpenseForm({ dict, expense, drivers = [] }: { dict: any, expens
       }
       setOpen(false);
       if (!expense) {
-        setFormData({ category: '', amountRub: '', note: '', orderId: '', driverId: '', liters: '' });
+        setFormData({ category: '', amountRub: '', note: '', orderId: '', driverId: '', dispatcherId: '', liters: '' });
         setAmt('');
       }
     } finally {
@@ -96,25 +107,62 @@ export function ExpenseForm({ dict, expense, drivers = [] }: { dict: any, expens
             </Select>
           </div>
           {formData.category === 'dispatcher_salary' && (
-            <div className="space-y-2">
-              <Label htmlFor="orderId">Номер заказа (ID)</Label>
-              <Input 
-                id="orderId" 
-                type="number" 
-                value={formData.orderId || ''} 
-                onChange={e => setFormData({...formData, orderId: e.target.value})} 
-                placeholder="Например: 1108"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="dispatcherId">Диспетчер</Label>
+                <Select 
+                  value={formData.dispatcherId ? String(formData.dispatcherId) : "unassigned"} 
+                  onValueChange={val => setFormData({...formData, dispatcherId: val === "unassigned" ? "" : val})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите диспетчера" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">-- Не выбрано (Общий расход) --</SelectItem>
+                    {dispatchers.map(d => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="orderId">Заказ</Label>
+                <Select 
+                  value={formData.orderId ? String(formData.orderId) : "unassigned"} 
+                  onValueChange={val => setFormData({...formData, orderId: val === "unassigned" ? "" : val})}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Выберите заказ" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[250px] overflow-y-auto">
+                    <SelectItem value="unassigned">-- Не выбран (Общий расход) --</SelectItem>
+                    {ordersList.map(o => {
+                      const clientInfo = o.isExternalVehicle 
+                        ? `Стороннее авто (${o.externalDriverName || 'Без имени'})` 
+                        : (o.clientName || 'Без клиента');
+                      return (
+                        <SelectItem key={o.id} value={String(o.id)}>
+                          #{o.id} — {clientInfo} — {o.address} ({o.paymentAmount?.toLocaleString()} RUB)
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
-          {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'gai') && (
+          {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'gai' || formData.category === 'driver_salary' || formData.category === 'spare_parts') && (
             <div className="space-y-2">
               <Label htmlFor="driverId">Водитель</Label>
-              <Select value={String(formData.driverId)} onValueChange={val => setFormData({...formData, driverId: val})}>
+              <Select 
+                value={formData.driverId ? String(formData.driverId) : "unassigned"} 
+                onValueChange={val => setFormData({...formData, driverId: val === "unassigned" ? "" : val})}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите водителя" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="unassigned">-- Не выбрано (Общий расход) --</SelectItem>
                   {drivers.map(d => (
                     <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
                   ))}

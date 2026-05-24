@@ -226,14 +226,14 @@ export default async function DashboardPage({
 
   const chartFinanceData = last7Days.map(date => {
     const dateStr = format(date, 'dd.MM');
+    const targetDateStr = format(date, 'yyyy-MM-dd');
     let income = 0;
     let expenses = 0;
 
     allOrders.forEach(order => {
       if (isOperator && order.operatorId !== currentUserId) return;
       const orderDate = new Date(order.createdAt);
-      orderDate.setHours(0, 0, 0, 0);
-      if (orderDate.getTime() === date.getTime() && order.paymentStatus === 'entered') {
+      if (format(orderDate, 'yyyy-MM-dd') === targetDateStr && order.paymentStatus === 'entered') {
         income += order.paymentAmount;
       }
     });
@@ -242,8 +242,7 @@ export default async function DashboardPage({
       if (w.source === 'client_payment') return;
       if (isOperator && w.operatorId !== currentUserId) return;
       const wDate = new Date(w.recordedAt);
-      wDate.setHours(0, 0, 0, 0);
-      if (wDate.getTime() === date.getTime()) {
+      if (format(wDate, 'yyyy-MM-dd') === targetDateStr) {
         income += w.amountRub;
       }
     });
@@ -251,8 +250,7 @@ export default async function DashboardPage({
     allExpenses.forEach(e => {
       if (isOperator && e.operatorId !== currentUserId) return;
       const eDate = new Date(e.recordedAt);
-      eDate.setHours(0, 0, 0, 0);
-      if (eDate.getTime() === date.getTime()) {
+      if (format(eDate, 'yyyy-MM-dd') === targetDateStr) {
         expenses += e.amountRub;
       }
     });

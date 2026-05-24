@@ -16,7 +16,8 @@ import {
   Fuel,
   Users,
   Car,
-  Sliders
+  Sliders,
+  Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./lang-switcher";
@@ -39,6 +40,7 @@ export function MobileSidebar({ lang = 'ru', userRole }: { lang?: string, userRo
     { label: dict.orders, icon: ClipboardList, href: "/orders" },
     { label: dict.clients, icon: Users, href: "/clients" },
     { label: dict.drivers, icon: Car, href: "/drivers" },
+    { label: lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры', icon: Phone, href: "/dispatchers" },
     { label: dict.management_panel || "Панель управления", icon: Sliders, href: "/management" },
     { label: dict.finance, icon: Wallet, href: "/finance" },
     { label: dict.fuel_logs, icon: Fuel, href: "/fuel" },

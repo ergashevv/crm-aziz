@@ -14,6 +14,9 @@ import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import { getCurrentUser } from '@/lib/auth';
 import { DriverFuelTracker } from '@/components/DriverFuelTracker';
 import { DriverGaiTracker } from '@/components/DriverGaiTracker';
+import { DriverSalaryTracker } from '@/components/DriverSalaryTracker';
+import { DriverSparePartsTracker } from '@/components/DriverSparePartsTracker';
+import { DispatcherSalaryTracker } from '@/components/DispatcherSalaryTracker';
 
 export const dynamic = 'force-dynamic';
 
@@ -172,7 +175,7 @@ export default async function ExpensesDetailPage({
         </div>
         <div className="flex items-center gap-3">
           <DashboardDatePicker />
-          <ExpenseForm dict={dict} drivers={allDrivers} />
+          <ExpenseForm dict={dict} drivers={allDrivers} dispatchers={allDispatchers} />
         </div>
       </div>
 
@@ -290,6 +293,33 @@ export default async function ExpensesDetailPage({
             category: e.category as 'gai'
           }))} 
         />
+      ) : categoryParam === 'dispatcher_salary' ? (
+        <DispatcherSalaryTracker 
+          dict={dict} 
+          dispatchers={allDispatchers} 
+          expenses={filteredExpensesList.map(e => ({
+            ...e,
+            category: e.category as 'dispatcher_salary'
+          }))} 
+        />
+      ) : categoryParam === 'driver_salary' ? (
+        <DriverSalaryTracker 
+          dict={dict} 
+          drivers={allDrivers} 
+          expenses={filteredExpensesList.map(e => ({
+            ...e,
+            category: e.category as 'driver_salary'
+          }))} 
+        />
+      ) : categoryParam === 'spare_parts' ? (
+        <DriverSparePartsTracker 
+          dict={dict} 
+          drivers={allDrivers} 
+          expenses={filteredExpensesList.map(e => ({
+            ...e,
+            category: e.category as 'spare_parts'
+          }))} 
+        />
       ) : (
         <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl">
           <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100 flex flex-row items-center justify-between py-4">
@@ -351,7 +381,7 @@ export default async function ExpensesDetailPage({
                     </TableCell>
                     <TableCell className="text-right text-sm text-rose-600 font-extrabold">-{expense.amountRub.toLocaleString()}</TableCell>
                     <TableCell className="text-right">
-                      <ExpenseForm dict={dict} expense={expense} drivers={allDrivers} />
+                      <ExpenseForm dict={dict} expense={expense} drivers={allDrivers} dispatchers={allDispatchers} />
                     </TableCell>
                   </TableRow>
                 ))}

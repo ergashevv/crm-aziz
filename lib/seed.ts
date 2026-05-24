@@ -1,5 +1,5 @@
 import { db } from './db';
-import { clients, drivers, orders, expenses, fuelLogs, warehouseIncome, users, sessions, dispatchers } from './schema';
+import { clients, drivers, orders, expenses, fuelLogs, warehouseIncome, users, sessions, dispatchers, safeTransactions } from './schema';
 
 type OrderStatus = 'new' | 'assigned' | 'in_progress' | 'container_placed' | 'picked_up' | 'completed';
 
@@ -19,10 +19,11 @@ function atTimeOnDay(day: Date, hours: number, minutes = 0): Date {
 async function seed() {
   console.log('Clearing all tables...');
   await db.delete(sessions);
-  await db.delete(orders);
-  await db.delete(fuelLogs);
   await db.delete(expenses);
+  await db.delete(fuelLogs);
+  await db.delete(orders);
   await db.delete(warehouseIncome);
+  await db.delete(safeTransactions);
   await db.delete(clients);
   await db.delete(dispatchers);
   await db.delete(drivers);
@@ -233,6 +234,7 @@ async function seed() {
               category: 'dispatcher_salary',
               amountRub: dispatcherFee,
               note: `Услуга диспетчера за заказ #${order.id}`,
+              dispatcherId: dispatcherId,
               operatorId: opUser.id,
               recordedAt: createdAt
             });
@@ -277,6 +279,8 @@ async function seed() {
       category: 'fuel',
       amountRub: fuelCost,
       note: `Автоматически добавлено из заправки: ${activeDriver.vehiclePlate} (${fuelLiters}L)`,
+      driverId: activeDriver.id,
+      liters: fuelLiters,
       operatorId: opUser.id,
       recordedAt: expenseDate
     });
@@ -287,6 +291,7 @@ async function seed() {
         category: 'driver_salary',
         amountRub: 150000,
         note: `Зарплата водителя ${activeDriver.name} за неделю`,
+        driverId: activeDriver.id,
         operatorId: opUser.id,
         recordedAt: expenseDate
       });
@@ -320,6 +325,7 @@ async function seed() {
         category: 'gai',
         amountRub: 15000 + (daysBack % 4) * 5000, // 15,000 - 30,000
         note: `Штраф ГАИ / Оплата техосмотра и разрешений для ТС ${activeDriver.vehiclePlate}`,
+        driverId: activeDriver.id,
         operatorId: opUser.id,
         recordedAt: expenseDate
       });
@@ -327,10 +333,14 @@ async function seed() {
 
     // Other general daily expenses
     if (daysBack % 4 === 1) {
+      const isDriverAssigned = (daysBack % 8 === 1);
       await db.insert(expenses).values({
         category: 'spare_parts',
         amountRub: 25000 + (daysBack % 3) * 15000,
-        note: `Закупка расходников и запчастей для автомобилей`,
+        note: isDriverAssigned
+          ? `Закупка запчастей для автомобиля водителя ${activeDriver.name}`
+          : `Закупка расходников и запчастей для автопарка`,
+        driverId: isDriverAssigned ? activeDriver.id : null,
         operatorId: opUser.id,
         recordedAt: expenseDate
       });

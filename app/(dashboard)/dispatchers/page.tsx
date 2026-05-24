@@ -116,7 +116,7 @@ export default async function DispatchersPage({
                   <TableCell className="text-right font-medium text-green-600">
                     {statsByDisp[disp.id]?.volume?.toLocaleString() || 0} RUB
                   </TableCell>
-                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="text-right">
                     <DispatcherForm dict={dict} dispatcher={disp} />
                   </TableCell>
                 </TableRowLink>

@@ -44,15 +44,17 @@ export function DispatcherForm({ dict, dispatcher }: { dict: any, dispatcher?: a
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {dispatcher ? (
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary">
-            <Edit2 className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button className="rounded-full px-6 py-2.5 font-semibold shadow-lg shadow-primary/30 transition-all hover:scale-105">
-            <Plus className="h-4 w-4 mr-2" /> {addLabel}
-          </Button>
-        )}
+        <div onClick={(e) => e.stopPropagation()}>
+          {dispatcher ? (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary">
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button className="rounded-full px-6 py-2.5 font-semibold shadow-lg shadow-primary/30 transition-all hover:scale-105">
+              <Plus className="h-4 w-4 mr-2" /> {addLabel}
+            </Button>
+          )}
+        </div>
       </DialogTrigger>
       <DialogContent className="rounded-3xl">
         <DialogHeader>

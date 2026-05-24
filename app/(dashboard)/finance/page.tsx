@@ -39,8 +39,12 @@ export default async function FinancePage({
   const startDateStr = typeof searchParams.startDate === 'string' ? searchParams.startDate : '';
   const endDateStr = typeof searchParams.endDate === 'string' ? searchParams.endDate : '';
 
-  const startDate = startDateStr ? new Date(startDateStr) : null;
-  const endDate = endDateStr ? new Date(endDateStr) : null;
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  let startDate = startDateStr ? new Date(startDateStr) : new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+  let endDate = endDateStr ? new Date(endDateStr) : new Date(todayDate.getTime());
+  
   if (startDate) startDate.setHours(0, 0, 0, 0);
   if (endDate) endDate.setHours(23, 59, 59, 999);
 

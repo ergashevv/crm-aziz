@@ -23,18 +23,11 @@ export function FinanceFilter({
   const currentTab = searchParams.get('tab') || 'expenses';
   const currentCategory = searchParams.get('category') || 'all';
   const currentSource = searchParams.get('source') || 'all';
-  const currentStartDate = searchParams.get('startDate') || '';
-  const currentEndDate = searchParams.get('endDate') || '';
-
   const [query, setQuery] = useState(searchParams.get('q') || '');
-  const [startDate, setStartDate] = useState(currentStartDate);
-  const [endDate, setEndDate] = useState(currentEndDate);
 
   // Sync inputs with URL changes (e.g. when filters are cleared)
   useEffect(() => {
     setQuery(searchParams.get('q') || '');
-    setStartDate(searchParams.get('startDate') || '');
-    setEndDate(searchParams.get('endDate') || '');
   }, [searchParams]);
 
   // Debounced search query
@@ -83,30 +76,17 @@ export function FinanceFilter({
     });
   };
 
-  const handleDateChange = (type: 'startDate' | 'endDate', val: string) => {
-    if (type === 'startDate') {
-      setStartDate(val);
-    } else {
-      setEndDate(val);
-    }
-
-    const params = new URLSearchParams(searchParams.toString());
-    if (val) {
-      params.set(type, val);
-    } else {
-      params.delete(type);
-    }
-    startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`);
-    });
-  };
-
   const handleClearFilters = () => {
     setQuery('');
-    setStartDate('');
-    setEndDate('');
     const params = new URLSearchParams();
     params.set('tab', currentTab); // Keep current tab
+    
+    // Preserve date params if any
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    if (fromParam) params.set('from', fromParam);
+    if (toParam) params.set('to', toParam);
+
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
     });
@@ -115,9 +95,7 @@ export function FinanceFilter({
   const hasActiveFilters = 
     query || 
     (currentTab === 'expenses' && currentCategory !== 'all') || 
-    (currentTab === 'income' && currentSource !== 'all') || 
-    currentStartDate || 
-    currentEndDate;
+    (currentTab === 'income' && currentSource !== 'all');
 
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-sm ring-1 ring-slate-100 space-y-6">
@@ -196,36 +174,7 @@ export function FinanceFilter({
           </div>
         </div>
 
-        {/* Date Filters */}
-        <div className="grid grid-cols-2 gap-3 md:col-span-2">
-          {/* Start Date */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">{dict.start_date || "Boshlanish"}</label>
-            <div className="relative">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => handleDateChange('startDate', e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm font-bold text-slate-700 transition-all animate-none"
-              />
-              <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
 
-          {/* End Date */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">{dict.end_date || "Tugash"}</label>
-            <div className="relative">
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => handleDateChange('endDate', e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm font-bold text-slate-700 transition-all animate-none"
-              />
-              <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Active Filters Clear Button */}

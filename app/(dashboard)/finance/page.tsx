@@ -10,6 +10,7 @@ import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import { FinanceCharts } from '@/components/FinanceCharts';
 import { ExportButton } from '@/components/ExportButton';
 import { FinanceFilter } from '@/components/FinanceFilter';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { MetricCard } from '@/components/MetricCard';
 
 import { getCurrentUser } from '@/lib/auth';
@@ -36,8 +37,8 @@ export default async function FinancePage({
   const q = typeof searchParams.q === 'string' ? searchParams.q.toLowerCase() : '';
   const categoryFilter = typeof searchParams.category === 'string' ? searchParams.category : '';
   const sourceFilter = typeof searchParams.source === 'string' ? searchParams.source : '';
-  const startDateStr = typeof searchParams.startDate === 'string' ? searchParams.startDate : '';
-  const endDateStr = typeof searchParams.endDate === 'string' ? searchParams.endDate : '';
+  const startDateStr = typeof searchParams.from === 'string' ? searchParams.from : '';
+  const endDateStr = typeof searchParams.to === 'string' ? searchParams.to : '';
 
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
@@ -203,8 +204,7 @@ export default async function FinancePage({
     return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), 0, 0, 0, 0);
   };
   
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
+
   
   const currentFrom = startDateStr ? parseLocal(startDateStr) : new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
   const currentTo = endDateStr ? parseLocal(endDateStr) : new Date(todayDate.getTime());
@@ -377,6 +377,7 @@ export default async function FinancePage({
           </div>
         </div>
         <div className="flex gap-3 items-center w-full sm:w-auto justify-end">
+          <DashboardDatePicker />
           <ExportButton 
             data={currentTab === 'expenses' ? exportExpensesData : exportIncomesData} 
             columns={currentTab === 'expenses' ? exportExpensesColumns : exportIncomesColumns} 

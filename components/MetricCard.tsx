@@ -13,9 +13,10 @@ interface MetricCardProps {
   colorScheme: "indigo" | "emerald" | "rose" | "blue" | "amber" | "purple" | "cyan" | "orange" | "slate";
   href?: string;
   isActive?: boolean;
+  percentageOfTotal?: number;
 }
 
-export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href, isActive }: MetricCardProps) {
+export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href, isActive, percentageOfTotal }: MetricCardProps) {
   const isPositive = trend > 0;
   const isNegative = trend < 0;
   const isNeutral = trend === 0;
@@ -67,6 +68,11 @@ export function MetricCard({ title, value, prevValue, unit, trend, icon, colorSc
                 "к прошлому периоду"
               )}
             </span>
+            {percentageOfTotal !== undefined && (
+              <span className="ml-auto text-xs font-extrabold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 shadow-sm">
+                {percentageOfTotal}% от общ.
+              </span>
+            )}
           </div>
         </div>
       </CardContent>

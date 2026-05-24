@@ -68,6 +68,7 @@ export default async function ExpensesDetailPage({
     dispatcherOrders: 0,
     dispatcherSalary: 0,
     tractor: 0,
+    utilizationCost: 0,
   };
 
   let prevMetrics = {
@@ -98,6 +99,7 @@ export default async function ExpensesDetailPage({
       if (e.category === 'driver_salary') currentMetrics.driverSalary += amt;
       if (e.category === 'dispatcher_salary') currentMetrics.dispatcherSalary += amt;
       if (e.category === 'tractor') currentMetrics.tractor += amt;
+      if (e.category === 'utilization') currentMetrics.utilizationCost += amt;
 
       if (!categoryParam || categoryParam === 'all' || e.category === categoryParam || (categoryParam === 'fuel' && e.category === 'diesel')) {
         filteredExpensesList.push(e);
@@ -172,6 +174,7 @@ export default async function ExpensesDetailPage({
           icon={<Briefcase className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=dispatcher_salary`}
           isActive={categoryParam === 'dispatcher_salary'}
+          percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.dispatcherSalary / currentMetrics.expenses) * 100) : 0}
         />
         <MetricCard 
           title={dict.fuel || 'Топливо'} 
@@ -183,6 +186,7 @@ export default async function ExpensesDetailPage({
           icon={<Fuel className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=fuel`}
           isActive={categoryParam === 'fuel'}
+          percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.fuel / currentMetrics.expenses) * 100) : 0}
         />
         <MetricCard 
           title={dict.gai || 'ГАИ'} 
@@ -194,6 +198,7 @@ export default async function ExpensesDetailPage({
           icon={<FileWarning className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=gai`}
           isActive={categoryParam === 'gai'}
+          percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.gai / currentMetrics.expenses) * 100) : 0}
         />
         <MetricCard 
           title={lang === 'uz' ? 'Svalka' : 'Свалка'} 
@@ -205,6 +210,7 @@ export default async function ExpensesDetailPage({
           icon={<Recycle className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=utilization`}
           isActive={categoryParam === 'utilization'}
+          percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.utilizationCost / currentMetrics.expenses) * 100) : 0}
         />
         <MetricCard 
           title={dict.spare_parts || 'Запчасти'} 
@@ -216,6 +222,7 @@ export default async function ExpensesDetailPage({
           icon={<Wrench className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=spare_parts`}
           isActive={categoryParam === 'spare_parts'}
+          percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.spareParts / currentMetrics.expenses) * 100) : 0}
         />
         <MetricCard 
           title={lang === 'uz' ? 'Haydovchilar' : 'Зарплата вод.'} 
@@ -227,6 +234,7 @@ export default async function ExpensesDetailPage({
           icon={<CarFront className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=driver_salary`}
           isActive={categoryParam === 'driver_salary'}
+          percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.driverSalary / currentMetrics.expenses) * 100) : 0}
         />
         <MetricCard 
           title={dict.tractor || 'Трактор'} 
@@ -238,6 +246,7 @@ export default async function ExpensesDetailPage({
           icon={<Tractor className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=tractor`}
           isActive={categoryParam === 'tractor'}
+          percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.tractor / currentMetrics.expenses) * 100) : 0}
         />
         {categoryParam && categoryParam !== 'all' && (
           <Button variant="outline" asChild className="h-full rounded-2xl border-dashed border-2 flex items-center justify-center">

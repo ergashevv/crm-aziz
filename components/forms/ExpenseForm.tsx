@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { createExpense, updateExpense, getRecentOrders } from '@/app/actions/entities';
 import { Plus, Edit2 } from 'lucide-react';
 
-const EXPENSE_CATEGORIES = ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other', 'tractor'];
+const EXPENSE_CATEGORIES = ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'master_fee', 'other', 'tractor'];
 
 const formatNum = (val: string | number) => {
   const n = String(val).replace(/\D/g, '');
@@ -151,7 +151,7 @@ export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: {
               </div>
             </>
           )}
-          {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'gai' || formData.category === 'driver_salary' || formData.category === 'spare_parts') && (
+          {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'gai' || formData.category === 'driver_salary' || formData.category === 'spare_parts' || formData.category === 'master_fee') && (
             <div className="space-y-2">
               <Label htmlFor="driverId">Водитель</Label>
               <Select 

@@ -53,7 +53,7 @@ export default async function FinancePage({
 
   let startDate = startDateStr ? new Date(startDateStr) : new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
   let endDate = endDateStr ? new Date(endDateStr) : new Date(todayDate.getTime());
-  
+
   if (startDate) startDate.setHours(0, 0, 0, 0);
   if (endDate) endDate.setHours(23, 59, 59, 999);
 
@@ -70,8 +70,8 @@ export default async function FinancePage({
     filteredExpenses = filteredExpenses.filter(e => e.category === categoryFilter);
   }
   if (q) {
-    filteredExpenses = filteredExpenses.filter(e => 
-      e.note?.toLowerCase().includes(q) || 
+    filteredExpenses = filteredExpenses.filter(e =>
+      e.note?.toLowerCase().includes(q) ||
       e.category.toLowerCase().includes(q) ||
       (dict[e.category as keyof typeof dict]?.toLowerCase() || '').includes(q)
     );
@@ -132,11 +132,11 @@ export default async function FinancePage({
         date: new Date(o.createdAt),
         amount: o.paymentAmount,
         sourceKey: o.isExternalVehicle ? 'external_vehicle_rental' : 'client_payment',
-        sourceLabel: o.isExternalVehicle 
-          ? (lang === 'uz' ? 'Begona moshina' : 'Сторонняя машина') 
+        sourceLabel: o.isExternalVehicle
+          ? (lang === 'uz' ? 'Begona moshina' : 'Сторонняя машина')
           : dict.client_payment,
-        clientName: o.isExternalVehicle 
-          ? (o.externalDriverName || (lang === 'uz' ? 'Begona haydovchi' : 'Сторонний водитель')) 
+        clientName: o.isExternalVehicle
+          ? (o.externalDriverName || (lang === 'uz' ? 'Begona haydovchi' : 'Сторонний водитель'))
           : (client?.name || dict.client),
         note: o.operatorNote || '',
         address: o.isExternalVehicle ? 'База' : o.address
@@ -170,8 +170,8 @@ export default async function FinancePage({
     filteredIncomes = filteredIncomes.filter(i => i.sourceKey === sourceFilter);
   }
   if (q) {
-    filteredIncomes = filteredIncomes.filter(i => 
-      i.note.toLowerCase().includes(q) || 
+    filteredIncomes = filteredIncomes.filter(i =>
+      i.note.toLowerCase().includes(q) ||
       (i.clientName?.toLowerCase() || '').includes(q) ||
       (i.address?.toLowerCase() || '').includes(q) ||
       i.sourceLabel.toLowerCase().includes(q) ||
@@ -211,15 +211,15 @@ export default async function FinancePage({
     const [y, m, d] = dateStr.split('-');
     return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), 0, 0, 0, 0);
   };
-  
 
-  
+
+
   const currentFrom = startDateStr ? parseLocal(startDateStr) : new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
   const currentTo = endDateStr ? parseLocal(endDateStr) : new Date(todayDate.getTime());
   currentTo.setHours(23, 59, 59, 999);
 
   const durationMs = currentTo.getTime() - currentFrom.getTime();
-  
+
   const prevTo = new Date(currentFrom.getTime() - 1);
   const prevFrom = new Date(prevTo.getTime() - durationMs);
   prevFrom.setHours(0, 0, 0, 0);
@@ -277,7 +277,7 @@ export default async function FinancePage({
   const last6Months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - i);
-    d.setHours(0,0,0,0);
+    d.setHours(0, 0, 0, 0);
     return d;
   }).reverse();
 
@@ -334,8 +334,8 @@ export default async function FinancePage({
   const exportIncomesData = filteredIncomes.map(i => ({
     id: i.type === 'order' ? `#Buyurtma-${i.rawId}` : `#Ombor-${i.rawId}`,
     source: i.sourceLabel,
-    details: i.type === 'order' 
-      ? `${i.clientName} (${i.address || ''})` 
+    details: i.type === 'order'
+      ? `${i.clientName} (${i.address || ''})`
       : (i.note || '-'),
     date: format(i.date, 'dd.MM.yyyy'),
     amount: `${i.amount.toLocaleString()} RUB`
@@ -362,8 +362,10 @@ export default async function FinancePage({
     { value: 'worker_salary', label: dict.worker_salary || 'Зарплата рабочего' },
     { value: 'dispatcher_salary', label: dict.dispatcher_salary || 'Зарплата диспетчера' },
     { value: 'referral_fee', label: dict.referral_fee || 'Реферальные' },
+    { value: 'master_fee', label: dict.master_fee || 'Мастер' },
     { value: 'tractor', label: dict.tractor || 'Трактор' },
     { value: 'other', label: dict.other || 'Другое' }
+
   ];
 
   const incomeSources = [
@@ -386,16 +388,16 @@ export default async function FinancePage({
         </div>
         <div className="flex gap-3 items-center w-full sm:w-auto justify-end">
           <DashboardDatePicker />
-          <ExportButton 
-            data={currentTab === 'expenses' ? exportExpensesData : exportIncomesData} 
-            columns={currentTab === 'expenses' ? exportExpensesColumns : exportIncomesColumns} 
-            filename={currentTab === 'expenses' ? "expenses_report" : "income_report"} 
+          <ExportButton
+            data={currentTab === 'expenses' ? exportExpensesData : exportIncomesData}
+            columns={currentTab === 'expenses' ? exportExpensesColumns : exportIncomesColumns}
+            filename={currentTab === 'expenses' ? "expenses_report" : "income_report"}
             title={
-              currentTab === 'expenses' 
-                ? (lang === 'uz' ? "Xarajatlar Ro'yxati" : "Список расходов") 
+              currentTab === 'expenses'
+                ? (lang === 'uz' ? "Xarajatlar Ro'yxati" : "Список расходов")
                 : (lang === 'uz' ? "Daromadlar Ro'yxati" : "Список доходов")
-            } 
-            dict={dict} 
+            }
+            dict={dict}
           />
           <ExpenseForm dict={dict} drivers={allDrivers} dispatchers={allDispatchers} />
         </div>
@@ -425,7 +427,7 @@ export default async function FinancePage({
             )}
           </CardContent>
         </Card>
-        
+
         {/* Total Expenses */}
         <Card className="border-0 shadow-lg shadow-rose-500/10 ring-1 ring-rose-100 rounded-3xl overflow-hidden bg-gradient-to-br from-rose-50 to-white relative">
           <div className="absolute top-0 right-0 p-6 opacity-10 text-rose-600">
@@ -448,7 +450,7 @@ export default async function FinancePage({
             )}
           </CardContent>
         </Card>
-        
+
         {/* Net Profit */}
         <Card className={`border-0 shadow-lg ring-1 rounded-3xl overflow-hidden relative ${filteredNetProfit >= 0 ? "shadow-blue-500/10 ring-blue-100 bg-gradient-to-br from-blue-50 to-white" : "shadow-orange-500/10 ring-orange-100 bg-gradient-to-br from-orange-50 to-white"}`}>
           <div className={`absolute top-0 right-0 p-6 opacity-10 ${filteredNetProfit >= 0 ? "text-blue-600" : "text-orange-600"}`}>
@@ -474,15 +476,15 @@ export default async function FinancePage({
       </div>
 
       {/* Finance Charts */}
-      <FinanceCharts 
-        monthlyData={chartMonthlyData} 
-        expensesByCategory={chartExpensesByCategory} 
-        dict={dict} 
+      <FinanceCharts
+        monthlyData={chartMonthlyData}
+        expensesByCategory={chartExpensesByCategory}
+        dict={dict}
       />
 
       {/* Filters Area */}
       <div className="pt-4">
-        <FinanceFilter 
+        <FinanceFilter
           dict={dict}
           expenseCategories={expenseCategories}
           incomeSources={incomeSources}
@@ -492,8 +494,8 @@ export default async function FinancePage({
       {/* Dynamic Ledgers Section depending on tab */}
       {currentTab === 'expenses' ? (
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Expenses Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Expenses Breakdown */}
           <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl">
             <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100">
               <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">{dict.expenses_breakdown}</CardTitle>
@@ -637,11 +639,10 @@ export default async function FinancePage({
                     <TableRow key={income.id}>
                       <TableCell className="text-xs text-slate-500">{format(income.date, 'dd.MM.yyyy')}</TableCell>
                       <TableCell>
-                        <span className={`capitalize text-xs font-semibold px-2 py-0.5 border rounded-md inline-flex ${
-                          income.sourceKey === 'client_payment' 
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                        <span className={`capitalize text-xs font-semibold px-2 py-0.5 border rounded-md inline-flex ${income.sourceKey === 'client_payment'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             : 'bg-blue-50 text-blue-700 border-blue-100'
-                        }`}>
+                          }`}>
                           {income.sourceLabel}
                         </span>
                       </TableCell>

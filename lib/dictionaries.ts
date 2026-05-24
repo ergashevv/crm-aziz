@@ -103,7 +103,7 @@ export const dictionaries = {
     worker_salary: "Зарплата рабочего",
     dispatcher_salary: "Зарплата диспетчера",
     referral_fee: "Реферальные",
-    master_fee: "Мастер пули",
+    master_fee: "Оплата мастера",
     tractor: "Трактор",
     other: "Другое",
     driver_busy: "Занят",

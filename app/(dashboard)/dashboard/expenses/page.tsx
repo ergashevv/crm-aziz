@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Briefcase, Fuel, FileWarning, Recycle, Wrench, CarFront, Tractor } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Briefcase, Fuel, FileWarning, Recycle, Wrench, CarFront, Tractor, HardHat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { MetricCard } from '@/components/MetricCard';
@@ -16,6 +16,7 @@ import { DriverFuelTracker } from '@/components/DriverFuelTracker';
 import { DriverGaiTracker } from '@/components/DriverGaiTracker';
 import { DriverSalaryTracker } from '@/components/DriverSalaryTracker';
 import { DriverSparePartsTracker } from '@/components/DriverSparePartsTracker';
+import { DriverMasterFeeTracker } from '@/components/DriverMasterFeeTracker';
 import { DispatcherSalaryTracker } from '@/components/DispatcherSalaryTracker';
 
 export const dynamic = 'force-dynamic';
@@ -80,6 +81,7 @@ export default async function ExpensesDetailPage({
     dispatcherSalary: 0,
     tractor: 0,
     utilizationCost: 0,
+    masterFee: 0,
   };
 
   let prevMetrics = {
@@ -93,6 +95,7 @@ export default async function ExpensesDetailPage({
     dispatcherSalary: 0,
     tractor: 0,
     utilizationCost: 0,
+    masterFee: 0,
   };
 
   const filteredExpensesList: any[] = [];
@@ -112,6 +115,7 @@ export default async function ExpensesDetailPage({
       if (e.category === 'dispatcher_salary') currentMetrics.dispatcherSalary += amt;
       if (e.category === 'tractor') currentMetrics.tractor += amt;
       if (e.category === 'utilization') currentMetrics.utilizationCost += amt;
+      if (e.category === 'master_fee') currentMetrics.masterFee += amt;
 
       if (!categoryParam || categoryParam === 'all' || e.category === categoryParam || (categoryParam === 'fuel' && e.category === 'diesel')) {
         filteredExpensesList.push(e);
@@ -126,6 +130,7 @@ export default async function ExpensesDetailPage({
       if (e.category === 'dispatcher_salary') prevMetrics.dispatcherSalary += amt;
       if (e.category === 'tractor') prevMetrics.tractor += amt;
       if (e.category === 'utilization') prevMetrics.utilizationCost += amt;
+      if (e.category === 'master_fee') prevMetrics.masterFee += amt;
     }
   }
 
@@ -266,6 +271,18 @@ export default async function ExpensesDetailPage({
           isActive={categoryParam === 'tractor'}
           percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.tractor / currentMetrics.expenses) * 100) : 0}
         />
+        <MetricCard 
+          title={dict.master_fee || 'Оплата мастера'} 
+          value={currentMetrics.masterFee} 
+          prevValue={prevMetrics.masterFee}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.masterFee, prevMetrics.masterFee)} 
+          colorScheme="amber"
+          icon={<HardHat className="w-8 h-8" />}
+          href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=master_fee`}
+          isActive={categoryParam === 'master_fee'}
+          percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.masterFee / currentMetrics.expenses) * 100) : 0}
+        />
         {categoryParam && categoryParam !== 'all' && (
           <Button variant="outline" asChild className="h-full rounded-2xl border-dashed border-2 flex items-center justify-center">
             <Link href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}`}>
@@ -318,6 +335,15 @@ export default async function ExpensesDetailPage({
           expenses={filteredExpensesList.map(e => ({
             ...e,
             category: e.category as 'spare_parts'
+          }))} 
+        />
+      ) : categoryParam === 'master_fee' ? (
+        <DriverMasterFeeTracker 
+          dict={dict} 
+          drivers={allDrivers} 
+          expenses={filteredExpensesList.map(e => ({
+            ...e,
+            category: e.category as 'master_fee'
           }))} 
         />
       ) : (

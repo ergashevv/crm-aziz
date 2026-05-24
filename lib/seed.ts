@@ -235,6 +235,7 @@ async function seed() {
               amountRub: dispatcherFee,
               note: `Услуга диспетчера за заказ #${order.id}`,
               dispatcherId: dispatcherId,
+              orderId: order.id, // Set orderId!
               operatorId: opUser.id,
               recordedAt: createdAt
             });
@@ -247,6 +248,7 @@ async function seed() {
               category: 'referral_fee',
               amountRub: referralAmount,
               note: `Процент для 3-го лица (${referralName}) за заказ #${order.id}`,
+              orderId: order.id, // Set orderId!
               operatorId: opUser.id,
               recordedAt: createdAt
             });

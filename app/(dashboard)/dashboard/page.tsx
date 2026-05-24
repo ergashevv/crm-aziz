@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDashboardData, getFinanceData, getClients, getDrivers } from '@/lib/data';
+import { getDashboardData, getFinanceData, getClients, getDrivers, getSafeData } from '@/lib/data';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,12 +37,13 @@ export default async function DashboardPage({
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
 
-  const [allOrders, { allExpenses, allWarehouseIncome }, allClients, allDrivers, user] = await Promise.all([
+  const [allOrders, { allExpenses, allWarehouseIncome }, allClients, allDrivers, user, safeData] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
     getClients(),
     getDrivers(),
-    getCurrentUser()
+    getCurrentUser(),
+    getSafeData()
   ]);
   const isOperator = user?.role === 'operator';
   const currentUserId = user?.id;
@@ -74,7 +75,7 @@ export default async function DashboardPage({
   const isPrev = (d: Date) => d >= prevFrom && d <= prevTo;
 
   let currentMetrics = {
-    revenue: 0, expenses: 0, profit: 0, warehouseTotal: 0,
+    revenue: 0, expenses: 0, profit: 0, safeTotal: 0,
     revenueOwn: 0, revenueExternal: 0,
     dispatcherOrders: 0, dispatcherFee: 0, dispatcherSalary: 0,
     fuel: 0, gai: 0, utilizationM3: 0, utilizationExpense: 0,
@@ -82,7 +83,7 @@ export default async function DashboardPage({
   };
 
   let prevMetrics = {
-    revenue: 0, expenses: 0, profit: 0, warehouseTotal: 0,
+    revenue: 0, expenses: 0, profit: 0, safeTotal: 0,
     revenueOwn: 0, revenueExternal: 0,
     dispatcherOrders: 0, dispatcherFee: 0, dispatcherSalary: 0,
     fuel: 0, gai: 0, utilizationM3: 0, utilizationExpense: 0,
@@ -146,18 +147,10 @@ export default async function DashboardPage({
   }
 
   for (const w of allWarehouseIncome) {
+     if (w.source === 'client_payment') continue;
      if (isOperator && w.operatorId !== currentUserId) continue;
 
      const wDate = new Date(w.recordedAt);
-     if (isCurrent(wDate)) {
-       currentMetrics.warehouseTotal += w.amountRub;
-     }
-     if (isPrev(wDate)) {
-       prevMetrics.warehouseTotal += w.amountRub;
-     }
-
-     if (w.source === 'client_payment') continue;
-
      if (isCurrent(wDate)) {
        currentMetrics.revenue += w.amountRub;
        currentMetrics.revenueExternal += w.amountRub;
@@ -166,6 +159,20 @@ export default async function DashboardPage({
        prevMetrics.revenue += w.amountRub;
        prevMetrics.revenueExternal += w.amountRub;
      }
+  }
+
+  for (const s of safeData) {
+    if (isOperator && s.transaction.operatorId !== currentUserId) continue;
+
+    const sDate = new Date(s.transaction.recordedAt);
+    if (isCurrent(sDate)) {
+      if (s.transaction.type === 'income') currentMetrics.safeTotal += s.transaction.amountRub;
+      else currentMetrics.safeTotal -= s.transaction.amountRub;
+    }
+    if (isPrev(sDate)) {
+      if (s.transaction.type === 'income') prevMetrics.safeTotal += s.transaction.amountRub;
+      else prevMetrics.safeTotal -= s.transaction.amountRub;
+    }
   }
 
   for (const e of allExpenses) {
@@ -316,14 +323,14 @@ export default async function DashboardPage({
           href={`/finance?tab=income&startDate=${resolvedFromParam}&endDate=${resolvedToParam}`}
         />
         <MetricCard 
-          title={dict.warehouse || 'Склад'} 
-          value={currentMetrics.warehouseTotal} 
-          prevValue={prevMetrics.warehouseTotal}
+          title={dict.safe || 'Сейф'} 
+          value={currentMetrics.safeTotal} 
+          prevValue={prevMetrics.safeTotal}
           unit="RUB" 
-          trend={calcTrend(currentMetrics.warehouseTotal, prevMetrics.warehouseTotal)} 
+          trend={calcTrend(currentMetrics.safeTotal, prevMetrics.safeTotal)} 
           colorScheme="indigo"
           icon={<Warehouse className="w-12 h-12" />}
-          href={`/warehouse`}
+          href={`/safe`}
         />
       </div>
 

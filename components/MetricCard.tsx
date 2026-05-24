@@ -14,9 +14,10 @@ interface MetricCardProps {
   href?: string;
   isActive?: boolean;
   percentageOfTotal?: number;
+  subText?: React.ReactNode;
 }
 
-export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href, isActive, percentageOfTotal }: MetricCardProps) {
+export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href, isActive, percentageOfTotal, subText }: MetricCardProps) {
   const isPositive = trend > 0;
   const isNegative = trend < 0;
   const isNeutral = trend === 0;
@@ -49,9 +50,14 @@ export function MetricCard({ title, value, prevValue, unit, trend, icon, colorSc
       </CardHeader>
       <CardContent className="px-5 pb-5">
         <div className="flex flex-col gap-1">
-          <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            {typeof value === 'number' ? value.toLocaleString() : value}
-            {unit && <span className="text-base font-semibold text-slate-400 ml-1">{unit}</span>}
+          <div className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-end gap-2 flex-wrap">
+            <span>
+              {typeof value === 'number' ? value.toLocaleString() : value}
+              {unit && <span className="text-base font-semibold text-slate-400 ml-1">{unit}</span>}
+            </span>
+            {subText && (
+              <span className="text-sm font-bold text-slate-500 mb-1 px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">{subText}</span>
+            )}
           </div>
           
           <div className="flex items-center flex-wrap gap-2 mt-1">

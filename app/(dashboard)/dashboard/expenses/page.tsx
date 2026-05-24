@@ -85,6 +85,7 @@ export default async function ExpensesDetailPage({
     dispatcherOrders: 0,
     dispatcherSalary: 0,
     tractor: 0,
+    utilizationCost: 0,
   };
 
   const filteredExpensesList: any[] = [];
@@ -117,6 +118,7 @@ export default async function ExpensesDetailPage({
       if (e.category === 'driver_salary') prevMetrics.driverSalary += amt;
       if (e.category === 'dispatcher_salary') prevMetrics.dispatcherSalary += amt;
       if (e.category === 'tractor') prevMetrics.tractor += amt;
+      if (e.category === 'utilization') prevMetrics.utilizationCost += amt;
     }
   }
 
@@ -170,10 +172,11 @@ export default async function ExpensesDetailPage({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <MetricCard 
           title={lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры'} 
-          value={currentMetrics.dispatcherOrders} 
-          prevValue={prevMetrics.dispatcherOrders}
-          unit={lang === 'uz' ? 'ta' : 'зак.'} 
-          trend={calcTrend(currentMetrics.dispatcherOrders, prevMetrics.dispatcherOrders)} 
+          value={currentMetrics.dispatcherSalary} 
+          prevValue={prevMetrics.dispatcherSalary}
+          unit="RUB" 
+          subText={`${currentMetrics.dispatcherOrders} ${lang === 'uz' ? 'ta' : 'зак.'}`}
+          trend={calcTrend(currentMetrics.dispatcherSalary, prevMetrics.dispatcherSalary)} 
           colorScheme="indigo"
           icon={<Briefcase className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=dispatcher_salary`}
@@ -206,10 +209,11 @@ export default async function ExpensesDetailPage({
         />
         <MetricCard 
           title={lang === 'uz' ? 'Svalka' : 'Свалка'} 
-          value={currentMetrics.utilizationM3} 
-          prevValue={prevMetrics.utilizationM3}
-          unit="м³" 
-          trend={calcTrend(currentMetrics.utilizationM3, prevMetrics.utilizationM3)} 
+          value={currentMetrics.utilizationCost} 
+          prevValue={prevMetrics.utilizationCost}
+          unit="RUB" 
+          subText={`${currentMetrics.utilizationM3} м³`}
+          trend={calcTrend(currentMetrics.utilizationCost, prevMetrics.utilizationCost)} 
           colorScheme="purple"
           icon={<Recycle className="w-8 h-8" />}
           href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=utilization`}

@@ -20,7 +20,7 @@ export const getDashboardData = unstable_cache(
   { revalidate: 30, tags: ['orders'] }
 );
 
-export const getOrders = async (status?: string, q?: string) => {
+export const getOrders = async (status?: string, q?: string, from?: string, to?: string) => {
     const user = await getCurrentUser();
     let conditions = [];
     
@@ -57,6 +57,15 @@ export const getOrders = async (status?: string, q?: string) => {
           ilike(drivers.name, `%${q}%`)
         ));
       }
+    }
+
+    if (from) {
+      conditions.push(sql`${orders.scheduledAt} >= ${new Date(from).toISOString()}`);
+    }
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      conditions.push(sql`${orders.scheduledAt} <= ${toDate.toISOString()}`);
     }
 
     const query = db.select({

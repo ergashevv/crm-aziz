@@ -40,7 +40,7 @@ export function StatusTabs({
   };
 
   return (
-    <div className="flex items-center gap-2 mb-6">
+    <div className="flex items-center gap-2 w-full sm:w-auto">
       <div className="w-full sm:w-[320px]">
         <Select 
           value={currentVal} 
@@ -55,7 +55,7 @@ export function StatusTabs({
           </SelectTrigger>
           <SelectContent className="rounded-xl border-slate-200/60 shadow-lg font-medium p-1">
             {options.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value} className="rounded-lg cursor-pointer py-2.5 px-4 focus:bg-primary/5 focus:text-primary">
+              <SelectItem key={opt.value} value={opt.value} className="rounded-lg cursor-pointer py-2.5 pl-8 pr-4 focus:bg-primary/5 focus:text-primary">
                 {opt.label}
               </SelectItem>
             ))}

@@ -15,6 +15,8 @@ import { OrderForm } from '@/components/forms/OrderForm';
 import { ExportButton } from '@/components/ExportButton';
 import { ConfirmPaymentButton } from '@/components/ConfirmPaymentButton';
 import { isOverdue } from '@/lib/utils';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
+import { Pagination } from '@/components/Pagination';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,9 +52,11 @@ export default async function OrdersPage({
   const q = typeof searchParams.q === 'string' ? searchParams.q : '';
   const statusParam = typeof searchParams.status === 'string' ? searchParams.status : '';
   const status = statusParam || 'all';
+  const from = typeof searchParams.from === 'string' ? searchParams.from : undefined;
+  const to = typeof searchParams.to === 'string' ? searchParams.to : undefined;
 
   const [allFetchedOrders, activeOrders, clients, drivers, dispatchers] = await Promise.all([
-    getOrders(status === 'overdue_containers' ? 'all' : status, q),
+    getOrders(status === 'overdue_containers' ? 'all' : status, q, from, to),
     getOrders('active', ''),
     getClients(),
     getDrivers(),
@@ -64,6 +68,10 @@ export default async function OrdersPage({
   const allOrders = status === 'overdue_containers' 
     ? allFetchedOrders.filter((o) => isOverdue(o.order))
     : allFetchedOrders;
+
+  const page = typeof searchParams.page === 'string' ? parseInt(searchParams.page) : 1;
+  const limit = 10;
+  const paginatedOrders = allOrders.slice((page - 1) * limit, page * limit);
 
 
 
@@ -121,9 +129,10 @@ export default async function OrdersPage({
 
       <AutoRefresh intervalMs={10000} />
 
-      <StatusTabs 
-        options={[
-          { value: 'active', label: lang === 'uz' ? 'Faol (tugallanmagan)' : 'Активные' },
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <StatusTabs 
+          options={[
+            { value: 'active', label: lang === 'uz' ? 'Faol (tugallanmagan)' : 'Активные' },
           { value: 'pending_confirmation', label: lang === 'uz' ? 'Tasdiqlash kutilmoqda' : 'Ожидает подтверждения' },
           { value: 'overdue_containers', label: lang === 'uz' ? 'Muddati o\'tgan konteynerlar' : 'Просроченные контейнеры' },
           { value: 'all', label: lang === 'uz' ? 'Barchasi' : 'Все' },
@@ -136,8 +145,10 @@ export default async function OrdersPage({
         ]}
         defaultFilter="all"
       />
+      <DashboardDatePicker />
+    </div>
 
-      <SearchAndFilter
+    <SearchAndFilter
         dict={dict}
         hideFilter={true}
       />
@@ -159,7 +170,7 @@ export default async function OrdersPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {allOrders.map(({ order, client, driver, dispatcher, operator }) => (
+              {paginatedOrders.map(({ order, client, driver, dispatcher, operator }) => (
                 <TableRowLink href={`/orders/${order.id}`} key={order.id}>
                   <TableCell className="font-medium text-slate-500">
                     <div>#{order.id}</div>
@@ -235,6 +246,8 @@ export default async function OrdersPage({
           </Table>
         </CardContent>
       </Card>
+
+      <Pagination totalItems={allOrders.length} itemsPerPage={limit} />
     </div>
   );
 }

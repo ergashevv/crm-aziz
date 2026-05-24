@@ -258,6 +258,9 @@ export default async function DashboardPage({
     value
   })).sort((a, b) => b.value - a.value);
 
+  const resolvedFromParam = fromParam || format(currentFrom, 'yyyy-MM-dd');
+  const resolvedToParam = toParam || format(currentTo, 'yyyy-MM-dd');
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -282,7 +285,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.revenue, prevMetrics.revenue)} 
           colorScheme="emerald"
           icon={<DollarSign className="w-12 h-12" />}
-          href={`/dashboard/revenue?from=${fromParam || ''}&to=${toParam || ''}`}
+          href={`/dashboard/revenue?from=${resolvedFromParam}&to=${resolvedToParam}`}
         />
         <MetricCard 
           title={dict.expenses || 'Расход'} 
@@ -292,7 +295,7 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.expenses, prevMetrics.expenses)} 
           colorScheme="rose"
           icon={<DollarSign className="w-12 h-12" />}
-          href={`/finance?tab=expenses&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
+          href={`/dashboard/expenses?from=${resolvedFromParam}&to=${resolvedToParam}`}
         />
         <MetricCard 
           title={dict.net_profit || 'Чистая прибыль'} 
@@ -302,11 +305,9 @@ export default async function DashboardPage({
           trend={calcTrend(currentMetrics.profit, prevMetrics.profit)} 
           colorScheme={currentMetrics.profit >= 0 ? "cyan" : "orange"}
           icon={<HandCoins className="w-12 h-12" />}
-          href={`/finance?tab=income&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
+          href={`/finance?tab=income&startDate=${resolvedFromParam}&endDate=${resolvedToParam}`}
         />
       </div>
-
-
 
       <DashboardCharts 
         financeData={chartFinanceData} 

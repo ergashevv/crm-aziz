@@ -1,0 +1,300 @@
+import React from 'react';
+import { getDashboardData, getFinanceData } from '@/lib/data';
+import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { cookies } from 'next/headers';
+import { getDictionary } from '@/lib/dictionaries';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Briefcase, Fuel, FileWarning, Recycle, Wrench, CarFront, Tractor } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
+import { MetricCard } from '@/components/MetricCard';
+import { ExpenseForm } from '@/components/forms/ExpenseForm';
+import { getCurrentUser } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+
+export default async function ExpensesDetailPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
+  const lang = cookies().get('lang')?.value;
+  const dict = getDictionary(lang);
+
+  const [allOrders, { allExpenses }, user] = await Promise.all([
+    getDashboardData(),
+    getFinanceData(),
+    getCurrentUser()
+  ]);
+  const isOperator = user?.role === 'operator';
+  const currentUserId = user?.id;
+
+  // Date Parsing Logic
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  const fromParam = searchParams?.from as string;
+  const toParam = searchParams?.to as string;
+  const categoryParam = searchParams?.category as string;
+
+  const parseLocal = (dateStr: string) => {
+    const [y, m, d] = dateStr.split('-');
+    return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), 0, 0, 0, 0);
+  };
+
+  const currentFrom = fromParam ? parseLocal(fromParam) : new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+  const currentTo = toParam ? parseLocal(toParam) : new Date(todayDate.getTime());
+  currentTo.setHours(23, 59, 59, 999);
+
+  const durationMs = currentTo.getTime() - currentFrom.getTime();
+  
+  const prevTo = new Date(currentFrom.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - durationMs);
+  prevFrom.setHours(0, 0, 0, 0);
+  prevTo.setHours(23, 59, 59, 999);
+
+  const isCurrent = (d: Date) => d >= currentFrom && d <= currentTo;
+  const isPrev = (d: Date) => d >= prevFrom && d <= prevTo;
+
+  let currentMetrics = {
+    expenses: 0,
+    fuel: 0,
+    gai: 0,
+    utilizationM3: 0, // tracked from orders
+    spareParts: 0,
+    driverSalary: 0,
+    dispatcherOrders: 0,
+    dispatcherSalary: 0,
+    tractor: 0,
+  };
+
+  let prevMetrics = {
+    expenses: 0,
+    fuel: 0,
+    gai: 0,
+    utilizationM3: 0,
+    spareParts: 0,
+    driverSalary: 0,
+    dispatcherOrders: 0,
+    dispatcherSalary: 0,
+    tractor: 0,
+  };
+
+  const filteredExpensesList: any[] = [];
+
+  for (const e of allExpenses) {
+    if (isOperator && e.operatorId !== currentUserId) continue;
+
+    const eDate = new Date(e.recordedAt);
+    const amt = e.amountRub;
+    
+    if (isCurrent(eDate)) {
+      currentMetrics.expenses += amt;
+      if (e.category === 'fuel' || e.category === 'diesel') currentMetrics.fuel += amt;
+      if (e.category === 'gai') currentMetrics.gai += amt;
+      if (e.category === 'spare_parts') currentMetrics.spareParts += amt;
+      if (e.category === 'driver_salary') currentMetrics.driverSalary += amt;
+      if (e.category === 'dispatcher_salary') currentMetrics.dispatcherSalary += amt;
+      if (e.category === 'tractor') currentMetrics.tractor += amt;
+
+      if (!categoryParam || categoryParam === 'all' || e.category === categoryParam || (categoryParam === 'fuel' && e.category === 'diesel')) {
+        filteredExpensesList.push(e);
+      }
+    }
+    if (isPrev(eDate)) {
+      prevMetrics.expenses += amt;
+      if (e.category === 'fuel' || e.category === 'diesel') prevMetrics.fuel += amt;
+      if (e.category === 'gai') prevMetrics.gai += amt;
+      if (e.category === 'spare_parts') prevMetrics.spareParts += amt;
+      if (e.category === 'driver_salary') prevMetrics.driverSalary += amt;
+      if (e.category === 'dispatcher_salary') prevMetrics.dispatcherSalary += amt;
+      if (e.category === 'tractor') prevMetrics.tractor += amt;
+    }
+  }
+
+  for (const order of allOrders) {
+    const orderDate = new Date(order.createdAt);
+    if (order.dispatcherId) {
+      if (isCurrent(orderDate)) {
+        currentMetrics.dispatcherOrders++;
+      }
+      if (isPrev(orderDate)) {
+        prevMetrics.dispatcherOrders++;
+      }
+    }
+    if (order.status === 'completed') {
+      if (isCurrent(orderDate)) currentMetrics.utilizationM3 += (order.containerSizeM3 || 0);
+      if (isPrev(orderDate)) prevMetrics.utilizationM3 += (order.containerSizeM3 || 0);
+    }
+  }
+
+  filteredExpensesList.sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
+
+  const calcTrend = (current: number, prev: number) => {
+    if (prev === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - prev) / Math.abs(prev)) * 100);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header Panel */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" asChild className="rounded-xl bg-white shadow-sm border-slate-200">
+            <Link href="/dashboard">
+              <ArrowLeft className="h-4.5 w-4.5 text-slate-700" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+              {lang === 'uz' ? 'Xarajatlar Tafsilotlari' : 'Детализация расходов'}
+            </h1>
+            <p className="text-slate-500 mt-1 font-medium">
+              {lang === 'uz' 
+                ? 'Barcha xarajatlar turlari bo\'yicha taqsimot' 
+                : 'Распределение расходов по всем категориям'}
+            </p>
+          </div>
+        </div>
+        <DashboardDatePicker />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <MetricCard 
+          title={lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры'} 
+          value={currentMetrics.dispatcherOrders} 
+          prevValue={prevMetrics.dispatcherOrders}
+          unit={lang === 'uz' ? 'ta' : 'зак.'} 
+          trend={calcTrend(currentMetrics.dispatcherOrders, prevMetrics.dispatcherOrders)} 
+          colorScheme="indigo"
+          icon={<Briefcase className="w-8 h-8" />}
+          href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=dispatcher_salary`}
+          isActive={categoryParam === 'dispatcher_salary'}
+        />
+        <MetricCard 
+          title={dict.fuel || 'Топливо'} 
+          value={currentMetrics.fuel} 
+          prevValue={prevMetrics.fuel}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.fuel, prevMetrics.fuel)} 
+          colorScheme="amber"
+          icon={<Fuel className="w-8 h-8" />}
+          href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=fuel`}
+          isActive={categoryParam === 'fuel'}
+        />
+        <MetricCard 
+          title={dict.gai || 'ГАИ'} 
+          value={currentMetrics.gai} 
+          prevValue={prevMetrics.gai}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.gai, prevMetrics.gai)} 
+          colorScheme="rose"
+          icon={<FileWarning className="w-8 h-8" />}
+          href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=gai`}
+          isActive={categoryParam === 'gai'}
+        />
+        <MetricCard 
+          title={lang === 'uz' ? 'Svalka' : 'Свалка'} 
+          value={currentMetrics.utilizationM3} 
+          prevValue={prevMetrics.utilizationM3}
+          unit="м³" 
+          trend={calcTrend(currentMetrics.utilizationM3, prevMetrics.utilizationM3)} 
+          colorScheme="purple"
+          icon={<Recycle className="w-8 h-8" />}
+          href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=utilization`}
+          isActive={categoryParam === 'utilization'}
+        />
+        <MetricCard 
+          title={dict.spare_parts || 'Запчасти'} 
+          value={currentMetrics.spareParts} 
+          prevValue={prevMetrics.spareParts}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.spareParts, prevMetrics.spareParts)} 
+          colorScheme="slate"
+          icon={<Wrench className="w-8 h-8" />}
+          href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=spare_parts`}
+          isActive={categoryParam === 'spare_parts'}
+        />
+        <MetricCard 
+          title={lang === 'uz' ? 'Haydovchilar' : 'Зарплата вод.'} 
+          value={currentMetrics.driverSalary} 
+          prevValue={prevMetrics.driverSalary}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.driverSalary, prevMetrics.driverSalary)} 
+          colorScheme="blue"
+          icon={<CarFront className="w-8 h-8" />}
+          href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=driver_salary`}
+          isActive={categoryParam === 'driver_salary'}
+        />
+        <MetricCard 
+          title={dict.tractor || 'Трактор'} 
+          value={currentMetrics.tractor} 
+          prevValue={prevMetrics.tractor}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.tractor, prevMetrics.tractor)} 
+          colorScheme="orange"
+          icon={<Tractor className="w-8 h-8" />}
+          href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}&category=tractor`}
+          isActive={categoryParam === 'tractor'}
+        />
+        {categoryParam && categoryParam !== 'all' && (
+          <Button variant="outline" asChild className="h-full rounded-2xl border-dashed border-2 flex items-center justify-center">
+            <Link href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}`}>
+              {lang === 'uz' ? 'Barchasini ko\'rish' : 'Показать все'}
+            </Link>
+          </Button>
+        )}
+      </div>
+
+      <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl">
+        <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100 flex flex-row items-center justify-between py-4">
+          <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+            {categoryParam && categoryParam !== 'all' ? (dict[categoryParam as keyof typeof dict] || categoryParam) : dict.expense_ledger || dict.recent_expenses}
+          </CardTitle>
+          <div className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+            {filteredExpensesList.length} {lang === 'uz' ? 'ta yozuv' : 'записей'}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-slate-50/80">
+              <TableRow>
+                <TableHead>{dict.date}</TableHead>
+                <TableHead>{dict.category}</TableHead>
+                <TableHead>{dict.note}</TableHead>
+                <TableHead className="text-right">{dict.amount}</TableHead>
+                <TableHead className="w-10"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredExpensesList.slice(0, 100).map((expense) => (
+                <TableRow key={expense.id}>
+                  <TableCell className="text-xs text-slate-500">{format(new Date(expense.recordedAt), 'dd.MM.yyyy HH:mm')}</TableCell>
+                  <TableCell>
+                    <span className="capitalize text-xs font-semibold px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-md inline-flex">
+                      {dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' ')}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs font-medium text-slate-600">{expense.note || '-'}</TableCell>
+                  <TableCell className="text-right text-sm text-rose-600 font-extrabold">-{expense.amountRub.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">
+                    <ExpenseForm dict={dict} expense={expense} />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredExpensesList.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
+                    {lang === 'uz' ? "Xarajatlar topilmadi." : "Расходы не найдены."}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

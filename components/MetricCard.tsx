@@ -12,29 +12,32 @@ interface MetricCardProps {
   icon?: React.ReactNode;
   colorScheme: "indigo" | "emerald" | "rose" | "blue" | "amber" | "purple" | "cyan" | "orange" | "slate";
   href?: string;
+  isActive?: boolean;
 }
 
-export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href }: MetricCardProps) {
+export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href, isActive }: MetricCardProps) {
   const isPositive = trend > 0;
   const isNegative = trend < 0;
   const isNeutral = trend === 0;
 
   const colorClasses = {
-    indigo: "bg-indigo-50 text-indigo-600",
-    emerald: "bg-emerald-50 text-emerald-600",
-    rose: "bg-rose-50 text-rose-600",
-    blue: "bg-blue-50 text-blue-600",
-    amber: "bg-amber-50 text-amber-600",
-    purple: "bg-purple-50 text-purple-600",
-    cyan: "bg-cyan-50 text-cyan-600",
-    orange: "bg-orange-50 text-orange-600",
-    slate: "bg-slate-50 text-slate-600",
+    indigo: "bg-indigo-50 text-indigo-600 ring-indigo-500",
+    emerald: "bg-emerald-50 text-emerald-600 ring-emerald-500",
+    rose: "bg-rose-50 text-rose-600 ring-rose-500",
+    blue: "bg-blue-50 text-blue-600 ring-blue-500",
+    amber: "bg-amber-50 text-amber-600 ring-amber-500",
+    purple: "bg-purple-50 text-purple-600 ring-purple-500",
+    cyan: "bg-cyan-50 text-cyan-600 ring-cyan-500",
+    orange: "bg-orange-50 text-orange-600 ring-orange-500",
+    slate: "bg-slate-50 text-slate-600 ring-slate-500",
   };
 
-  const iconBg = colorClasses[colorScheme] || colorClasses.slate;
+  const colorClass = colorClasses[colorScheme] || colorClasses.slate;
+  const iconBg = colorClass.split(' ').slice(0, 2).join(' '); // get bg and text
+  const activeRing = colorClass.split(' ')[2]; // get ring color
 
   const cardContent = (
-    <Card className={`h-full border border-slate-200/60 shadow-sm rounded-2xl overflow-hidden bg-white transition-all duration-200 ${href ? 'hover:shadow-md hover:border-emerald-300 cursor-pointer active:scale-[0.99]' : 'hover:shadow-md'}`}>
+    <Card className={`h-full border border-slate-200/60 shadow-sm rounded-2xl overflow-hidden bg-white transition-all duration-200 ${href ? 'hover:shadow-md hover:border-slate-300 cursor-pointer active:scale-[0.99]' : 'hover:shadow-md'} ${isActive ? `ring-2 ${activeRing} shadow-md` : ''}`}>
       <CardHeader className="pb-2 pt-5 px-5 flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{title}</CardTitle>
         {icon && (

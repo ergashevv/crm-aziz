@@ -9,7 +9,8 @@ import {
   expenses, 
   warehouseIncome,
   dispatchers,
-  safeTransactions
+  safeTransactions,
+  utilizationLogs
 } from '@/lib/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
@@ -121,6 +122,49 @@ export async function updateFuelLog(id: number, data: any) {
   }).where(eq(fuelLogs.id, id));
   revalidateTag('fuelLogs');
   revalidatePath('/fuel');
+}
+
+// Utilization
+export async function createUtilizationLog(data: any) {
+  const user = await getCurrentUser();
+  await db.transaction(async (tx) => {
+    const cleanPrice = parseInt(String(data.amountRub).replace(/\D/g, '')) || 0;
+    const m3Val = parseInt(data.m3) || 0;
+    await tx.insert(utilizationLogs).values({
+      driverId: parseInt(data.driverId),
+      vehiclePlate: data.vehiclePlate,
+      m3: m3Val,
+      amountRub: cleanPrice,
+      note: data.note,
+      operatorId: user ? user.id : null,
+    });
+
+    await tx.insert(expenses).values({
+      category: 'utilization',
+      amountRub: cleanPrice,
+      note: `Автоматически добавлено из свалки: ${data.vehiclePlate} (${m3Val} м³) - ${data.note || ''}`,
+      driverId: parseInt(data.driverId),
+      liters: m3Val, // Store m3 in liters column for unified expense tracking
+      operatorId: user ? user.id : null,
+    });
+  });
+
+  revalidateTag('utilizationLogs');
+  revalidateTag('expenses');
+  revalidatePath('/utilization');
+  revalidatePath('/finance');
+}
+
+export async function updateUtilizationLog(id: number, data: any) {
+  await db.update(utilizationLogs).set({
+    driverId: parseInt(data.driverId),
+    vehiclePlate: data.vehiclePlate,
+    m3: parseInt(data.m3) || 0,
+    amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
+    note: data.note,
+  }).where(eq(utilizationLogs.id, id));
+  revalidateTag('utilizationLogs');
+  revalidatePath('/utilization');
 }
 
 // Expenses

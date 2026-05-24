@@ -96,7 +96,7 @@ export const dictionaries = {
     diesel: "Дизель",
     spare_parts: "Запчасти",
     repair: "Ремонт",
-    utilization: "Утилизация",
+    utilization: "Свалка",
     base_rent: "Аренда базы",
     gai: "ГАИ",
     driver_salary: "Зарплата водителя",

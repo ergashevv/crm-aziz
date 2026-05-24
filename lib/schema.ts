@@ -93,6 +93,17 @@ export const fuelLogs = pgTable('fuel_logs', {
   loggedAt: timestamp('logged_at').defaultNow().notNull(),
 });
 
+export const utilizationLogs = pgTable('utilization_logs', {
+  id: serial('id').primaryKey(),
+  driverId: integer('driver_id').references(() => drivers.id).notNull(),
+  vehiclePlate: text('vehicle_plate').notNull(),
+  m3: integer('m3').notNull(),
+  amountRub: integer('amount_rub').notNull(),
+  note: text('note'),
+  operatorId: integer('operator_id').references(() => users.id),
+  loggedAt: timestamp('logged_at').defaultNow().notNull(),
+});
+
 export const expenses = pgTable('expenses', {
   id: serial('id').primaryKey(),
   category: expenseCategoryEnum('category').notNull(),

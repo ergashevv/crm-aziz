@@ -18,6 +18,7 @@ import { DriverSalaryTracker } from '@/components/DriverSalaryTracker';
 import { DriverSparePartsTracker } from '@/components/DriverSparePartsTracker';
 import { DriverMasterFeeTracker } from '@/components/DriverMasterFeeTracker';
 import { DispatcherSalaryTracker } from '@/components/DispatcherSalaryTracker';
+import { DriverUtilizationTracker } from '@/components/DriverUtilizationTracker';
 
 export const dynamic = 'force-dynamic';
 
@@ -346,6 +347,15 @@ export default async function ExpensesDetailPage({
             category: e.category as 'master_fee'
           }))} 
         />
+      ) : categoryParam === 'utilization' ? (
+        <DriverUtilizationTracker 
+          dict={dict} 
+          drivers={allDrivers} 
+          expenses={filteredExpensesList.map(e => ({
+            ...e,
+            category: e.category as 'utilization'
+          }))} 
+        />
       ) : (
         <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl">
           <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100 flex flex-row items-center justify-between py-4">
@@ -395,9 +405,11 @@ export default async function ExpensesDetailPage({
                                 </span>
                               )}
                               {expense.liters && (
-                                <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-amber-100">
-                                  <Fuel className="h-3 w-3 text-amber-500" />
-                                  {expense.liters} L
+                                <span className={expense.category === 'utilization' 
+                                  ? "inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-indigo-100"
+                                  : "inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-amber-100"}>
+                                  {expense.category === 'utilization' ? <Recycle className="h-3 w-3 text-indigo-500" /> : <Fuel className="h-3 w-3 text-amber-500" />}
+                                  {expense.liters} {expense.category === 'utilization' ? 'м³' : 'L'}
                                 </span>
                               )}
                             </div>

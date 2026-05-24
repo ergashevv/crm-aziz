@@ -16,6 +16,7 @@ import {
   UserCog,
   Sliders,
   Phone,
+  Recycle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./lang-switcher";

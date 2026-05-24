@@ -151,7 +151,7 @@ export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: {
               </div>
             </>
           )}
-          {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'gai' || formData.category === 'driver_salary' || formData.category === 'spare_parts' || formData.category === 'master_fee') && (
+          {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'gai' || formData.category === 'driver_salary' || formData.category === 'spare_parts' || formData.category === 'master_fee' || formData.category === 'utilization') && (
             <div className="space-y-2">
               <Label htmlFor="driverId">Водитель</Label>
               <Select 
@@ -170,9 +170,9 @@ export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: {
               </Select>
             </div>
           )}
-          {(formData.category === 'fuel' || formData.category === 'diesel') && (
+          {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'utilization') && (
             <div className="space-y-2">
-              <Label htmlFor="liters">Литры</Label>
+              <Label htmlFor="liters">{formData.category === 'utilization' ? 'Объем (м³)' : 'Литры'}</Label>
               <Input 
                 id="liters" 
                 type="number" 

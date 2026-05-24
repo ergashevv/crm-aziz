@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { format, startOfMonth, startOfWeek } from "date-fns";
+import { format, startOfMonth, startOfWeek, subDays } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Calendar as CalendarIcon, ArrowRight } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
@@ -66,7 +66,7 @@ export function DashboardDatePicker() {
     let fromDate = today;
 
     if (type === 'week') {
-      fromDate = startOfWeek(today, { weekStartsOn: 1 });
+      fromDate = subDays(today, 6);
     } else if (type === 'month') {
       fromDate = startOfMonth(today);
     }

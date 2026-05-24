@@ -49,7 +49,7 @@ export default async function OrdersPage({
 
   const q = typeof searchParams.q === 'string' ? searchParams.q : '';
   const statusParam = typeof searchParams.status === 'string' ? searchParams.status : '';
-  const status = statusParam || 'active';
+  const status = statusParam || 'all';
 
   const [allFetchedOrders, activeOrders, clients, drivers, dispatchers] = await Promise.all([
     getOrders(status === 'overdue_containers' ? 'all' : status, q),
@@ -134,7 +134,7 @@ export default async function OrdersPage({
           { value: 'picked_up', label: dict.picked_up },
           { value: 'completed', label: dict.completed },
         ]}
-        defaultFilter="active"
+        defaultFilter="all"
       />
 
       <SearchAndFilter

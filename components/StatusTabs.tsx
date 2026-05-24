@@ -2,6 +2,14 @@
 
 import React, { useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Filter } from 'lucide-react';
 
 export function StatusTabs({ 
   options, 
@@ -32,24 +40,28 @@ export function StatusTabs({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-6">
-      {options.map((opt) => {
-        const isActive = currentVal === opt.value;
-        return (
-          <button
-            key={opt.value}
-            onClick={() => handleStatus(opt.value)}
-            disabled={isPending}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${
-              isActive
-                ? 'bg-primary text-white border border-primary'
-                : 'bg-white text-slate-600 border border-slate-200/60 hover:border-primary/50 hover:text-primary'
-            } ${isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
-          >
-            {opt.label}
-          </button>
-        );
-      })}
+    <div className="flex items-center gap-2 mb-6">
+      <div className="w-full sm:w-[320px]">
+        <Select 
+          value={currentVal} 
+          onValueChange={handleStatus}
+          disabled={isPending}
+        >
+          <SelectTrigger className={`w-full bg-white h-12 rounded-xl border-slate-200/60 shadow-sm font-semibold text-slate-700 hover:border-primary/50 transition-colors ${isPending ? 'opacity-70' : ''}`}>
+            <div className="flex items-center gap-2.5">
+              <Filter className="w-4 h-4 text-primary" />
+              <SelectValue placeholder="Status" />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-slate-200/60 shadow-lg font-medium p-1">
+            {options.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value} className="rounded-lg cursor-pointer py-2.5 px-4 focus:bg-primary/5 focus:text-primary">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }

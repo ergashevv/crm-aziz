@@ -4,7 +4,7 @@ export const rentalDurationEnum = pgEnum('rental_duration', ['1_day', '1_week', 
 export const orderStatusEnum = pgEnum('status', ['new', 'assigned', 'in_progress', 'container_placed', 'picked_up', 'completed']);
 export const paymentTypeEnum = pgEnum('payment_type', ['cash', 'card', 'online']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'received', 'entered']);
-export const expenseCategoryEnum = pgEnum('expense_category', ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other', 'master_fee']);
+export const expenseCategoryEnum = pgEnum('expense_category', ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other', 'master_fee', 'tractor']);
 export const incomeSourceEnum = pgEnum('income_source', ['client_payment', 'external_vehicle_rental']);
 export const usersRoleEnum = pgEnum('user_role', ['admin', 'operator']);
 

@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { createExpense, updateExpense } from '@/app/actions/entities';
 import { Plus, Edit2 } from 'lucide-react';
 
-const EXPENSE_CATEGORIES = ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other'];
+const EXPENSE_CATEGORIES = ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other', 'tractor'];
 
 const formatNum = (val: string | number) => {
   const n = String(val).replace(/\D/g, '');

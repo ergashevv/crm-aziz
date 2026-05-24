@@ -84,7 +84,7 @@ async function seed() {
       const hour = 8 + i * 3 + (counter % 2);
       const scheduledAt = atTimeOnDay(day, hour, 0);
       const createdAt = atTimeOnDay(day, hour - 1, 0);
-      const opUser = (counter % 2 === 0) ? adminUser : operatorUser;
+      const opUser = operatorUser; // All orders belong to operator
       const isExternal = (counter % 4 === 0); // 25% of orders are external vehicles
 
       if (isExternal) {
@@ -254,7 +254,7 @@ async function seed() {
     }
 
     // Daily expenses & driver fuel logs
-    const opUser = (daysBack % 2 === 0) ? adminUser : operatorUser;
+    const opUser = operatorUser; // All expenses belong to operator
     const expenseDate = atTimeOnDay(day, 18, 0);
 
     // Fuel log for a driver every day

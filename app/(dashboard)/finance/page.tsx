@@ -5,11 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
-import { Wallet, ArrowUpRight, ArrowDownRight, Percent } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownRight, Percent, Briefcase, Fuel, FileWarning, Recycle, Wrench, CarFront, Tractor } from 'lucide-react';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import { FinanceCharts } from '@/components/FinanceCharts';
 import { ExportButton } from '@/components/ExportButton';
 import { FinanceFilter } from '@/components/FinanceFilter';
+import { MetricCard } from '@/components/MetricCard';
 
 import { getCurrentUser } from '@/lib/auth';
 
@@ -192,6 +193,74 @@ export default async function FinancePage({
   const overallNetProfit = overallTotalIncome - overallTotalExpenses;
   const filteredNetProfit = filteredTotalIncome - filteredTotalExpenses;
 
+  // Compute trends for sub-category cards
+  const parseLocal = (dateStr: string) => {
+    const [y, m, d] = dateStr.split('-');
+    return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), 0, 0, 0, 0);
+  };
+  
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  
+  const currentFrom = startDateStr ? parseLocal(startDateStr) : new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+  const currentTo = endDateStr ? parseLocal(endDateStr) : new Date(todayDate.getTime());
+  currentTo.setHours(23, 59, 59, 999);
+
+  const durationMs = currentTo.getTime() - currentFrom.getTime();
+  
+  const prevTo = new Date(currentFrom.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - durationMs);
+  prevFrom.setHours(0, 0, 0, 0);
+  prevTo.setHours(23, 59, 59, 999);
+
+  const isCurrent = (d: Date) => d >= currentFrom && d <= currentTo;
+  const isPrev = (d: Date) => d >= prevFrom && d <= prevTo;
+
+  let currentMetrics = {
+    dispatcherOrders: 0, fuel: 0, gai: 0, utilizationM3: 0, spareParts: 0, driverSalary: 0, tractor: 0
+  };
+  let prevMetrics = {
+    dispatcherOrders: 0, fuel: 0, gai: 0, utilizationM3: 0, spareParts: 0, driverSalary: 0, tractor: 0
+  };
+
+  for (const order of allOrders) {
+    if (isOperator && order.operatorId !== currentUserId) continue;
+    const orderDate = new Date(order.createdAt);
+    if (order.dispatcherId) {
+      if (isCurrent(orderDate)) currentMetrics.dispatcherOrders++;
+      if (isPrev(orderDate)) prevMetrics.dispatcherOrders++;
+    }
+    if (order.status === 'completed') {
+      if (isCurrent(orderDate)) currentMetrics.utilizationM3 += (order.containerSizeM3 || 0);
+      if (isPrev(orderDate)) prevMetrics.utilizationM3 += (order.containerSizeM3 || 0);
+    }
+  }
+
+  for (const e of allExpenses) {
+    if (isOperator && e.operatorId !== currentUserId) continue;
+    const eDate = new Date(e.recordedAt);
+    const amt = e.amountRub;
+    if (isCurrent(eDate)) {
+      if (e.category === 'fuel' || e.category === 'diesel') currentMetrics.fuel += amt;
+      if (e.category === 'gai') currentMetrics.gai += amt;
+      if (e.category === 'spare_parts') currentMetrics.spareParts += amt;
+      if (e.category === 'driver_salary') currentMetrics.driverSalary += amt;
+      if (e.category === 'tractor') currentMetrics.tractor += amt;
+    }
+    if (isPrev(eDate)) {
+      if (e.category === 'fuel' || e.category === 'diesel') prevMetrics.fuel += amt;
+      if (e.category === 'gai') prevMetrics.gai += amt;
+      if (e.category === 'spare_parts') prevMetrics.spareParts += amt;
+      if (e.category === 'driver_salary') prevMetrics.driverSalary += amt;
+      if (e.category === 'tractor') prevMetrics.tractor += amt;
+    }
+  }
+
+  const calcTrend = (current: number, prev: number) => {
+    if (prev === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - prev) / Math.abs(prev)) * 100);
+  };
+
   // ================= CHARTS DATA (All-Time Monthly) =================
   const last6Months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date();
@@ -281,6 +350,7 @@ export default async function FinancePage({
     { value: 'worker_salary', label: dict.worker_salary || 'Зарплата рабочего' },
     { value: 'dispatcher_salary', label: dict.dispatcher_salary || 'Зарплата диспетчера' },
     { value: 'referral_fee', label: dict.referral_fee || 'Реферальные' },
+    { value: 'tractor', label: dict.tractor || 'Трактор' },
     { value: 'other', label: dict.other || 'Другое' }
   ];
 
@@ -408,8 +478,82 @@ export default async function FinancePage({
 
       {/* Dynamic Ledgers Section depending on tab */}
       {currentTab === 'expenses' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Expenses Breakdown */}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+            <MetricCard 
+              title={lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры'} 
+              value={currentMetrics.dispatcherOrders} 
+              prevValue={prevMetrics.dispatcherOrders}
+              unit={lang === 'uz' ? 'ta' : 'зак.'} 
+              trend={calcTrend(currentMetrics.dispatcherOrders, prevMetrics.dispatcherOrders)} 
+              colorScheme="indigo"
+              icon={<Briefcase className="w-8 h-8" />}
+              href="/orders"
+            />
+            <MetricCard 
+              title={dict.fuel || 'Топливо'} 
+              value={currentMetrics.fuel} 
+              prevValue={prevMetrics.fuel}
+              unit="RUB" 
+              trend={calcTrend(currentMetrics.fuel, prevMetrics.fuel)} 
+              colorScheme="amber"
+              icon={<Fuel className="w-8 h-8" />}
+              href="/fuel"
+            />
+            <MetricCard 
+              title={dict.gai || 'ГАИ'} 
+              value={currentMetrics.gai} 
+              prevValue={prevMetrics.gai}
+              unit="RUB" 
+              trend={calcTrend(currentMetrics.gai, prevMetrics.gai)} 
+              colorScheme="rose"
+              icon={<FileWarning className="w-8 h-8" />}
+              href={`/finance?tab=expenses&category=gai&startDate=${startDateStr || ''}&endDate=${endDateStr || ''}`}
+            />
+            <MetricCard 
+              title={lang === 'uz' ? 'Svalka' : 'Свалка'} 
+              value={currentMetrics.utilizationM3} 
+              prevValue={prevMetrics.utilizationM3}
+              unit="м³" 
+              trend={calcTrend(currentMetrics.utilizationM3, prevMetrics.utilizationM3)} 
+              colorScheme="purple"
+              icon={<Recycle className="w-8 h-8" />}
+              href="/warehouse"
+            />
+            <MetricCard 
+              title={dict.spare_parts || 'Запчасти'} 
+              value={currentMetrics.spareParts} 
+              prevValue={prevMetrics.spareParts}
+              unit="RUB" 
+              trend={calcTrend(currentMetrics.spareParts, prevMetrics.spareParts)} 
+              colorScheme="slate"
+              icon={<Wrench className="w-8 h-8" />}
+              href={`/finance?tab=expenses&category=spare_parts&startDate=${startDateStr || ''}&endDate=${endDateStr || ''}`}
+            />
+            <MetricCard 
+              title={lang === 'uz' ? 'Haydovchilar' : 'Зарплата вод.'} 
+              value={currentMetrics.driverSalary} 
+              prevValue={prevMetrics.driverSalary}
+              unit="RUB" 
+              trend={calcTrend(currentMetrics.driverSalary, prevMetrics.driverSalary)} 
+              colorScheme="blue"
+              icon={<CarFront className="w-8 h-8" />}
+              href={`/finance?tab=expenses&category=driver_salary&startDate=${startDateStr || ''}&endDate=${endDateStr || ''}`}
+            />
+            <MetricCard 
+              title={dict.tractor || 'Трактор'} 
+              value={currentMetrics.tractor} 
+              prevValue={prevMetrics.tractor}
+              unit="RUB" 
+              trend={calcTrend(currentMetrics.tractor, prevMetrics.tractor)} 
+              colorScheme="orange"
+              icon={<Tractor className="w-8 h-8" />}
+              href={`/finance?tab=expenses&category=tractor&startDate=${startDateStr || ''}&endDate=${endDateStr || ''}`}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Expenses Breakdown */}
           <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl">
             <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100">
               <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">{dict.expenses_breakdown}</CardTitle>
@@ -486,6 +630,7 @@ export default async function FinancePage({
               </Table>
             </CardContent>
           </Card>
+        </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -306,68 +306,7 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <MetricCard 
-          title={lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры'} 
-          value={currentMetrics.dispatcherOrders} 
-          prevValue={prevMetrics.dispatcherOrders}
-          unit={lang === 'uz' ? 'ta' : 'зак.'} 
-          trend={calcTrend(currentMetrics.dispatcherOrders, prevMetrics.dispatcherOrders)} 
-          colorScheme="indigo"
-          icon={<Briefcase className="w-8 h-8" />}
-          href="/orders"
-        />
-        <MetricCard 
-          title={dict.fuel || 'Топливо'} 
-          value={currentMetrics.fuel} 
-          prevValue={prevMetrics.fuel}
-          unit="RUB" 
-          trend={calcTrend(currentMetrics.fuel, prevMetrics.fuel)} 
-          colorScheme="amber"
-          icon={<Fuel className="w-8 h-8" />}
-          href="/fuel"
-        />
-        <MetricCard 
-          title={dict.gai || 'ГАИ'} 
-          value={currentMetrics.gai} 
-          prevValue={prevMetrics.gai}
-          unit="RUB" 
-          trend={calcTrend(currentMetrics.gai, prevMetrics.gai)} 
-          colorScheme="rose"
-          icon={<FileWarning className="w-8 h-8" />}
-          href={`/finance?tab=expenses&category=gai&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
-        />
-        <MetricCard 
-          title={lang === 'uz' ? 'Svalka' : 'Свалка'} 
-          value={currentMetrics.utilizationM3} 
-          prevValue={prevMetrics.utilizationM3}
-          unit="м³" 
-          trend={calcTrend(currentMetrics.utilizationM3, prevMetrics.utilizationM3)} 
-          colorScheme="purple"
-          icon={<Recycle className="w-8 h-8" />}
-          href="/warehouse"
-        />
-        <MetricCard 
-          title={dict.spare_parts || 'Запчасти'} 
-          value={currentMetrics.spareParts} 
-          prevValue={prevMetrics.spareParts}
-          unit="RUB" 
-          trend={calcTrend(currentMetrics.spareParts, prevMetrics.spareParts)} 
-          colorScheme="slate"
-          icon={<Wrench className="w-8 h-8" />}
-          href={`/finance?tab=expenses&category=spare_parts&startDate=${fromParam || ''}&endDate=${toParam || ''}`}
-        />
-        <MetricCard 
-          title={lang === 'uz' ? 'Haydovchilar' : 'Зарплата вод.'} 
-          value={currentMetrics.driverSalary} 
-          prevValue={prevMetrics.driverSalary}
-          unit="RUB" 
-          trend={calcTrend(currentMetrics.driverSalary, prevMetrics.driverSalary)} 
-          colorScheme="blue"
-          icon={<CarFront className="w-8 h-8" />}
-          href="/drivers"
-        />
-      </div>
+
 
       <DashboardCharts 
         financeData={chartFinanceData} 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDashboardData, getFinanceData } from '@/lib/data';
+import { getDashboardData, getFinanceData, getDrivers } from '@/lib/data';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,6 +10,7 @@ import { getDictionary } from '@/lib/dictionaries';
 import { ArrowLeft, DollarSign, Truck, Calendar, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TableRowLink } from '@/components/TableRowLink';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,8 @@ export default async function RevenueDetailPage({
 
   const allOrders = await getDashboardData();
   const { allWarehouseIncome } = await getFinanceData();
+  const driversList = await getDrivers();
+  const driverMap = new Map(driversList.map(d => [d.id, d.name]));
 
   // Date Parsing Logic
   const todayDate = new Date();
@@ -92,7 +95,7 @@ export default async function RevenueDetailPage({
             id: order.id,
             date: orderDate,
             amount: amt,
-            driverName: order.driverId ? `ID: ${order.driverId}` : (lang === 'uz' ? 'Biriktirilmagan' : 'Не назначен'),
+            driverName: order.driverId ? (driverMap.get(order.driverId) || `ID: ${order.driverId}`) : (lang === 'uz' ? 'Biriktirilmagan' : 'Не назначен'),
             type: 'order',
             paymentType: order.paymentType,
             address: order.address
@@ -185,10 +188,7 @@ export default async function RevenueDetailPage({
             </p>
           </div>
         </div>
-        <span className="text-slate-500 font-bold flex items-center gap-2 bg-white border border-slate-200 shadow-sm px-4 py-2.5 rounded-2xl text-sm sm:text-base">
-          <Calendar className="h-4 w-4 text-emerald-500" />
-          {format(currentFrom, 'dd.MM.yyyy')} — {format(currentTo, 'dd.MM.yyyy')}
-        </span>
+        <DashboardDatePicker />
       </div>
 
       {/* Main Breakdown Section */}
@@ -308,7 +308,7 @@ export default async function RevenueDetailPage({
                 <TableRow>
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>{dict.date || 'Дата'}</TableHead>
-                  <TableHead>{dict.address || 'Адрес'}</TableHead>
+                  <TableHead>{lang === 'uz' ? 'Haydovchi / Manzil' : 'Водитель / Адрес'}</TableHead>
                   <TableHead className="text-right">{dict.amount || 'Сумма'}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -319,7 +319,10 @@ export default async function RevenueDetailPage({
                     <TableCell className="text-xs font-semibold text-slate-700">
                       {format(item.date, 'dd.MM.yyyy HH:mm')}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600 truncate max-w-[200px]">{item.address}</TableCell>
+                    <TableCell className="text-xs text-slate-600 truncate max-w-[200px]">
+                      <div className="font-bold text-slate-800">{item.driverName}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{item.address || '—'}</div>
+                    </TableCell>
                     <TableCell className="text-right font-extrabold text-emerald-600 text-sm">
                       {item.amount.toLocaleString()} <span className="text-[10px] opacity-70">RUB</span>
                     </TableCell>

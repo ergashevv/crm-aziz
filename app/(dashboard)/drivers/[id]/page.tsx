@@ -102,12 +102,21 @@ export default async function DriverDetailPage({
 
   // Build URL helper preserving filters
   const buildUrl = (overrides: Record<string, string | number>) => {
-    const params = new URLSearchParams();
-    if (statusFilter) params.set('status', statusFilter);
-    if (paymentFilter) params.set('payment', paymentFilter);
-    params.set('page', String(page));
-    Object.entries(overrides).forEach(([k, v]) => params.set(k, String(v)));
-    return `/drivers/${driverId}?${params.toString()}`;
+    const p = new URLSearchParams();
+    // Start with current filters
+    if (statusFilter) p.set('status', statusFilter);
+    if (paymentFilter) p.set('payment', paymentFilter);
+    p.set('page', String(page));
+    // Apply overrides (can clear a param by setting empty string)
+    Object.entries(overrides).forEach(([k, v]) => {
+      if (v === '' || v === undefined) {
+        p.delete(k);
+      } else {
+        p.set(k, String(v));
+      }
+    });
+    const qs = p.toString();
+    return `/drivers/${driverId}${qs ? '?' + qs : ''}`;
   };
 
   return (
@@ -296,11 +305,12 @@ export default async function DriverDetailPage({
                   { value: 'new', label: isUz ? 'Yangi' : 'Новые', color: 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200' },
                   { value: 'in_progress', label: isUz ? "Yo'lda" : 'В пути', color: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' },
                   { value: 'completed', label: isUz ? 'Tugallangan' : 'Завершены', color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' },
+                  { value: 'active', label: isUz ? 'Faol' : 'Активные', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' },
                 ].map(opt => (
                   <Link
-                    key={opt.value}
+                    key={opt.value || 'all'}
                     href={buildUrl({ status: opt.value, page: 1 })}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${opt.color} ${statusFilter === opt.value ? 'ring-2 ring-offset-1 ring-primary/40 shadow-sm' : 'opacity-80 hover:opacity-100'}`}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${opt.color} ${statusFilter === opt.value ? 'ring-2 ring-offset-1 ring-primary/40 shadow-sm opacity-100' : 'opacity-75 hover:opacity-100'}`}
                   >
                     {opt.label}
                   </Link>
@@ -318,7 +328,7 @@ export default async function DriverDetailPage({
                   { value: 'entered', label: isUz ? 'Hisobda' : 'Учтён' },
                 ].map(opt => (
                   <Link
-                    key={opt.value}
+                    key={opt.value || 'all-payment'}
                     href={buildUrl({ payment: opt.value, page: 1 })}
                     className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all border ${
                       paymentFilter === opt.value

@@ -34,6 +34,7 @@ interface SalaryExpense {
   driverId: number | null;
   dispatcherId: number | null;
   recordedAt: Date | string;
+  orderId?: number | null; // Added orderId!
 }
 
 interface DispatcherSalaryTrackerProps {
@@ -253,7 +254,18 @@ export function DispatcherSalaryTracker({ dict, dispatchers, expenses }: Dispatc
                                 </span>
                               </TableCell>
                               <TableCell className="text-xs font-semibold text-slate-700">
-                                {exp.note || '-'}
+                                <div className="space-y-1">
+                                  <div>{exp.note || '-'}</div>
+                                  {exp.orderId && (
+                                    <Link 
+                                      href={`/orders/${exp.orderId}`}
+                                      className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:text-blue-800 px-2 py-0.5 rounded transition-all mt-1 shadow-sm"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      📦 {isUz ? 'Buyurtma' : 'Заказ'} #{exp.orderId}
+                                    </Link>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="text-right text-sm text-indigo-600 font-extrabold">
                                 -{exp.amountRub.toLocaleString()} RUB
@@ -368,7 +380,18 @@ export function DispatcherSalaryTracker({ dict, dispatchers, expenses }: Dispatc
                               </span>
                             </TableCell>
                             <TableCell className="text-xs font-semibold text-slate-700">
-                              {exp.note || '-'}
+                              <div className="space-y-1">
+                                <div>{exp.note || '-'}</div>
+                                {exp.orderId && (
+                                  <Link 
+                                    href={`/orders/${exp.orderId}`}
+                                    className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:text-blue-800 px-2 py-0.5 rounded transition-all mt-1 shadow-sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    📦 {isUz ? 'Buyurtma' : 'Заказ'} #{exp.orderId}
+                                  </Link>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right text-sm text-indigo-600 font-extrabold">
                               -{exp.amountRub.toLocaleString()} RUB
@@ -436,7 +459,18 @@ export function DispatcherSalaryTracker({ dict, dispatchers, expenses }: Dispatc
                         )}
                       </TableCell>
                       <TableCell className="text-xs font-medium text-slate-600">
-                        {expense.note || '-'}
+                        <div className="space-y-1">
+                          <div>{expense.note || '-'}</div>
+                          {expense.orderId && (
+                            <Link 
+                              href={`/orders/${expense.orderId}`}
+                              className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:text-blue-800 px-2 py-0.5 rounded transition-all mt-1 shadow-sm"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              📦 {isUz ? 'Buyurtma' : 'Заказ'} #{expense.orderId}
+                            </Link>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right text-sm text-indigo-600 font-extrabold">
                         -{expense.amountRub.toLocaleString()} RUB

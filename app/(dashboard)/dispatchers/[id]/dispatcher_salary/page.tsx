@@ -143,7 +143,17 @@ export default async function DispatcherSalaryDetailPage({ params }: { params: {
                     </span>
                   </TableCell>
                   <TableCell className="text-xs font-bold text-slate-700">
-                    {exp.note || '-'}
+                    <div className="space-y-1">
+                      <div>{exp.note || '-'}</div>
+                      {exp.orderId && (
+                        <Link 
+                          href={`/orders/${exp.orderId}`}
+                          className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:text-blue-800 px-2 py-0.5 rounded transition-all mt-1 shadow-sm"
+                        >
+                          📦 {isUz ? 'Buyurtma' : 'Заказ'} #{exp.orderId}
+                        </Link>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right text-sm text-indigo-600 font-extrabold">
                     -{exp.amountRub.toLocaleString()} RUB

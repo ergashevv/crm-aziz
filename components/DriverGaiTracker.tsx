@@ -9,13 +9,12 @@ import { format } from 'date-fns';
 import { 
   User, 
   Car, 
-  Fuel, 
   ChevronDown, 
   ChevronUp, 
   Search, 
   Layers, 
-  DollarSign, 
-  AlertCircle 
+  AlertCircle,
+  DollarSign 
 } from 'lucide-react';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import Link from 'next/link';
@@ -27,9 +26,9 @@ interface Driver {
   vehiclePlate: string;
 }
 
-interface FuelExpense {
+interface GaiExpense {
   id: number;
-  category: 'fuel' | 'diesel';
+  category: 'gai';
   amountRub: number;
   note: string | null;
   driverId: number | null;
@@ -37,40 +36,37 @@ interface FuelExpense {
   recordedAt: Date | string;
 }
 
-interface DriverFuelTrackerProps {
+interface DriverGaiTrackerProps {
   dict: any;
   drivers: Driver[];
-  expenses: FuelExpense[];
+  expenses: GaiExpense[];
 }
 
-export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTrackerProps) {
+export function DriverGaiTracker({ dict, drivers, expenses }: DriverGaiTrackerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedDriverId, setExpandedDriverId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'drivers' | 'all'>('drivers');
 
-  // Filter drivers based on search term (name or plate)
+  // Filter drivers based on search term
   const filteredDrivers = drivers.filter(driver => 
     driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     driver.vehiclePlate.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Group and calculate statistics for each driver
+  // Calculate statistics for each driver
   const driverStats = drivers.map(driver => {
     const driverExpenses = expenses.filter(exp => exp.driverId === driver.id);
-    const totalLiters = driverExpenses.reduce((sum, exp) => sum + (exp.liters || 0), 0);
     const totalCost = driverExpenses.reduce((sum, exp) => sum + exp.amountRub, 0);
     
     return {
       ...driver,
       expensesList: driverExpenses,
-      totalLiters,
       totalCost,
       count: driverExpenses.length
     };
   });
 
   // Calculate overall metrics
-  const totalLitersAll = expenses.reduce((sum, exp) => sum + (exp.liters || 0), 0);
   const totalCostAll = expenses.reduce((sum, exp) => sum + exp.amountRub, 0);
 
   // Filtered master ledger expenses
@@ -99,7 +95,7 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
             } flex-1 md:flex-initial`}
           >
             <User className="h-4.5 w-4.5" />
-            {dict.driver_stats || 'По водителям'}
+            По водителям (ГАИ)
           </button>
           <button
             onClick={() => setActiveTab('all')}
@@ -110,14 +106,14 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
             } flex-1 md:flex-initial`}
           >
             <Layers className="h-4.5 w-4.5" />
-            {dict.fuel_entries || 'Все записи'}
+            Все записи ГАИ
           </button>
         </div>
 
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" />
           <Input
-            placeholder="Поиск водителя или auto..."
+            placeholder="Поиск по водителю..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white transition-all focus:ring-primary/20"
@@ -127,22 +123,22 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
 
       {/* Global Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl bg-gradient-to-br from-amber-500/5 to-orange-500/5 relative overflow-hidden">
+        <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl bg-gradient-to-br from-red-500/5 to-rose-500/5 relative overflow-hidden">
           <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 pointer-events-none">
-            <Fuel className="h-40 w-40 text-amber-500" />
+            <AlertCircle className="h-40 w-40 text-red-500" />
           </div>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Fuel className="h-4 w-4" />
-              {dict.total_fuel_consumed || 'Всего топлива'}
+            <CardTitle className="text-xs font-bold text-red-700 uppercase tracking-wider flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4" />
+              Всего штрафов
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-extrabold text-slate-800 flex items-baseline gap-1.5">
-              {totalLitersAll.toLocaleString()}
-              <span className="text-base font-semibold text-slate-500">L</span>
+              {expenses.length}
+              <span className="text-base font-semibold text-slate-500">шт.</span>
             </div>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Расход по всем водителям и заправкам</p>
+            <p className="text-xs text-slate-400 mt-1 font-medium">Количество зафиксированных нарушений</p>
           </CardContent>
         </Card>
 
@@ -153,7 +149,7 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
               <DollarSign className="h-4 w-4" />
-              {dict.total_fuel_cost || 'Общая стоимость'}
+              {dict.gai || 'ГАИ'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -161,7 +157,7 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
               {totalCostAll.toLocaleString()}
               <span className="text-base font-semibold text-slate-500">RUB</span>
             </div>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Финансовые затраты на топливо</p>
+            <p className="text-xs text-slate-400 mt-1 font-medium">Общая сумма штрафов и сборов</p>
           </CardContent>
         </Card>
       </div>
@@ -204,15 +200,11 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                   <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
                     <div className="flex items-center gap-6">
                       <div className="text-right">
-                        <span className="text-xs text-slate-400 font-semibold block">Расход</span>
-                        <span className="font-bold text-slate-800">{stats.totalLiters.toLocaleString()} L</span>
-                      </div>
-                      <div className="text-right">
                         <span className="text-xs text-slate-400 font-semibold block">Сумма</span>
                         <span className="font-extrabold text-red-600">{stats.totalCost.toLocaleString()} RUB</span>
                       </div>
                       <div className="text-right hidden md:block">
-                        <span className="text-xs text-slate-400 font-semibold block">Заправки</span>
+                        <span className="text-xs text-slate-400 font-semibold block">Штрафы</span>
                         <span className="font-bold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-full text-xs">{stats.count}</span>
                       </div>
                     </div>
@@ -227,7 +219,7 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                 {isExpanded && (
                   <div className="border-t border-slate-100 bg-slate-50/40 p-4 sm:p-6 space-y-4">
                     <div className="flex justify-between items-center">
-                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">История заправок водителем</h4>
+                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">История штрафов ГАИ водителем</h4>
                       <span className="text-xs text-slate-400 font-medium">Всего {stats.count} записей</span>
                     </div>
 
@@ -238,7 +230,6 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                             <TableHead className="w-[120px]">Дата</TableHead>
                             <TableHead className="w-[100px]">Категория</TableHead>
                             <TableHead>Описание</TableHead>
-                            <TableHead className="text-right w-[100px]">Литры</TableHead>
                             <TableHead className="text-right w-[150px]">Сумма</TableHead>
                             <TableHead className="w-[60px]"></TableHead>
                           </TableRow>
@@ -257,9 +248,6 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                               <TableCell className="text-xs font-semibold text-slate-700">
                                 {exp.note || '-'}
                               </TableCell>
-                              <TableCell className="text-right text-xs font-bold text-slate-800">
-                                {exp.liters ? `${exp.liters} L` : '-'}
-                              </TableCell>
                               <TableCell className="text-right text-sm text-red-600 font-extrabold">
                                 -{exp.amountRub.toLocaleString()} RUB
                               </TableCell>
@@ -270,8 +258,8 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                           ))}
                           {stats.expensesList.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center py-6 text-slate-400 font-medium">
-                                Нет записей о заправке для этого водителя.
+                              <TableCell colSpan={5} className="text-center py-6 text-slate-400 font-medium">
+                                Нет записей о ГАИ для этого водителя.
                               </TableCell>
                             </TableRow>
                           )}
@@ -279,14 +267,14 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                       </Table>
                       {stats.expensesList.length > 5 && (
                         <div className="flex justify-center p-3.5 bg-slate-50/50 border-t border-slate-100">
-                          <Link href={`/drivers/${driver.id}/fuel`} className="w-full sm:w-auto">
+                          <Link href={`/drivers/${driver.id}/gai`} className="w-full sm:w-auto">
                             <Button 
                               variant="ghost" 
                               size="sm" 
                               className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1.5 hover:bg-slate-100/80 px-4 py-1.5 rounded-lg transition-all w-full"
                             >
                               <Layers className="h-4 w-4" />
-                              {dict.show_all || 'Показать все'} ({stats.expensesList.length})
+                              Показать все ({stats.expensesList.length})
                             </Button>
                           </Link>
                         </div>
@@ -312,7 +300,7 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
           <CardHeader className="border-b border-slate-100 flex flex-row items-center justify-between py-4">
             <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="h-4 w-4 text-slate-500" />
-              Общий реестр заправок
+              Общий реестр ГАИ
             </CardTitle>
             <div className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
               {filteredAllExpenses.length} записей
@@ -325,7 +313,6 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                   <TableHead className="w-[120px]">Дата</TableHead>
                   <TableHead className="w-[160px]">Водитель</TableHead>
                   <TableHead>Описание / Заметка</TableHead>
-                  <TableHead className="text-right w-[100px]">Литры</TableHead>
                   <TableHead className="text-right w-[150px]">Сумма</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
@@ -351,9 +338,6 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                       <TableCell className="text-xs font-medium text-slate-600">
                         {expense.note || '-'}
                       </TableCell>
-                      <TableCell className="text-right text-xs font-bold text-slate-800">
-                        {expense.liters ? `${expense.liters} L` : '-'}
-                      </TableCell>
                       <TableCell className="text-right text-sm text-red-600 font-extrabold">
                         -{expense.amountRub.toLocaleString()} RUB
                       </TableCell>
@@ -365,8 +349,8 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                 })}
                 {filteredAllExpenses.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-slate-500 font-medium">
-                      Записи о расходах на топливо не найдены.
+                    <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
+                      Записи о штрафах ГАИ не найдены.
                     </TableCell>
                   </TableRow>
                 )}

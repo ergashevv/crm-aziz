@@ -13,6 +13,7 @@ import { MetricCard } from '@/components/MetricCard';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import { getCurrentUser } from '@/lib/auth';
 import { DriverFuelTracker } from '@/components/DriverFuelTracker';
+import { DriverGaiTracker } from '@/components/DriverGaiTracker';
 
 export const dynamic = 'force-dynamic';
 
@@ -278,6 +279,15 @@ export default async function ExpensesDetailPage({
           expenses={filteredExpensesList.map(e => ({
             ...e,
             category: e.category as 'fuel' | 'diesel'
+          }))} 
+        />
+      ) : categoryParam === 'gai' ? (
+        <DriverGaiTracker 
+          dict={dict} 
+          drivers={allDrivers} 
+          expenses={filteredExpensesList.map(e => ({
+            ...e,
+            category: e.category as 'gai'
           }))} 
         />
       ) : (

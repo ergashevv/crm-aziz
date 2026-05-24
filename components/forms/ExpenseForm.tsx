@@ -107,32 +107,32 @@ export function ExpenseForm({ dict, expense, drivers = [] }: { dict: any, expens
               />
             </div>
           )}
+          {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'gai') && (
+            <div className="space-y-2">
+              <Label htmlFor="driverId">Водитель</Label>
+              <Select value={String(formData.driverId)} onValueChange={val => setFormData({...formData, driverId: val})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите водителя" />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers.map(d => (
+                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {(formData.category === 'fuel' || formData.category === 'diesel') && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="driverId">Водитель</Label>
-                <Select value={String(formData.driverId)} onValueChange={val => setFormData({...formData, driverId: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите водителя" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {drivers.map(d => (
-                      <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="liters">Литры</Label>
-                <Input 
-                  id="liters" 
-                  type="number" 
-                  value={formData.liters || ''} 
-                  onChange={e => setFormData({...formData, liters: e.target.value})} 
-                  placeholder="Например: 40"
-                />
-              </div>
-            </>
+            <div className="space-y-2">
+              <Label htmlFor="liters">Литры</Label>
+              <Input 
+                id="liters" 
+                type="number" 
+                value={formData.liters || ''} 
+                onChange={e => setFormData({...formData, liters: e.target.value})} 
+                placeholder="Например: 40"
+              />
+            </div>
           )}
           <div className="space-y-2">
             <Label htmlFor="amountRub">{dict.amount} (RUB)</Label>

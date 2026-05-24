@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { db } from '@/lib/db';
-import { orders } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { orders, expenses } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
 
 export async function PUT(
   request: Request,
@@ -16,6 +16,12 @@ export async function PUT(
 
     const body = await request.json();
     const { status, paymentType, paymentStatus } = body;
+
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+    const previousStatus = order.status;
 
     // Build update object based on what is provided
     const updateData: any = {};
@@ -44,6 +50,43 @@ export async function PUT(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
+    // Generate dispatcher and referral expenses when order is 'completed'
+    if (status === 'completed' && previousStatus !== 'completed') {
+      // Dispatcher fee as expense
+      if (order.dispatcherFee && order.dispatcherFee > 0) {
+        const [existingDisp] = await db.select().from(expenses).where(
+          and(eq(expenses.orderId, orderId), eq(expenses.category, 'dispatcher_salary'))
+        );
+        if (!existingDisp) {
+          await db.insert(expenses).values({
+            category: 'dispatcher_salary',
+            amountRub: order.dispatcherFee,
+            note: `Услуга диспетчера за заказ #${orderId}`,
+            orderId: orderId,
+            operatorId: undefined,
+          });
+        }
+      }
+
+      // Referral fee
+      if (order.referralPercent && order.referralPercent > 0) {
+        const [existingRef] = await db.select().from(expenses).where(
+          and(eq(expenses.orderId, orderId), eq(expenses.category, 'referral_fee'))
+        );
+        if (!existingRef) {
+          const feeAmount = (order.paymentAmount * order.referralPercent) / 100;
+          await db.insert(expenses).values({
+            category: 'referral_fee',
+            amountRub: Math.round(feeAmount),
+            note: `Процент для 3-го лица (${order.referralName || 'Аноним'}) за заказ #${orderId}`,
+            orderId: orderId,
+            operatorId: undefined,
+          });
+        }
+      }
+    }
+
+    revalidateTag('expenses');
     revalidateTag('orders');
     revalidatePath('/dashboard');
     revalidatePath('/orders');

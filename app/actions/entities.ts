@@ -8,9 +8,10 @@ import {
   fuelLogs, 
   expenses, 
   warehouseIncome,
-  dispatchers
+  dispatchers,
+  safeTransactions
 } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -127,6 +128,7 @@ export async function createExpense(data: any) {
     category: data.category,
     amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
     note: data.note,
+    orderId: data.orderId || null,
     operatorId: user ? user.id : null,
   });
   revalidateTag('expenses');
@@ -139,6 +141,7 @@ export async function updateExpense(id: number, data: any) {
     category: data.category,
     amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
     note: data.note,
+    orderId: data.orderId || null,
   }).where(eq(expenses.id, id));
   revalidateTag('expenses');
   revalidatePath('/finance');
@@ -169,6 +172,20 @@ export async function updateWarehouseIncome(id: number, data: any) {
   revalidatePath('/warehouse');
   revalidatePath('/finance');
 }
+
+// Safe Transactions
+export async function createSafeTransaction(data: { type: 'income' | 'expense'; amountRub: number; note?: string }) {
+  const user = await getCurrentUser();
+  await db.insert(safeTransactions).values({
+    type: data.type,
+    amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
+    note: data.note || null,
+    operatorId: user ? user.id : null,
+  });
+  revalidateTag('safe');
+  revalidatePath('/safe');
+}
+
 
 function parseDate(dateStr: any): Date {
   if (!dateStr) return new Date();
@@ -339,13 +356,17 @@ export async function createOrder(data: any) {
           : `Оплата за заказ #${newOrder.id}`,
         operatorId: user ? user.id : null,
       });
+    }
 
+    // Generate dispatcher and referral expenses when order is 'completed'
+    if (status === 'completed') {
       // Dispatcher fee as expense
       if (dispatcherFee && dispatcherFee > 0) {
         await db.insert(expenses).values({
           category: 'dispatcher_salary',
           amountRub: dispatcherFee,
           note: `Услуга диспетчера за заказ #${newOrder.id}`,
+          orderId: newOrder.id,
           operatorId: user ? user.id : null,
         });
       }
@@ -358,6 +379,7 @@ export async function createOrder(data: any) {
           category: 'referral_fee',
           amountRub: Math.round(feeAmount),
           note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${newOrder.id}`,
+          orderId: newOrder.id,
           operatorId: user ? user.id : null,
         });
       }
@@ -478,6 +500,7 @@ export async function updateOrder(id: number, data: any) {
     }
 
     const previousPaymentStatus = order.paymentStatus;
+    const previousStatus = order.status;
     const newPaymentStatus = isExternalVehicle ? 'entered' : data.paymentStatus;
     const dispatcherFee = isExternalVehicle ? null : (data.dispatcherFee ? parseInt(String(data.dispatcherFee).replace(/\D/g, '')) : null);
     const status = isExternalVehicle ? 'completed' : data.status;
@@ -518,27 +541,42 @@ export async function updateOrder(id: number, data: any) {
           : `Оплата за заказ #${id}`,
         operatorId: user ? user.id : null,
       });
+    }
 
+    // If transitioned to 'completed'
+    if (status === 'completed' && previousStatus !== 'completed') {
       // Dispatcher fee as expense
       if (dispatcherFee && dispatcherFee > 0) {
-        await db.insert(expenses).values({
-          category: 'dispatcher_salary',
-          amountRub: dispatcherFee,
-          note: `Услуга диспетчера за заказ #${id}`,
-          operatorId: user ? user.id : null,
-        });
+        const [existingDisp] = await db.select().from(expenses).where(
+          and(eq(expenses.orderId, id), eq(expenses.category, 'dispatcher_salary'))
+        );
+        if (!existingDisp) {
+          await db.insert(expenses).values({
+            category: 'dispatcher_salary',
+            amountRub: dispatcherFee,
+            note: `Услуга диспетчера за заказ #${id}`,
+            orderId: id,
+            operatorId: user ? user.id : null,
+          });
+        }
       }
 
       // Referral fee
       const referralPercent = data.referralPercent ? parseInt(data.referralPercent) : null;
       if (referralPercent && referralPercent > 0) {
-        const feeAmount = (paymentAmount * referralPercent) / 100;
-        await db.insert(expenses).values({
-          category: 'referral_fee',
-          amountRub: Math.round(feeAmount),
-          note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${id}`,
-          operatorId: user ? user.id : null,
-        });
+        const [existingRef] = await db.select().from(expenses).where(
+          and(eq(expenses.orderId, id), eq(expenses.category, 'referral_fee'))
+        );
+        if (!existingRef) {
+          const feeAmount = (paymentAmount * referralPercent) / 100;
+          await db.insert(expenses).values({
+            category: 'referral_fee',
+            amountRub: Math.round(feeAmount),
+            note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${id}`,
+            orderId: id,
+            operatorId: user ? user.id : null,
+          });
+        }
       }
     }
 

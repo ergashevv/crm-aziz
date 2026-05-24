@@ -1,5 +1,5 @@
 import { db } from './db';
-import { orders, clients, drivers, fuelLogs, expenses, warehouseIncome, dispatchers, users } from './schema';
+import { orders, clients, drivers, fuelLogs, expenses, warehouseIncome, dispatchers, users, safeTransactions } from './schema';
 import { unstable_cache } from 'next/cache';
 import { desc, eq, and, or, ilike, ne, asc, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth';
@@ -139,3 +139,18 @@ export const getWarehouseData = unstable_cache(
   ['warehouse-data'],
   { revalidate: 30, tags: ['warehouse', 'expenses'] }
 );
+
+export const getSafeData = unstable_cache(
+  async () => {
+    return await db.select({
+      transaction: safeTransactions,
+      operator: users,
+    })
+    .from(safeTransactions)
+    .leftJoin(users, eq(safeTransactions.operatorId, users.id))
+    .orderBy(desc(safeTransactions.recordedAt));
+  },
+  ['safe-data'],
+  { revalidate: 30, tags: ['safe'] }
+);
+

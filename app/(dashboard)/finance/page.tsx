@@ -1,5 +1,6 @@
 import React from 'react';
-import { getFinanceData, getClients } from '@/lib/data';
+import { getFinanceData, getClients, getDispatchers, getDashboardData } from '@/lib/data';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
@@ -24,11 +25,18 @@ export default async function FinancePage({
   const dict = getDictionary(lang);
 
   // Fetch all database records
-  const { allOrders, allExpenses, allWarehouseIncome } = await getFinanceData();
-  const allClients = await getClients();
+  const [allOrders, { allExpenses, allWarehouseIncome }, user, allClients, allDispatchers] = await Promise.all([
+    getDashboardData(),
+    getFinanceData(),
+    getCurrentUser(),
+    getClients(),
+    getDispatchers()
+  ]);
+
+  const ordersMap = new Map(allOrders.map(o => [o.id, o]));
+  const dispatchersMap = new Map(allDispatchers.map(d => [d.id, d.name]));
   const clientMap = new Map(allClients.map(c => [c.id, c]));
 
-  const user = await getCurrentUser();
   const isOperator = user?.role === 'operator';
   const currentUserId = user?.id;
 
@@ -541,10 +549,20 @@ export default async function FinancePage({
                       <TableCell className="text-xs text-slate-500">{format(new Date(expense.recordedAt), 'dd.MM.yyyy')}</TableCell>
                       <TableCell>
                         <span className="capitalize text-xs font-semibold px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-md inline-flex">
-                          {dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' ')}
+                          {expense.category === 'dispatcher_salary' && expense.orderId && ordersMap.get(expense.orderId)?.dispatcherId
+                            ? dispatchersMap.get(ordersMap.get(expense.orderId)!.dispatcherId!) || dict.dispatcher_salary
+                            : (dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' '))}
                         </span>
                       </TableCell>
-                      <TableCell className="text-xs truncate max-w-[150px] font-medium text-slate-600">{expense.note || '-'}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600">
+                        {expense.orderId ? (
+                          <Link href={`/orders/${expense.orderId}`} className="text-blue-600 hover:underline">
+                            {expense.note || `Заказ #${expense.orderId}`}
+                          </Link>
+                        ) : (
+                          expense.note || '-'
+                        )}
+                      </TableCell>
                       <TableCell className="text-right text-sm text-rose-600 font-extrabold">-{expense.amountRub.toLocaleString()}</TableCell>
                       <TableCell className="text-right">
                         <ExpenseForm dict={dict} expense={expense} />

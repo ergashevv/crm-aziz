@@ -24,11 +24,13 @@ export function ExpenseForm({ dict, expense }: { dict: any, expense?: any }) {
   const [formData, setFormData] = useState(expense ? {
     category: expense.category || '',
     amountRub: String(expense.amountRub || ''),
-    note: expense.note || ''
+    note: expense.note || '',
+    orderId: expense.orderId || ''
   } : {
     category: '',
     amountRub: '',
-    note: ''
+    note: '',
+    orderId: ''
   });
 
   const [amt, setAmt] = useState(expense ? formatNum(expense.amountRub) : '');
@@ -50,7 +52,7 @@ export function ExpenseForm({ dict, expense }: { dict: any, expense?: any }) {
       }
       setOpen(false);
       if (!expense) {
-        setFormData({ category: '', amountRub: '', note: '' });
+        setFormData({ category: '', amountRub: '', note: '', orderId: '' });
         setAmt('');
       }
     } finally {
@@ -89,6 +91,18 @@ export function ExpenseForm({ dict, expense }: { dict: any, expense?: any }) {
               </SelectContent>
             </Select>
           </div>
+          {formData.category === 'dispatcher_salary' && (
+            <div className="space-y-2">
+              <Label htmlFor="orderId">Номер заказа (ID)</Label>
+              <Input 
+                id="orderId" 
+                type="number" 
+                value={formData.orderId || ''} 
+                onChange={e => setFormData({...formData, orderId: e.target.value})} 
+                placeholder="Например: 1108"
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="amountRub">{dict.amount} (RUB)</Label>
             <Input 

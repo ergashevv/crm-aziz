@@ -43,6 +43,7 @@ export function MobileSidebar({ lang = 'ru', userRole }: { lang?: string, userRo
     { label: dict.finance, icon: Wallet, href: "/finance" },
     { label: dict.fuel_logs, icon: Fuel, href: "/fuel" },
     { label: dict.warehouse, icon: Warehouse, href: "/warehouse" },
+    { label: dict.safe, icon: Wallet, href: "/safe" },
   ];
 
   if (userRole === 'admin') {

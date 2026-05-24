@@ -154,6 +154,16 @@ export const dictionaries = {
     no_expenses: "Расходы отсутствуют",
     error: "Произошла ошибка",
     operators_menu: "Операторы",
+    safe: "Сейф",
+    safe_balance: "Баланс сейфа",
+    safe_transactions: "Транзакции сейфа",
+    log_safe_income: "+ Приход в сейф",
+    log_safe_expense: "- Расход из сейфа",
+    safe_income: "Приход",
+    safe_expense: "Расход",
+    transaction_type: "Тип",
+    no_safe_transactions: "Транзакций в сейфе не найдено.",
+    safe_overview: "Учет наличных средств в сейфе.",
   },
 };
 

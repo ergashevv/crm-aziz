@@ -42,6 +42,7 @@ export function Sidebar({
     { label: dict.finance,                       icon: Wallet,           href: "/finance",     color: "text-emerald-400" },
     { label: dict.fuel_logs,                     icon: Fuel,             href: "/fuel",        color: "text-orange-400" },
     { label: dict.warehouse,                     icon: Warehouse,        href: "/warehouse",   color: "text-rose-400" },
+    { label: dict.safe,                          icon: Wallet,           href: "/safe",        color: "text-green-400" },
   ];
 
   if (userRole === 'admin') {

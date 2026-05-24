@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDashboardData, getFinanceData } from '@/lib/data';
+import { getDashboardData, getFinanceData, getDispatchers } from '@/lib/data';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,11 +23,15 @@ export default async function ExpensesDetailPage({
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
 
-  const [allOrders, { allExpenses }, user] = await Promise.all([
+  const [allOrders, { allExpenses }, user, allDispatchers] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
-    getCurrentUser()
+    getCurrentUser(),
+    getDispatchers()
   ]);
+  
+  const ordersMap = new Map(allOrders.map(o => [o.id, o]));
+  const dispatchersMap = new Map(allDispatchers.map(d => [d.id, d.name]));
   const isOperator = user?.role === 'operator';
   const currentUserId = user?.id;
 
@@ -283,10 +287,20 @@ export default async function ExpensesDetailPage({
                   <TableCell className="text-xs text-slate-500">{format(new Date(expense.recordedAt), 'dd.MM.yyyy HH:mm')}</TableCell>
                   <TableCell>
                     <span className="capitalize text-xs font-semibold px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-md inline-flex">
-                      {dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' ')}
+                      {expense.category === 'dispatcher_salary' && expense.orderId && ordersMap.get(expense.orderId)?.dispatcherId
+                        ? dispatchersMap.get(ordersMap.get(expense.orderId)!.dispatcherId!) || dict.dispatcher_salary
+                        : (dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' '))}
                     </span>
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-slate-600">{expense.note || '-'}</TableCell>
+                  <TableCell className="text-xs font-medium text-slate-600">
+                    {expense.orderId ? (
+                      <Link href={`/orders/${expense.orderId}`} className="text-blue-600 hover:underline">
+                        {expense.note || `Заказ #${expense.orderId}`}
+                      </Link>
+                    ) : (
+                      expense.note || '-'
+                    )}
+                  </TableCell>
                   <TableCell className="text-right text-sm text-rose-600 font-extrabold">-{expense.amountRub.toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <ExpenseForm dict={dict} expense={expense} />

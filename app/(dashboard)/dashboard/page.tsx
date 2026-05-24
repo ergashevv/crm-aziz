@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import { TableRowLink } from '@/components/TableRowLink';
-import { LayoutDashboard, Users, Truck, DollarSign, Fuel, CarFront, FileWarning, Recycle, Wrench, Briefcase, HandCoins } from 'lucide-react';
+import { LayoutDashboard, Users, Truck, DollarSign, Fuel, CarFront, FileWarning, Recycle, Wrench, Briefcase, HandCoins, Warehouse } from 'lucide-react';
 import { DashboardCharts } from '@/components/DashboardCharts';
 import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { MetricCard } from '@/components/MetricCard';
@@ -74,7 +74,7 @@ export default async function DashboardPage({
   const isPrev = (d: Date) => d >= prevFrom && d <= prevTo;
 
   let currentMetrics = {
-    revenue: 0, expenses: 0, profit: 0,
+    revenue: 0, expenses: 0, profit: 0, warehouseTotal: 0,
     revenueOwn: 0, revenueExternal: 0,
     dispatcherOrders: 0, dispatcherFee: 0, dispatcherSalary: 0,
     fuel: 0, gai: 0, utilizationM3: 0, utilizationExpense: 0,
@@ -82,7 +82,7 @@ export default async function DashboardPage({
   };
 
   let prevMetrics = {
-    revenue: 0, expenses: 0, profit: 0,
+    revenue: 0, expenses: 0, profit: 0, warehouseTotal: 0,
     revenueOwn: 0, revenueExternal: 0,
     dispatcherOrders: 0, dispatcherFee: 0, dispatcherSalary: 0,
     fuel: 0, gai: 0, utilizationM3: 0, utilizationExpense: 0,
@@ -146,10 +146,18 @@ export default async function DashboardPage({
   }
 
   for (const w of allWarehouseIncome) {
-     if (w.source === 'client_payment') continue;
      if (isOperator && w.operatorId !== currentUserId) continue;
 
      const wDate = new Date(w.recordedAt);
+     if (isCurrent(wDate)) {
+       currentMetrics.warehouseTotal += w.amountRub;
+     }
+     if (isPrev(wDate)) {
+       prevMetrics.warehouseTotal += w.amountRub;
+     }
+
+     if (w.source === 'client_payment') continue;
+
      if (isCurrent(wDate)) {
        currentMetrics.revenue += w.amountRub;
        currentMetrics.revenueExternal += w.amountRub;
@@ -276,7 +284,7 @@ export default async function DashboardPage({
         <DashboardDatePicker />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard 
           title={lang === 'uz' ? 'Aylanma' : 'Оборот'} 
           value={currentMetrics.revenue} 
@@ -306,6 +314,16 @@ export default async function DashboardPage({
           colorScheme={currentMetrics.profit >= 0 ? "cyan" : "orange"}
           icon={<HandCoins className="w-12 h-12" />}
           href={`/finance?tab=income&startDate=${resolvedFromParam}&endDate=${resolvedToParam}`}
+        />
+        <MetricCard 
+          title={dict.warehouse || 'Склад'} 
+          value={currentMetrics.warehouseTotal} 
+          prevValue={prevMetrics.warehouseTotal}
+          unit="RUB" 
+          trend={calcTrend(currentMetrics.warehouseTotal, prevMetrics.warehouseTotal)} 
+          colorScheme="indigo"
+          icon={<Warehouse className="w-12 h-12" />}
+          href={`/warehouse`}
         />
       </div>
 

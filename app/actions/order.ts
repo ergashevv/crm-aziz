@@ -17,7 +17,7 @@ export async function updateOrderStatus(orderId: number, status: any) {
     const user = await getCurrentUser();
     
     // Check if dispatcher fee expense already exists for this order
-    if (order.dispatcherFee && order.dispatcherFee > 0) {
+    if (order.dispatcherFee && order.dispatcherFee > 0 && order.dispatcherId) {
       const [existingDisp] = await db.select().from(expenses).where(
         and(eq(expenses.orderId, order.id), eq(expenses.category, 'dispatcher_salary'))
       );
@@ -27,6 +27,7 @@ export async function updateOrderStatus(orderId: number, status: any) {
           amountRub: order.dispatcherFee,
           note: `Услуга диспетчера за заказ #${order.id}`,
           orderId: order.id,
+          dispatcherId: order.dispatcherId, // Link to dispatcher!
           operatorId: user ? user.id : undefined,
         });
       }
@@ -91,7 +92,39 @@ export async function updateOrderPayment(orderId: number, paymentStatus: any) {
       operatorId: user ? user.id : undefined,
     });
 
-    // (Referral fee expense creation moved to updateOrderStatus)
+    // 2. ALSO generate dispatcher fee if it doesn't exist yet!
+    if (order.dispatcherFee && order.dispatcherFee > 0 && order.dispatcherId) {
+      const [existingDisp] = await db.select().from(expenses).where(
+        and(eq(expenses.orderId, order.id), eq(expenses.category, 'dispatcher_salary'))
+      );
+      if (!existingDisp) {
+        await db.insert(expenses).values({
+          category: 'dispatcher_salary',
+          amountRub: order.dispatcherFee,
+          note: `Услуга диспетчера за заказ #${order.id}`,
+          orderId: order.id,
+          dispatcherId: order.dispatcherId, // Link to dispatcher!
+          operatorId: user ? user.id : undefined,
+        });
+      }
+    }
+    
+    // 3. ALSO generate referral fee if it doesn't exist yet!
+    if (order.referralPercent && order.referralPercent > 0) {
+      const [existingRef] = await db.select().from(expenses).where(
+        and(eq(expenses.orderId, order.id), eq(expenses.category, 'referral_fee'))
+      );
+      if (!existingRef) {
+        const feeAmount = (order.paymentAmount * order.referralPercent) / 100;
+        await db.insert(expenses).values({
+          category: 'referral_fee',
+          amountRub: Math.round(feeAmount),
+          note: `Процент для 3-го лица (${order.referralName || 'Аноним'}) за заказ #${order.id}`,
+          orderId: order.id,
+          operatorId: user ? user.id : undefined,
+        });
+      }
+    }
   }
 
   revalidateTag('warehouse');

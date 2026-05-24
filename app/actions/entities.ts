@@ -366,15 +366,16 @@ export async function createOrder(data: any) {
       });
     }
 
-    // Generate dispatcher and referral expenses when order is 'completed'
-    if (status === 'completed') {
+    // Generate dispatcher and referral expenses when order is 'completed' or closed
+    if (status === 'completed' || isClosed || newPaymentStatus === 'entered' || newPaymentStatus === 'received') {
       // Dispatcher fee as expense
-      if (dispatcherFee && dispatcherFee > 0) {
+      if (dispatcherFee && dispatcherFee > 0 && dispatcherId) {
         await db.insert(expenses).values({
           category: 'dispatcher_salary',
           amountRub: dispatcherFee,
           note: `Услуга диспетчера за заказ #${newOrder.id}`,
           orderId: newOrder.id,
+          dispatcherId: dispatcherId, // Link to dispatcher!
           operatorId: user ? user.id : null,
         });
       }
@@ -551,10 +552,10 @@ export async function updateOrder(id: number, data: any) {
       });
     }
 
-    // If transitioned to 'completed'
-    if (status === 'completed' && previousStatus !== 'completed') {
+    // If completed or closed, add dispatcher fee and referral fee as expenses
+    if (status === 'completed' || isClosed || newPaymentStatus === 'entered' || newPaymentStatus === 'received') {
       // Dispatcher fee as expense
-      if (dispatcherFee && dispatcherFee > 0) {
+      if (dispatcherFee && dispatcherFee > 0 && dispatcherId) {
         const [existingDisp] = await db.select().from(expenses).where(
           and(eq(expenses.orderId, id), eq(expenses.category, 'dispatcher_salary'))
         );
@@ -564,8 +565,15 @@ export async function updateOrder(id: number, data: any) {
             amountRub: dispatcherFee,
             note: `Услуга диспетчера за заказ #${id}`,
             orderId: id,
+            dispatcherId: dispatcherId, // Link to dispatcher!
             operatorId: user ? user.id : null,
           });
+        } else {
+          // If it exists, update it in case dispatcherId or dispatcherFee changed
+          await db.update(expenses).set({
+            amountRub: dispatcherFee,
+            dispatcherId: dispatcherId,
+          }).where(eq(expenses.id, existingDisp.id));
         }
       }
 
@@ -575,15 +583,21 @@ export async function updateOrder(id: number, data: any) {
         const [existingRef] = await db.select().from(expenses).where(
           and(eq(expenses.orderId, id), eq(expenses.category, 'referral_fee'))
         );
+        const feeAmount = Math.round((paymentAmount * referralPercent) / 100);
         if (!existingRef) {
-          const feeAmount = (paymentAmount * referralPercent) / 100;
           await db.insert(expenses).values({
             category: 'referral_fee',
-            amountRub: Math.round(feeAmount),
+            amountRub: feeAmount,
             note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${id}`,
             orderId: id,
             operatorId: user ? user.id : null,
           });
+        } else {
+          // Update existing referral fee amount and note
+          await db.update(expenses).set({
+            amountRub: feeAmount,
+            note: `Процент для 3-го лица (${data.referralName || 'Аноним'}) за заказ #${id}`,
+          }).where(eq(expenses.id, existingRef.id));
         }
       }
     }

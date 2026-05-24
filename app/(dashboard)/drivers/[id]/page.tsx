@@ -1,6 +1,6 @@
 import React from 'react';
 import { db } from '@/lib/db';
-import { drivers, orders, fuelLogs } from '@/lib/schema';
+import { drivers, orders, fuelLogs, expenses } from '@/lib/schema';
 import { eq, desc } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,7 +27,10 @@ export default async function DriverDetailPage({ params }: { params: { id: strin
   if (!driver) return notFound();
 
   const driverOrders = await db.select().from(orders).where(eq(orders.driverId, driverId)).orderBy(desc(orders.createdAt));
-  const driverFuelLogs = await db.select().from(fuelLogs).where(eq(fuelLogs.driverId, driverId)).orderBy(desc(fuelLogs.loggedAt));
+  const driverFuelExpenses = await db.select().from(expenses)
+    .where(eq(expenses.driverId, driverId))
+    .orderBy(desc(expenses.recordedAt))
+    .then(list => list.filter(e => e.category === 'fuel' || e.category === 'diesel'));
 
   return (
     <div className="space-y-6">
@@ -125,25 +128,29 @@ export default async function DriverDetailPage({ params }: { params: { id: strin
           <CardTitle>{dict.fuel_logs}</CardTitle>
         </CardHeader>
         <CardContent>
-          {driverFuelLogs.length > 0 ? (
+          {driverFuelExpenses.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>{dict.date}</TableHead>
-                  <TableHead>{dict.station}</TableHead>
-                  <TableHead>{dict.vehicle}</TableHead>
+                  <TableHead>{dict.category}</TableHead>
+                  <TableHead>Описание / Заправка</TableHead>
                   <TableHead className="text-right">{dict.liters}</TableHead>
                   <TableHead className="text-right">{dict.amount} (RUB)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {driverFuelLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>{format(new Date(log.loggedAt), 'dd.MM.yyyy HH:mm')}</TableCell>
-                    <TableCell>{log.stationName}</TableCell>
-                    <TableCell>{log.vehicle}</TableCell>
-                    <TableCell className="text-right">{log.liters} L</TableCell>
-                    <TableCell className="text-right font-medium">{log.priceRub.toLocaleString()} RUB</TableCell>
+                {driverFuelExpenses.map((exp) => (
+                  <TableRow key={exp.id}>
+                    <TableCell>{format(new Date(exp.recordedAt), 'dd.MM.yyyy HH:mm')}</TableCell>
+                    <TableCell>
+                      <span className="capitalize text-[10px] font-bold px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-md inline-flex">
+                        {dict[exp.category] || exp.category}
+                      </span>
+                    </TableCell>
+                    <TableCell className="font-semibold text-slate-700">{exp.note || '-'}</TableCell>
+                    <TableCell className="text-right">{exp.liters ? `${exp.liters} L` : '-'}</TableCell>
+                    <TableCell className="text-right font-bold text-red-600">-{exp.amountRub.toLocaleString()} RUB</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

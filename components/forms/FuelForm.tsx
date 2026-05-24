@@ -81,7 +81,14 @@ export function FuelForm({ dict, log, drivers }: { dict: any, log?: any, drivers
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="driverId">{dict.driver}</Label>
-            <Select value={formData.driverId.toString()} onValueChange={val => setFormData({...formData, driverId: val})} required>
+            <Select value={formData.driverId.toString()} onValueChange={val => {
+              const driver = drivers.find(d => d.id.toString() === val);
+              setFormData({
+                ...formData,
+                driverId: val,
+                vehicle: driver ? driver.vehiclePlate : formData.vehicle
+              });
+            }} required>
               <SelectTrigger>
                 <SelectValue placeholder={dict.select_driver || "Select driver"} />
               </SelectTrigger>

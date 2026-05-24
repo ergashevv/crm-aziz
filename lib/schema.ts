@@ -99,6 +99,8 @@ export const expenses = pgTable('expenses', {
   amountRub: integer('amount_rub').notNull(),
   note: text('note'),
   orderId: integer('order_id').references(() => orders.id),
+  driverId: integer('driver_id').references(() => drivers.id),
+  liters: integer('liters'),
   operatorId: integer('operator_id').references(() => users.id),
   recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 });

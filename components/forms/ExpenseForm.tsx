@@ -18,19 +18,23 @@ const formatNum = (val: string | number) => {
   return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
 };
 
-export function ExpenseForm({ dict, expense }: { dict: any, expense?: any }) {
+export function ExpenseForm({ dict, expense, drivers = [] }: { dict: any, expense?: any, drivers?: any[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(expense ? {
     category: expense.category || '',
     amountRub: String(expense.amountRub || ''),
     note: expense.note || '',
-    orderId: expense.orderId || ''
+    orderId: expense.orderId || '',
+    driverId: expense.driverId || '',
+    liters: expense.liters || ''
   } : {
     category: '',
     amountRub: '',
     note: '',
-    orderId: ''
+    orderId: '',
+    driverId: '',
+    liters: ''
   });
 
   const [amt, setAmt] = useState(expense ? formatNum(expense.amountRub) : '');
@@ -52,7 +56,7 @@ export function ExpenseForm({ dict, expense }: { dict: any, expense?: any }) {
       }
       setOpen(false);
       if (!expense) {
-        setFormData({ category: '', amountRub: '', note: '', orderId: '' });
+        setFormData({ category: '', amountRub: '', note: '', orderId: '', driverId: '', liters: '' });
         setAmt('');
       }
     } finally {
@@ -102,6 +106,33 @@ export function ExpenseForm({ dict, expense }: { dict: any, expense?: any }) {
                 placeholder="Например: 1108"
               />
             </div>
+          )}
+          {(formData.category === 'fuel' || formData.category === 'diesel') && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="driverId">Водитель</Label>
+                <Select value={String(formData.driverId)} onValueChange={val => setFormData({...formData, driverId: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите водителя" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {drivers.map(d => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="liters">Литры</Label>
+                <Input 
+                  id="liters" 
+                  type="number" 
+                  value={formData.liters || ''} 
+                  onChange={e => setFormData({...formData, liters: e.target.value})} 
+                  placeholder="Например: 40"
+                />
+              </div>
+            </>
           )}
           <div className="space-y-2">
             <Label htmlFor="amountRub">{dict.amount} (RUB)</Label>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDashboardData, getFinanceData, getDispatchers } from '@/lib/data';
+import { getDashboardData, getFinanceData, getDispatchers, getDrivers } from '@/lib/data';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +12,7 @@ import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { MetricCard } from '@/components/MetricCard';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import { getCurrentUser } from '@/lib/auth';
+import { DriverFuelTracker } from '@/components/DriverFuelTracker';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,15 +24,17 @@ export default async function ExpensesDetailPage({
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
 
-  const [allOrders, { allExpenses }, user, allDispatchers] = await Promise.all([
+  const [allOrders, { allExpenses }, user, allDispatchers, allDrivers] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
     getCurrentUser(),
-    getDispatchers()
+    getDispatchers(),
+    getDrivers()
   ]);
   
   const ordersMap = new Map(allOrders.map(o => [o.id, o]));
   const dispatchersMap = new Map(allDispatchers.map(d => [d.id, d.name]));
+  const driversMap = new Map(allDrivers.map(d => [d.id, d]));
   const isOperator = user?.role === 'operator';
   const currentUserId = user?.id;
 
@@ -166,7 +169,10 @@ export default async function ExpensesDetailPage({
             </p>
           </div>
         </div>
-        <DashboardDatePicker />
+        <div className="flex items-center gap-3">
+          <DashboardDatePicker />
+          <ExpenseForm dict={dict} drivers={allDrivers} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -265,63 +271,92 @@ export default async function ExpensesDetailPage({
         )}
       </div>
 
-      <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl">
-        <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100 flex flex-row items-center justify-between py-4">
-          <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-            {categoryParam && categoryParam !== 'all' ? (dict[categoryParam as keyof typeof dict] || categoryParam) : dict.expense_ledger || dict.recent_expenses}
-          </CardTitle>
-          <div className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-            {filteredExpensesList.length} {lang === 'uz' ? 'ta yozuv' : 'записей'}
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50/80">
-              <TableRow>
-                <TableHead>{dict.date}</TableHead>
-                <TableHead>{dict.category}</TableHead>
-                <TableHead>{dict.note}</TableHead>
-                <TableHead className="text-right">{dict.amount}</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredExpensesList.slice(0, 100).map((expense) => (
-                <TableRow key={expense.id}>
-                  <TableCell className="text-xs text-slate-500">{format(new Date(expense.recordedAt), 'dd.MM.yyyy HH:mm')}</TableCell>
-                  <TableCell>
-                    <span className="capitalize text-xs font-semibold px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-md inline-flex">
-                      {expense.category === 'dispatcher_salary' && expense.orderId && ordersMap.get(expense.orderId)?.dispatcherId
-                        ? dispatchersMap.get(ordersMap.get(expense.orderId)!.dispatcherId!) || dict.dispatcher_salary
-                        : (dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' '))}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-xs font-medium text-slate-600">
-                    {expense.orderId ? (
-                      <Link href={`/orders/${expense.orderId}`} className="text-blue-600 hover:underline">
-                        {expense.note || `Заказ #${expense.orderId}`}
-                      </Link>
-                    ) : (
-                      expense.note || '-'
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right text-sm text-rose-600 font-extrabold">-{expense.amountRub.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">
-                    <ExpenseForm dict={dict} expense={expense} />
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredExpensesList.length === 0 && (
+      {categoryParam === 'fuel' || categoryParam === 'diesel' ? (
+        <DriverFuelTracker 
+          dict={dict} 
+          drivers={allDrivers} 
+          expenses={filteredExpensesList.map(e => ({
+            ...e,
+            category: e.category as 'fuel' | 'diesel'
+          }))} 
+        />
+      ) : (
+        <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl">
+          <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100 flex flex-row items-center justify-between py-4">
+            <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              {categoryParam && categoryParam !== 'all' ? (dict[categoryParam as keyof typeof dict] || categoryParam) : dict.expense_ledger || dict.recent_expenses}
+            </CardTitle>
+            <div className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+              {filteredExpensesList.length} {lang === 'uz' ? 'ta yozuv' : 'записей'}
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader className="bg-slate-50/80">
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
-                    {lang === 'uz' ? "Xarajatlar topilmadi." : "Расходы не найдены."}
-                  </TableCell>
+                  <TableHead>{dict.date}</TableHead>
+                  <TableHead>{dict.category}</TableHead>
+                  <TableHead>{dict.note}</TableHead>
+                  <TableHead className="text-right">{dict.amount}</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {filteredExpensesList.slice(0, 100).map((expense) => (
+                  <TableRow key={expense.id}>
+                    <TableCell className="text-xs text-slate-500">{format(new Date(expense.recordedAt), 'dd.MM.yyyy HH:mm')}</TableCell>
+                    <TableCell>
+                      <span className="capitalize text-xs font-semibold px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-md inline-flex">
+                        {expense.category === 'dispatcher_salary' && expense.orderId && ordersMap.get(expense.orderId)?.dispatcherId
+                          ? dispatchersMap.get(ordersMap.get(expense.orderId)!.dispatcherId!) || dict.dispatcher_salary
+                          : (dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' '))}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs font-medium text-slate-600">
+                      {expense.orderId ? (
+                        <Link href={`/orders/${expense.orderId}`} className="text-blue-600 hover:underline">
+                          {expense.note || `Заказ #${expense.orderId}`}
+                        </Link>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="font-semibold text-slate-700">{expense.note || '-'}</span>
+                          {(expense.driverId || expense.liters) && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                              {expense.driverId && (
+                                <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-slate-200">
+                                  <CarFront className="h-3 w-3 text-slate-400" />
+                                  {driversMap.get(expense.driverId)?.name || 'Водитель'}
+                                </span>
+                              )}
+                              {expense.liters && (
+                                <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-amber-100">
+                                  <Fuel className="h-3 w-3 text-amber-500" />
+                                  {expense.liters} L
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-rose-600 font-extrabold">-{expense.amountRub.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                      <ExpenseForm dict={dict} expense={expense} drivers={allDrivers} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredExpensesList.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
+                      {lang === 'uz' ? "Xarajatlar topilmadi." : "Расходы не найдены."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

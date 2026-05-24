@@ -99,6 +99,8 @@ export async function createFuelLog(data: any) {
       category: 'fuel',
       amountRub: cleanPrice,
       note: `Автоматически добавлено из заправки: ${data.vehicle} (${data.liters}L) - ${data.stationName}`,
+      driverId: parseInt(data.driverId),
+      liters: parseInt(data.liters),
       operatorId: user ? user.id : null,
     });
   });
@@ -129,6 +131,8 @@ export async function createExpense(data: any) {
     amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
     note: data.note,
     orderId: data.orderId || null,
+    driverId: data.driverId ? parseInt(data.driverId) : null,
+    liters: data.liters ? parseInt(data.liters) : null,
     operatorId: user ? user.id : null,
   });
   revalidateTag('expenses');
@@ -142,6 +146,8 @@ export async function updateExpense(id: number, data: any) {
     amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
     note: data.note,
     orderId: data.orderId || null,
+    driverId: data.driverId ? parseInt(data.driverId) : null,
+    liters: data.liters ? parseInt(data.liters) : null,
   }).where(eq(expenses.id, id));
   revalidateTag('expenses');
   revalidatePath('/finance');

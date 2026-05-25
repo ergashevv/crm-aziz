@@ -12,10 +12,15 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { ClientOrdersTable } from '@/components/tables/ClientOrdersTable';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 
-
-
-export default async function ClientDetailPage({ params }: { params: { id: string } }) {
+export default async function ClientDetailPage({ 
+  params,
+  searchParams,
+}: { 
+  params: { id: string },
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
   const lang: string = 'ru';
   const dict = getDictionary(lang);
   const clientId = parseInt(params.id);
@@ -26,7 +31,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
   if (!client) return notFound();
 
-  const clientOrders = await db.select({
+  const allClientOrders = await db.select({
     order: orders,
     driver: drivers,
   })
@@ -34,6 +39,19 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   .leftJoin(drivers, eq(orders.driverId, drivers.id))
   .where(eq(orders.clientId, clientId))
   .orderBy(desc(orders.createdAt));
+
+  const from = typeof searchParams.from === 'string' ? searchParams.from : undefined;
+  const to = typeof searchParams.to === 'string' ? searchParams.to : undefined;
+
+  let clientOrders = allClientOrders;
+  if (from) {
+    clientOrders = clientOrders.filter(r => new Date(r.order.scheduledAt) >= new Date(from));
+  }
+  if (to) {
+    const toDate = new Date(to);
+    toDate.setDate(toDate.getDate() + 1);
+    clientOrders = clientOrders.filter(r => new Date(r.order.scheduledAt) < toDate);
+  }
 
   let totalSpent = 0;
   clientOrders.forEach(({ order }) => {
@@ -82,8 +100,9 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         </Card>
 
         <Card className="col-span-1 md:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{dict.orders} ({clientOrders.length})</CardTitle>
+            <DashboardDatePicker />
           </CardHeader>
           <CardContent>
             {clientOrders.length > 0 ? (

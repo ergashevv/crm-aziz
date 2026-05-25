@@ -3,10 +3,8 @@ import { db } from '@/lib/db';
 import { drivers, orders, clients } from '@/lib/schema';
 import { eq, desc } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import Link from 'next/link';
 import {
@@ -18,33 +16,15 @@ import {
   Package,
   CheckCircle2,
   Clock,
-  Circle,
-  ChevronLeft,
-  ChevronRight,
   Filter,
-  Hash,
-  MapPin,
-  Banknote,
   TrendingUp,
 } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import { DriverOrdersTable } from '@/components/tables/DriverOrdersTable';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
+import { Pagination } from '@/components/Pagination';
 
 const PAGE_SIZE = 15;
-
-const STATUS_CONFIG: Record<string, { label_ru: string; label_uz: string; color: string }> = {
-  new:                { label_ru: 'Новый',              label_uz: 'Yangi',          color: 'bg-sky-50 text-sky-700 border-sky-200' },
-  assigned:           { label_ru: 'Назначен',           label_uz: 'Tayinlangan',    color: 'bg-violet-50 text-violet-700 border-violet-200' },
-  in_progress:        { label_ru: 'В пути',             label_uz: 'Yo\'lda',        color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  container_placed:   { label_ru: 'Контейнер уст.',     label_uz: 'Konteyner qo\'y.', color: 'bg-orange-50 text-orange-700 border-orange-200' },
-  picked_up:          { label_ru: 'Забран',             label_uz: 'Olib ketildi',   color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  completed:          { label_ru: 'Завершён',           label_uz: 'Tugallangan',    color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-};
-
-const PAYMENT_CONFIG: Record<string, { label_ru: string; color: string }> = {
-  pending:  { label_ru: 'Ожидает',  color: 'bg-slate-50 text-slate-500 border-slate-200' },
-  received: { label_ru: 'Получен',  color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-  entered:  { label_ru: 'Учтён',    color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-};
 
 export default async function DriverDetailPage({
   params,
@@ -75,6 +55,8 @@ export default async function DriverDetailPage({
   const statusFilter = typeof searchParams.status === 'string' ? searchParams.status : '';
   const paymentFilter = typeof searchParams.payment === 'string' ? searchParams.payment : '';
   const page = Math.max(1, parseInt(typeof searchParams.page === 'string' ? searchParams.page : '1') || 1);
+  const from = typeof searchParams.from === 'string' ? searchParams.from : undefined;
+  const to = typeof searchParams.to === 'string' ? searchParams.to : undefined;
 
   // Apply filters
   let filtered = allDriverOrders;
@@ -87,6 +69,15 @@ export default async function DriverDetailPage({
   if (paymentFilter && paymentFilter !== 'all') {
     filtered = filtered.filter(r => r.order.paymentStatus === paymentFilter);
   }
+  
+  if (from) {
+    filtered = filtered.filter(r => new Date(r.order.scheduledAt) >= new Date(from));
+  }
+  if (to) {
+    const toDate = new Date(to);
+    toDate.setDate(toDate.getDate() + 1);
+    filtered = filtered.filter(r => new Date(r.order.scheduledAt) < toDate);
+  }
 
   // Stats from ALL orders (no filter)
   const totalOrders = allDriverOrders.length;
@@ -96,24 +87,17 @@ export default async function DriverDetailPage({
     .reduce((sum, r) => sum + r.order.paymentAmount, 0);
   const activeOrders = allDriverOrders.filter(r => !r.order.isClosed && r.order.status !== 'completed').length;
 
-  // Pagination
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
   // Build URL helper preserving filters
   const buildUrl = (overrides: Record<string, string | number>) => {
     const p = new URLSearchParams();
-    // Start with current filters
     if (statusFilter) p.set('status', statusFilter);
     if (paymentFilter) p.set('payment', paymentFilter);
-    p.set('page', String(page));
-    // Apply overrides (can clear a param by setting empty string)
+    if (from) p.set('from', from);
+    if (to) p.set('to', to);
+    p.set('page', '1'); // reset page when clicking filters
     Object.entries(overrides).forEach(([k, v]) => {
-      if (v === '' || v === undefined) {
-        p.delete(k);
-      } else {
-        p.set(k, String(v));
-      }
+      if (v === '' || v === undefined) p.delete(k);
+      else p.set(k, String(v));
     });
     const qs = p.toString();
     return `/drivers/${driverId}${qs ? '?' + qs : ''}`;
@@ -178,18 +162,6 @@ export default async function DriverDetailPage({
                 <p className="font-bold text-slate-800">{format(new Date(driver.createdAt), 'dd.MM.yyyy')}</p>
               </div>
             </div>
-            {driver.username && (
-              <div className="pt-2 border-t border-slate-100">
-                <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide">{dict.username}</p>
-                <p className="font-mono font-bold text-slate-700 mt-0.5">{driver.username}</p>
-              </div>
-            )}
-            {driver.password && (
-              <div>
-                <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide">{dict.password}</p>
-                <p className="font-mono font-bold text-slate-700 mt-0.5">{driver.password}</p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -237,7 +209,7 @@ export default async function DriverDetailPage({
             </div>
           </Link>
 
-          {/* Active — shows all non-closed, non-completed orders */}
+          {/* Active */}
           <Link href={`/drivers/${driverId}?status=active`} className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-amber-500 to-orange-400 shadow-lg shadow-amber-500/30 p-5 flex flex-col justify-between min-h-[130px] cursor-pointer hover:brightness-105 transition-all active:scale-[0.98]">
             <div className="absolute -right-4 -bottom-4 opacity-10">
               <Clock className="h-28 w-28 text-white" />
@@ -285,7 +257,7 @@ export default async function DriverDetailPage({
       <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white">
         {/* Card Header + Filter Bar */}
         <CardHeader className="border-b border-slate-100 bg-slate-50/60 pb-0 pt-5 px-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4">
             <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
               <Package className="h-4.5 w-4.5 text-primary" />
               {isUz ? "Barcha buyurtmalar" : "Все заказы"}
@@ -295,259 +267,74 @@ export default async function DriverDetailPage({
             </CardTitle>
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Filter className="h-4 w-4 text-slate-400" />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-slate-400" />
+                {/* Status Filter */}
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { value: '', label: isUz ? 'Barchasi' : 'Все', color: 'bg-slate-100 text-slate-600 hover:bg-slate-200' },
+                    { value: 'new', label: isUz ? 'Yangi' : 'Новые', color: 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200' },
+                    { value: 'in_progress', label: isUz ? "Yo'lda" : 'В пути', color: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' },
+                    { value: 'completed', label: isUz ? 'Tugallangan' : 'Завершены', color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' },
+                    { value: 'active', label: isUz ? 'Faol' : 'Активные', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' },
+                  ].map(opt => (
+                    <Link
+                      key={opt.value || 'all'}
+                      href={buildUrl({ status: opt.value })}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${opt.color} ${statusFilter === opt.value ? 'ring-2 ring-offset-1 ring-primary/40 shadow-sm opacity-100' : 'opacity-75 hover:opacity-100'}`}
+                    >
+                      {opt.label}
+                    </Link>
+                  ))}
+                </div>
 
-              {/* Status Filter */}
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { value: '', label: isUz ? 'Barchasi' : 'Все', color: 'bg-slate-100 text-slate-600 hover:bg-slate-200' },
-                  { value: 'new', label: isUz ? 'Yangi' : 'Новые', color: 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200' },
-                  { value: 'in_progress', label: isUz ? "Yo'lda" : 'В пути', color: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' },
-                  { value: 'completed', label: isUz ? 'Tugallangan' : 'Завершены', color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' },
-                  { value: 'active', label: isUz ? 'Faol' : 'Активные', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' },
-                ].map(opt => (
-                  <Link
-                    key={opt.value || 'all'}
-                    href={buildUrl({ status: opt.value, page: 1 })}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${opt.color} ${statusFilter === opt.value ? 'ring-2 ring-offset-1 ring-primary/40 shadow-sm opacity-100' : 'opacity-75 hover:opacity-100'}`}
-                  >
-                    {opt.label}
-                  </Link>
-                ))}
+                <div className="w-px h-5 bg-slate-200 mx-1" />
+
+                {/* Payment Filter */}
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { value: '', label: isUz ? "To'lov barchasi" : 'Все оплаты' },
+                    { value: 'pending', label: isUz ? 'Kutilmoqda' : 'Ожидает' },
+                    { value: 'received', label: isUz ? 'Qabul' : 'Получен' },
+                    { value: 'entered', label: isUz ? 'Hisobda' : 'Учтён' },
+                  ].map(opt => (
+                    <Link
+                      key={opt.value || 'all-payment'}
+                      href={buildUrl({ payment: opt.value })}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all border ${
+                        paymentFilter === opt.value
+                          ? 'bg-primary text-white border-primary shadow-sm'
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
-
-              <div className="w-px h-5 bg-slate-200 mx-1" />
-
-              {/* Payment Filter */}
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { value: '', label: isUz ? "To'lov barchasi" : 'Все оплаты' },
-                  { value: 'pending', label: isUz ? 'Kutilmoqda' : 'Ожидает' },
-                  { value: 'received', label: isUz ? 'Qabul' : 'Получен' },
-                  { value: 'entered', label: isUz ? 'Hisobda' : 'Учтён' },
-                ].map(opt => (
-                  <Link
-                    key={opt.value || 'all-payment'}
-                    href={buildUrl({ payment: opt.value, page: 1 })}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all border ${
-                      paymentFilter === opt.value
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
-                    }`}
-                  >
-                    {opt.label}
-                  </Link>
-                ))}
+              
+              <div className="w-px h-5 bg-slate-200 hidden lg:block" />
+              
+              <div className="w-full lg:w-auto">
+                <DashboardDatePicker />
               </div>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50/80">
-              <TableRow>
-                <TableHead className="w-[70px] pl-6">
-                  <div className="flex items-center gap-1.5">
-                    <Hash className="h-3.5 w-3.5 text-slate-400" />
-                    ID
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                    {dict.address}
-                  </div>
-                </TableHead>
-                <TableHead className="hidden sm:table-cell">
-                  <div className="flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5 text-slate-400" />
-                    {isUz ? "Mijoz" : "Клиент"}
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                    {dict.scheduled_date}
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center gap-1.5">
-                    <Circle className="h-3.5 w-3.5 text-slate-400" />
-                    {dict.status}
-                  </div>
-                </TableHead>
-                <TableHead className="hidden md:table-cell">
-                  <div className="flex items-center gap-1.5">
-                    <Banknote className="h-3.5 w-3.5 text-slate-400" />
-                    {isUz ? "To'lov" : "Оплата"}
-                  </div>
-                </TableHead>
-                <TableHead className="text-right hidden lg:table-cell pr-6">
-                  {isUz ? "Summa" : "Сумма"}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-16">
-                    <Package className="h-12 w-12 text-slate-200 mx-auto mb-3" />
-                    <p className="font-semibold text-slate-400">
-                      {isUz ? "Buyurtmalar topilmadi" : "Заказы не найдены"}
-                    </p>
-                    <p className="text-xs text-slate-300 mt-1">
-                      {isUz ? "Filter shartlarini o'zgartiring" : "Измените условия фильтра"}
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginated.map(({ order, client }) => {
-                  const statusCfg = STATUS_CONFIG[order.status];
-                  const paymentCfg = PAYMENT_CONFIG[order.paymentStatus];
-                  return (
-                    <TableRow
-                      key={order.id}
-                      className="hover:bg-slate-50/60 cursor-pointer transition-colors group"
-                    >
-                      <TableCell className="pl-6">
-                        <Link href={`/orders/${order.id}`} className="block">
-                          <span className="font-bold text-primary text-sm group-hover:underline">#{order.id}</span>
-                          {order.isClosed && (
-                            <span className="block text-[10px] font-bold text-slate-400 mt-0.5">
-                              {isUz ? "Yopiq" : "Закрыт"}
-                            </span>
-                          )}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Link href={`/orders/${order.id}`} className="block">
-                          <span className="font-semibold text-slate-800 text-sm truncate max-w-[160px] block">
-                            {order.address}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-semibold">
-                            {order.containerSizeM3} м³ · {order.rentalDuration?.replace('_', ' ')}
-                          </span>
-                        </Link>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Link href={`/orders/${order.id}`} className="block">
-                          {order.isExternalVehicle ? (
-                            <span className="text-xs font-semibold text-slate-400 italic">
-                              {isUz ? "Tashqi avto" : "Стороннее авто"}
-                            </span>
-                          ) : (
-                            <span className="text-sm font-semibold text-slate-700">
-                              {client?.name || <span className="text-slate-300">—</span>}
-                            </span>
-                          )}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Link href={`/orders/${order.id}`} className="block">
-                          <div className="font-bold text-slate-800 text-sm">
-                            {format(new Date(order.scheduledAt), 'dd.MM.yyyy')}
-                          </div>
-                          <div className="text-xs text-slate-400 font-medium">
-                            {format(new Date(order.scheduledAt), 'HH:mm')}
-                          </div>
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Link href={`/orders/${order.id}`} className="block">
-                          <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border inline-flex items-center gap-1 ${statusCfg?.color || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                            {isUz
-                              ? statusCfg?.label_uz || order.status
-                              : statusCfg?.label_ru || order.status.replace('_', ' ')}
-                          </span>
-                        </Link>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <Link href={`/orders/${order.id}`} className="block">
-                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded border inline-flex ${paymentCfg?.color || ''}`}>
-                            {paymentCfg?.label_ru || order.paymentStatus}
-                          </span>
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-right hidden lg:table-cell pr-6">
-                        <Link href={`/orders/${order.id}`} className="block">
-                          <span className="font-extrabold text-slate-800 text-sm">
-                            {order.paymentAmount.toLocaleString()}
-                          </span>
-                          <span className="text-xs text-slate-400 ml-1 font-semibold">RUB</span>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/40">
-              <p className="text-xs text-slate-500 font-semibold">
-                {isUz
-                  ? `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} / ${filtered.length} ta`
-                  : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} из ${filtered.length}`}
-              </p>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={buildUrl({ page: page - 1 })}
-                  aria-disabled={page <= 1}
-                  className={`flex items-center justify-center h-8 w-8 rounded-lg border text-sm font-semibold transition-all ${
-                    page <= 1
-                      ? 'border-slate-100 text-slate-300 pointer-events-none'
-                      : 'border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 hover:shadow-sm'
-                  }`}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Link>
-
-                {/* Page numbers */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                  .reduce<(number | string)[]>((acc, p, idx, arr) => {
-                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('…');
-                    acc.push(p);
-                    return acc;
-                  }, [])
-                  .map((p, idx) =>
-                    typeof p === 'string' ? (
-                      <span key={`ellipsis-${idx}`} className="text-slate-400 text-xs font-bold px-1">…</span>
-                    ) : (
-                      <Link
-                        key={p}
-                        href={buildUrl({ page: p })}
-                        className={`flex items-center justify-center h-8 w-8 rounded-lg text-sm font-bold transition-all ${
-                          p === page
-                            ? 'bg-primary text-white shadow-sm shadow-primary/30'
-                            : 'border border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 hover:shadow-sm'
-                        }`}
-                      >
-                        {p}
-                      </Link>
-                    )
-                  )}
-
-                <Link
-                  href={buildUrl({ page: page + 1 })}
-                  aria-disabled={page >= totalPages}
-                  className={`flex items-center justify-center h-8 w-8 rounded-lg border text-sm font-semibold transition-all ${
-                    page >= totalPages
-                      ? 'border-slate-100 text-slate-300 pointer-events-none'
-                      : 'border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 hover:shadow-sm'
-                  }`}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-          )}
+          <DriverOrdersTable 
+            orders={filtered}
+            page={page}
+            limit={PAGE_SIZE}
+            dict={dict}
+            isUz={isUz}
+          />
+          <Pagination totalItems={filtered.length} itemsPerPage={PAGE_SIZE} />
         </CardContent>
       </Card>
     </div>
   );
 }
+

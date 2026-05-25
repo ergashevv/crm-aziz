@@ -201,16 +201,57 @@ export async function updateExpense(id: number, data: any) {
 }
 
 // Warehouse Transactions
-export async function addWarehouseTransaction(data: { type: 'inbound' | 'outbound', volumeM3: number, note?: string }) {
+export async function addWarehouseTransaction(data: { 
+  type: 'inbound' | 'outbound', 
+  volumeM3: number, 
+  note?: string,
+  driverId?: number,
+  driverAmount?: number,
+  svalkaAmount?: number
+}) {
   const user = await getCurrentUser();
-  await db.insert(warehouseTransactions).values({
-    type: data.type,
-    volumeM3: parseInt(String(data.volumeM3).replace(/\D/g, '')) || 0,
-    note: data.note,
-    operatorId: user ? user.id : null,
+  if (!user) throw new Error('Unauthorized');
+
+  await db.transaction(async (tx) => {
+    // 1. Log Warehouse Transaction
+    await tx.insert(warehouseTransactions).values({
+      type: data.type,
+      volumeM3: data.volumeM3,
+      note: data.note,
+      driverId: data.driverId,
+      driverAmount: data.driverAmount,
+      svalkaAmount: data.svalkaAmount,
+      operatorId: user.id
+    });
+
+    // 2. Log expenses if it's outbound and has amounts
+    if (data.type === 'outbound') {
+      if (data.driverAmount && data.driverAmount > 0 && data.driverId) {
+        await tx.insert(expenses).values({
+          category: 'driver_salary',
+          amountRub: data.driverAmount,
+          driverId: data.driverId,
+          note: `Оплата водителю за вывоз мусора (Склад)`,
+          operatorId: user.id
+        });
+      }
+      
+      if (data.svalkaAmount && data.svalkaAmount > 0) {
+        await tx.insert(expenses).values({
+          category: 'utilization',
+          amountRub: data.svalkaAmount,
+          driverId: data.driverId, // Link to driver if available
+          note: `Оплата свалке за вывоз мусора (Склад)`,
+          operatorId: user.id
+        });
+      }
+    }
   });
-  revalidateTag('warehouse');
+
+  revalidateTag('warehouseTransactions');
+  revalidateTag('expenses');
   revalidatePath('/warehouse');
+  revalidatePath('/finance');
 }
 
 // Safe Transactions

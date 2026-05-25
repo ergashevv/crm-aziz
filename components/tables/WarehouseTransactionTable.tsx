@@ -13,6 +13,7 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
           <TableHead>Тип</TableHead>
           <TableHead>Заказ</TableHead>
           <TableHead>{dict.note || 'Заметка'}</TableHead>
+          <TableHead>Расходы</TableHead>
           <TableHead className="text-right">Объем (m³)</TableHead>
         </TableRow>
       </TableHeader>
@@ -49,6 +50,20 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
                 <span className="text-slate-600">{tx.note || '-'}</span>
               )}
             </TableCell>
+            <TableCell>
+              {tx.driverAmount || tx.svalkaAmount ? (
+                <div className="flex flex-col gap-1 text-xs font-medium">
+                  {tx.driverAmount ? (
+                    <span className="text-slate-700">Водителю: <span className="font-bold text-slate-900">{tx.driverAmount.toLocaleString()}</span> UZS</span>
+                  ) : null}
+                  {tx.svalkaAmount ? (
+                    <span className="text-slate-700">Свалке: <span className="font-bold text-slate-900">{tx.svalkaAmount.toLocaleString()}</span> UZS</span>
+                  ) : null}
+                </div>
+              ) : (
+                <span className="text-slate-400">-</span>
+              )}
+            </TableCell>
             <TableCell className="text-right font-extrabold text-slate-800">
               {tx.type === 'inbound' ? (
                 <span className="text-emerald-600">+{tx.volumeM3}</span>
@@ -61,7 +76,7 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
         ))}
         {transactions.length === 0 && (
           <TableRow>
-            <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
+            <TableCell colSpan={6} className="text-center py-8 text-slate-500 font-medium">
               Данные не найдены.
             </TableCell>
           </TableRow>

@@ -123,6 +123,9 @@ export const warehouseTransactions = pgTable('warehouse_transactions', {
   volumeM3: integer('volume_m3').notNull(),
   note: text('note'),
   orderId: integer('order_id').references(() => orders.id),
+  driverId: integer('driver_id').references(() => drivers.id),
+  driverAmount: integer('driver_amount'),
+  svalkaAmount: integer('svalka_amount'),
   operatorId: integer('operator_id').references(() => users.id),
   recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 });

@@ -13,6 +13,9 @@ import { WarehouseTransactionTable } from '@/components/tables/WarehouseTransact
 import { Box, ArrowUpRight, ArrowDownRight, Package } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { db } from '@/lib/db';
+import { drivers } from '@/lib/schema';
+import { desc } from 'drizzle-orm';
 
 export default async function WarehousePage({
   searchParams,
@@ -25,6 +28,7 @@ export default async function WarehousePage({
   const isOperator = user?.role === 'operator';
 
   const { allTransactions } = await getWarehouseData();
+  const allDrivers = await db.select().from(drivers).orderBy(desc(drivers.id));
 
   const q = typeof searchParams.q === 'string' ? searchParams.q.toLowerCase() : '';
   const typeFilter = typeof searchParams.type === 'string' ? searchParams.type : '';
@@ -81,7 +85,7 @@ export default async function WarehousePage({
         </div>
         <div className="flex space-x-3 w-full sm:w-auto justify-end">
           <DashboardDatePicker />
-          <WarehouseTransactionForm dict={dict} />
+          <WarehouseTransactionForm dict={dict} drivers={allDrivers} />
         </div>
       </div>
       

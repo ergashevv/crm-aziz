@@ -29,7 +29,7 @@ export default async function ExpensesDetailPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
 
   const [allOrders, { allExpenses }, user, allDispatchers, allDrivers] = await Promise.all([

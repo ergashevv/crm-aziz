@@ -13,7 +13,7 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  const lang = cookies().get('lang')?.value || 'ru';
+  const lang = 'ru';
 
   return (
     <SidebarWrapper lang={lang} userRole={user.role}>

@@ -15,7 +15,7 @@ export default async function DispatchersPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
 
   const allDispatchers = await getDispatchers();

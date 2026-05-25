@@ -16,7 +16,7 @@ export default async function ManagementPage() {
     redirect('/dashboard');
   }
 
-  const lang = cookies().get('lang')?.value || 'ru';
+  const lang = 'ru';
   const dict = getDictionary(lang);
 
   const operators = await getOperators();

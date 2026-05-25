@@ -9,10 +9,10 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
     <Table>
       <TableHeader className="bg-slate-50/80">
         <TableRow>
-          <TableHead>{dict.date || 'Sana'}</TableHead>
-          <TableHead>Turi</TableHead>
-          <TableHead>{dict.note || 'Izoh'}</TableHead>
-          <TableHead className="text-right">Hajmi (m³)</TableHead>
+          <TableHead>{dict.date || 'Дата'}</TableHead>
+          <TableHead>Тип</TableHead>
+          <TableHead>{dict.note || 'Заметка'}</TableHead>
+          <TableHead className="text-right">Объем (m³)</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -24,18 +24,18 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
             <TableCell>
               {tx.type === 'inbound' ? (
                 <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 font-bold">
-                  <ArrowDown className="w-3 h-3" /> Kiruvchi
+                  <ArrowDown className="w-3 h-3" /> Приход
                 </Badge>
               ) : (
                 <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 gap-1 font-bold">
-                  <ArrowUp className="w-3 h-3" /> Chiquvchi
+                  <ArrowUp className="w-3 h-3" /> Расход
                 </Badge>
               )}
             </TableCell>
             <TableCell className="text-xs text-slate-600 font-medium">
               {tx.orderId ? (
                 <Link href={`/orders/${tx.orderId}`} className="text-blue-600 hover:underline">
-                  {tx.note || `Buyurtma #${tx.orderId}`}
+                  {tx.note || `Заказ #${tx.orderId}`}
                 </Link>
               ) : (
                 tx.note || '-'
@@ -54,7 +54,7 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
         {transactions.length === 0 && (
           <TableRow>
             <TableCell colSpan={4} className="text-center py-8 text-slate-500 font-medium">
-              Hech qanday ma'lumot topilmadi.
+              Данные не найдены.
             </TableCell>
           </TableRow>
         )}

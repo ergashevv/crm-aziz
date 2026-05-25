@@ -19,7 +19,6 @@ import {
   Recycle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LangSwitcher } from "./lang-switcher";
 import { getDictionary } from "@/lib/dictionaries";
 
 export function Sidebar({ 
@@ -72,12 +71,7 @@ export function Sidebar({
         </Link>
       </div>
 
-      {/* Lang Switcher */}
-      {!isCollapsed && (
-        <div className="px-4 pb-4 flex-shrink-0">
-          <LangSwitcher lang={lang} />
-        </div>
-      )}
+
 
       {/* Divider */}
       <div className={cn("mx-4 mb-3 border-t border-white/5", isCollapsed && "mx-3")} />

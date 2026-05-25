@@ -17,7 +17,7 @@ import { getDrivers } from '@/lib/data';
 export const dynamic = 'force-dynamic';
 
 export default async function DriverSalaryDetailPage({ params }: { params: { id: string } }) {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
   const driverId = parseInt(params.id);
 

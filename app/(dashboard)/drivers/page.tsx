@@ -20,7 +20,7 @@ export default async function DriversPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
 
   const allDrivers = await getDrivers();

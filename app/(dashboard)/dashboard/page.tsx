@@ -34,7 +34,7 @@ export default async function DashboardPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
 
   const [allOrders, { allExpenses }, allClients, allDrivers, user, safeData] = await Promise.all([

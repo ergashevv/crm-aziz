@@ -1,5 +1,6 @@
 import React from 'react';
 import { SearchAndFilter } from '@/components/SearchAndFilter';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { getWarehouseData } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,7 +19,7 @@ export default async function WarehousePage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
   const user = await getCurrentUser();
   const isOperator = user?.role === 'operator';
@@ -27,10 +28,23 @@ export default async function WarehousePage({
 
   const q = typeof searchParams.q === 'string' ? searchParams.q.toLowerCase() : '';
   const typeFilter = typeof searchParams.type === 'string' ? searchParams.type : '';
+  const from = typeof searchParams.from === 'string' ? searchParams.from : '';
+  const to = typeof searchParams.to === 'string' ? searchParams.to : '';
 
   let filteredTransactions = allTransactions;
   if (isOperator) {
     filteredTransactions = filteredTransactions.filter((i: any) => i.operatorId === user?.id);
+  }
+
+  if (from) {
+    const fromDate = new Date(from);
+    fromDate.setHours(0, 0, 0, 0);
+    filteredTransactions = filteredTransactions.filter((i: any) => new Date(i.recordedAt) >= fromDate);
+  }
+  if (to) {
+    const toDate = new Date(to);
+    toDate.setHours(23, 59, 59, 999);
+    filteredTransactions = filteredTransactions.filter((i: any) => new Date(i.recordedAt) <= toDate);
   }
 
   if (typeFilter && typeFilter !== 'all') {
@@ -45,15 +59,13 @@ export default async function WarehousePage({
   let totalInbound = 0;
   let totalOutbound = 0;
   
-  allTransactions.forEach((tx: any) => {
+  filteredTransactions.forEach((tx: any) => {
     if (tx.type === 'inbound') {
       totalInbound += tx.volumeM3;
     } else if (tx.type === 'outbound') {
       totalOutbound += tx.volumeM3;
     }
   });
-
-  const currentBalance = totalInbound - totalOutbound;
 
   return (
     <div className="space-y-8">
@@ -63,11 +75,12 @@ export default async function WarehousePage({
             <Package className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.warehouse || 'Sklad (Ombor)'}</h1>
-            <p className="text-slate-500 mt-1 font-medium">{lang === 'uz' ? 'Chiqindi hajmini boshqarish' : 'Управление объемом отходов'}</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.warehouse || 'Склад'}</h1>
+            <p className="text-slate-500 mt-1 font-medium">Управление объемом отходов</p>
           </div>
         </div>
         <div className="flex space-x-3 w-full sm:w-auto justify-end">
+          <DashboardDatePicker />
           <WarehouseTransactionForm dict={dict} />
         </div>
       </div>
@@ -75,21 +88,21 @@ export default async function WarehousePage({
       <SearchAndFilter 
         dict={dict} 
         filterOptions={[
-          { value: 'inbound', label: 'Kiruvchi (Inbound)' },
-          { value: 'outbound', label: 'Chiquvchi (Outbound)' },
+          { value: 'inbound', label: 'Входящие (Inbound)' },
+          { value: 'outbound', label: 'Исходящие (Outbound)' },
         ]} 
         filterParam="type" 
-        filterPlaceholder={lang === 'uz' ? "Barcha turlar" : "Все типы"} 
-        placeholder={lang === 'uz' ? "Izoh bo'yicha qidiruv..." : "Поиск по заметке..."} 
+        filterPlaceholder="Все типы" 
+        placeholder="Поиск по заметке..." 
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-0 shadow-lg shadow-emerald-500/5 ring-1 ring-emerald-100 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-50/50 to-white relative">
           <div className="absolute top-0 right-0 p-6 opacity-5 text-emerald-950">
             <ArrowDownRight className="w-16 h-16" />
           </div>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Jami Kirim</CardTitle>
+            <CardTitle className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Всего Приход</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-extrabold text-emerald-600 tracking-tight">
@@ -103,7 +116,7 @@ export default async function WarehousePage({
             <ArrowUpRight className="w-16 h-16" />
           </div>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold text-rose-800 uppercase tracking-wider">Jami Chiqim</CardTitle>
+            <CardTitle className="text-xs font-bold text-rose-800 uppercase tracking-wider">Всего Расход</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-extrabold text-rose-600 tracking-tight">
@@ -111,25 +124,11 @@ export default async function WarehousePage({
             </div>
           </CardContent>
         </Card>
-
-        <Card className="border-0 shadow-lg shadow-indigo-500/5 ring-1 ring-indigo-100 rounded-3xl overflow-hidden bg-gradient-to-br from-indigo-50/50 to-white relative">
-          <div className="absolute top-0 right-0 p-6 opacity-5 text-indigo-950">
-            <Box className="w-16 h-16" />
-          </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold text-indigo-800 uppercase tracking-wider">Ombordagi Qoldiq</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-extrabold text-indigo-600 tracking-tight">
-              {currentBalance.toLocaleString()} <span className="text-xl font-semibold opacity-70">m³</span>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden">
         <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100">
-          <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">Tarix</CardTitle>
+          <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">История</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <WarehouseTransactionTable transactions={filteredTransactions} dict={dict} />

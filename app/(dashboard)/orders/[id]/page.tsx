@@ -16,7 +16,7 @@ import { PaymentStatusUpdater } from '@/components/PaymentStatusUpdater';
 
 
 export default async function OrderDetailPage({ params }: { params: { id: string } }) {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
   const orderId = parseInt(params.id);
 

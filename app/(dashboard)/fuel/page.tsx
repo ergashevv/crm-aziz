@@ -12,7 +12,7 @@ import { DriverFuelTracker } from '@/components/DriverFuelTracker';
 export const dynamic = 'force-dynamic';
 
 export default async function FuelPage() {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
   const user = await getCurrentUser();
   const isOperator = user?.role === 'operator';

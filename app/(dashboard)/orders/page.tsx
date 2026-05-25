@@ -47,7 +47,7 @@ export default async function OrdersPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = cookies().get('lang')?.value;
+  const lang = 'ru';
   const dict = getDictionary(lang);
 
   const q = typeof searchParams.q === 'string' ? searchParams.q : '';

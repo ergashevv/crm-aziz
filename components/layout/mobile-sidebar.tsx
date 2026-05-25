@@ -20,7 +20,6 @@ import {
   Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LangSwitcher } from "./lang-switcher";
 import { getDictionary } from "@/lib/dictionaries";
 import { RefreshDataButton } from "@/components/RefreshDataButton";
 
@@ -75,9 +74,6 @@ export function MobileSidebar({ lang = 'ru', userRole }: { lang?: string, userRo
 
         <div className="flex items-center gap-2 scale-90 origin-right">
           <RefreshDataButton lang={lang} compact />
-          <div className="w-24">
-            <LangSwitcher lang={lang} />
-          </div>
         </div>
       </header>
 
@@ -113,9 +109,6 @@ export function MobileSidebar({ lang = 'ru', userRole }: { lang?: string, userRo
             </button>
           </div>
 
-          <div className="mb-8">
-            <LangSwitcher lang={lang} />
-          </div>
 
           <nav className="space-y-1.5 flex-1">
             {routes.map((route) => (

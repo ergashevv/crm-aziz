@@ -29,13 +29,14 @@ interface Driver {
 }
 
 interface FuelExpense {
-  id: number;
+  id: number | string;
   category: 'fuel' | 'diesel';
   amountRub: number;
   note: string | null;
   driverId: number | null;
   liters: number | null;
   recordedAt: Date | string;
+  type?: 'expense' | 'inbound';
 }
 
 interface DriverFuelTrackerProps {
@@ -73,8 +74,8 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
   // Calculate overall metrics
   const unassignedExpensesList = expenses.filter(exp => exp.driverId === null);
   const unassignedCost = unassignedExpensesList.reduce((sum, exp) => sum + exp.amountRub, 0);
-  const unassignedLiters = unassignedExpensesList.reduce((sum, exp) => sum + (exp.liters || 0), 0);
-  const totalLitersAll = expenses.reduce((sum, exp) => sum + (exp.liters || 0), 0);
+  const unassignedLiters = unassignedExpensesList.filter(e => e.type !== 'inbound').reduce((sum, exp) => sum + (exp.liters || 0), 0);
+  const totalLitersAll = expenses.filter(e => e.type !== 'inbound').reduce((sum, exp) => sum + (exp.liters || 0), 0);
   const totalCostAll = expenses.reduce((sum, exp) => sum + exp.amountRub, 0);
 
   // Filtered master ledger expenses
@@ -386,13 +387,17 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                               {exp.note || '-'}
                             </TableCell>
                             <TableCell className="text-right text-xs font-bold text-slate-800">
-                              {exp.liters ? `${exp.liters} L` : '-'}
+                              {exp.liters ? (exp.type === 'inbound' ? `+${exp.liters} L` : `${exp.liters} L`) : '-'}
                             </TableCell>
-                            <TableCell className="text-right text-sm text-red-600 font-extrabold">
-                              -{exp.amountRub.toLocaleString()} RUB
+                            <TableCell className="text-right text-sm font-extrabold">
+                              {exp.type === 'inbound' ? (
+                                <span className="text-emerald-600">Пополнение</span>
+                              ) : (
+                                <span className="text-red-600">-{exp.amountRub.toLocaleString()} RUB</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <ExpenseForm dict={dict} expense={exp} drivers={drivers} />
+                              {exp.type !== 'inbound' && <ExpenseForm dict={dict} expense={exp} drivers={drivers} />}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -458,13 +463,17 @@ export function DriverFuelTracker({ dict, drivers, expenses }: DriverFuelTracker
                         {expense.note || '-'}
                       </TableCell>
                       <TableCell className="text-right text-xs font-bold text-slate-800">
-                        {expense.liters ? `${expense.liters} L` : '-'}
+                        {expense.liters ? (expense.type === 'inbound' ? `+${expense.liters} L` : `${expense.liters} L`) : '-'}
                       </TableCell>
-                      <TableCell className="text-right text-sm text-red-600 font-extrabold">
-                        -{expense.amountRub.toLocaleString()} RUB
+                      <TableCell className="text-right text-sm font-extrabold">
+                        {expense.type === 'inbound' ? (
+                          <span className="text-emerald-600">Пополнение</span>
+                        ) : (
+                          <span className="text-red-600">-{expense.amountRub.toLocaleString()} RUB</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <ExpenseForm dict={dict} expense={expense} drivers={drivers} />
+                        {expense.type !== 'inbound' && <ExpenseForm dict={dict} expense={expense} drivers={drivers} />}
                       </TableCell>
                     </TableRow>
                   );

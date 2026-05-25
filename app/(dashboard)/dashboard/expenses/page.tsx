@@ -139,6 +139,26 @@ export default async function ExpensesDetailPage({
     }
   }
 
+  if (!categoryParam || categoryParam === 'all' || categoryParam === 'fuel' || categoryParam === 'diesel') {
+    for (const inbound of allGasStationInbounds || []) {
+      if (isOperator && inbound.operatorId !== currentUserId) continue;
+      const inboundDate = new Date(inbound.recordedAt);
+      if (isCurrent(inboundDate)) {
+        filteredExpensesList.push({
+          id: `inbound-${inbound.id}`,
+          category: 'fuel',
+          amountRub: 0,
+          note: inbound.note ? `[Пополнение] ${inbound.note}` : '[Пополнение]',
+          driverId: null,
+          liters: inbound.liters,
+          recordedAt: inbound.recordedAt,
+          operatorId: inbound.operatorId,
+          type: 'inbound'
+        });
+      }
+    }
+  }
+
   for (const order of allOrders) {
     if (isOperator && order.operatorId !== currentUserId) continue;
     const orderDate = new Date(order.createdAt);

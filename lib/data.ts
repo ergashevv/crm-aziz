@@ -1,5 +1,5 @@
 import { db } from './db';
-import { orders, clients, drivers, fuelLogs, expenses, warehouseTransactions, dispatchers, users, safeTransactions } from './schema';
+import { orders, clients, drivers, fuelLogs, expenses, warehouseTransactions, dispatchers, users, safeTransactions, gasStationInbounds } from './schema';
 import { unstable_cache } from 'next/cache';
 import { desc, eq, and, or, ilike, ne, asc, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth';
@@ -118,10 +118,11 @@ export const getFinanceData = unstable_cache(
   async () => {
     const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
     const allExpenses = await db.select().from(expenses).orderBy(desc(expenses.recordedAt));
-    return { allOrders, allExpenses };
+    const allGasStationInbounds = await db.select().from(gasStationInbounds).orderBy(desc(gasStationInbounds.recordedAt));
+    return { allOrders, allExpenses, allGasStationInbounds };
   },
   ['finance-data'],
-  { revalidate: 30, tags: ['orders', 'expenses', 'warehouse'] }
+  { revalidate: 30, tags: ['orders', 'expenses', 'warehouse', 'gasStation'] }
 );
 
 export const getFuelLogs = unstable_cache(

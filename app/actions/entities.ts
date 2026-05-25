@@ -243,26 +243,17 @@ function parseDate(dateStr: any): Date {
   if (!dateStr) return new Date();
   if (dateStr instanceof Date) return dateStr;
   
-  // Try dd/mm/yyyy
-  const parts = String(dateStr).split('/');
-  if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
-    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-      return new Date(year, month, day);
-    }
-  }
-
-  // Try dd.mm.yyyy
-  const dotParts = String(dateStr).split('.');
-  if (dotParts.length === 3) {
-    const day = parseInt(dotParts[0], 10);
-    const month = parseInt(dotParts[1], 10) - 1;
-    const year = parseInt(dotParts[2], 10);
-    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-      return new Date(year, month, day);
-    }
+  const str = String(dateStr).trim();
+  
+  // Try dd.mm.yyyy hh:mm or dd.mm.yyyy or dd/mm/yyyy
+  const match = str.match(/^(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2}))?$/);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    const hour = match[4] ? parseInt(match[4], 10) : 0;
+    const minute = match[5] ? parseInt(match[5], 10) : 0;
+    return new Date(year, month, day, hour, minute);
   }
 
   const parsed = new Date(dateStr);

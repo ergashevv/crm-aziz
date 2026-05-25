@@ -241,6 +241,10 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                   <span className="inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 bg-emerald-50 text-emerald-700 border-emerald-200">
                     {dict.entered}
                   </span>
+                ) : order.paymentType !== 'cash' ? (
+                  <span className="inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 bg-emerald-50 text-emerald-700 border-emerald-200">
+                    {lang === 'uz' ? 'To\'langan (Beznal)' : 'Оплачено (Безнал)'}
+                  </span>
                 ) : (
                   <PaymentStatusUpdater orderId={order.id} currentStatus={order.paymentStatus} dict={dict} />
                 )}

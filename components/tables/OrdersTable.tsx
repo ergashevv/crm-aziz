@@ -151,10 +151,18 @@ export function OrdersTable({
             </TableCell>
             <TableCell className="py-4">
               <div className="flex flex-col gap-2">
-                <span className={`inline-flex items-center w-fit text-[11px] font-bold border rounded-full px-2.5 py-1 ${getPaymentClasses(order.paymentStatus)}`}>
-                  {dict[order.paymentStatus] || order.paymentStatus}
-                </span>
-                <ConfirmPaymentButton orderId={order.id} currentStatus={order.paymentStatus} />
+                {order.paymentType !== 'cash' ? (
+                  <span className={`inline-flex items-center w-fit text-[11px] font-bold border rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700 border-emerald-200`}>
+                    {lang === 'uz' ? 'To\'langan (Beznal)' : 'Оплачено (Безнал)'}
+                  </span>
+                ) : (
+                  <>
+                    <span className={`inline-flex items-center w-fit text-[11px] font-bold border rounded-full px-2.5 py-1 ${getPaymentClasses(order.paymentStatus)}`}>
+                      {dict[order.paymentStatus] || order.paymentStatus}
+                    </span>
+                    <ConfirmPaymentButton orderId={order.id} currentStatus={order.paymentStatus} />
+                  </>
+                )}
               </div>
             </TableCell>
             <TableCell className="text-right py-4">

@@ -964,6 +964,28 @@ function AppInner() {
           </View>
         );
       }
+      
+      const isBeznal = order.paymentType === 'card' || order.paymentType === 'online';
+      
+      if (isBeznal) {
+        return (
+          <View style={large ? styles.heroPayBlock : styles.compactPayRow}>
+            <View style={{ backgroundColor: '#10b981', padding: 8, borderRadius: 8, marginBottom: large ? 12 : 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+               <CheckCircle size={18} color="#fff" style={{ marginRight: 6 }}/>
+               <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t(locale, 'paidBeznal')}</Text>
+            </View>
+            <TouchableOpacity
+              style={[large ? styles.heroBtn : styles.quickActionBtn, { backgroundColor: '#059669' }, isUpdating && styles.btnDisabled]}
+              disabled={isUpdating}
+              onPress={() => handleCompleteOrder(order.id, order.paymentType)}
+              activeOpacity={0.85}
+            >
+              {isUpdating ? <ActivityIndicator color="#fff" /> : <Text style={large ? styles.heroBtnText : styles.quickActionText}>{t(locale, 'btnComplete')}</Text>}
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
       return (
         <View style={large ? styles.heroPayBlock : styles.compactPayRow}>
           <Text style={styles.payHint}>{t(locale, 'waitingPayment')}</Text>

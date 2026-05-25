@@ -31,7 +31,12 @@ export async function PUT(
       if (paymentStatus === 'entered') {
         return NextResponse.json({ error: 'Drivers cannot confirm payment receipt' }, { status: 400 });
       }
-      updateData.paymentStatus = paymentStatus;
+      if (order.paymentStatus === 'entered') {
+        // If it's already entered, do not let driver downgrade it to received. Just keep it entered.
+        updateData.paymentStatus = 'entered';
+      } else {
+        updateData.paymentStatus = paymentStatus;
+      }
     }
     
     updateData.updatedAt = new Date();

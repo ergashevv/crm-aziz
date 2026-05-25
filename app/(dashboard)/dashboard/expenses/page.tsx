@@ -12,7 +12,7 @@ import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { MetricCard } from '@/components/MetricCard';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import { getCurrentUser } from '@/lib/auth';
-import { RevenueExpensePieChart } from '@/components/RevenueExpensePieChart';
+import { ExpensesBreakdownPieChart } from '@/components/ExpensesBreakdownPieChart';
 import { DriverFuelTracker } from '@/components/DriverFuelTracker';
 import { DriverGaiTracker } from '@/components/DriverGaiTracker';
 import { DriverSalaryTracker } from '@/components/DriverSalaryTracker';
@@ -181,6 +181,15 @@ export default async function ExpensesDetailPage({
     return Math.round(((current - prev) / Math.abs(prev)) * 100);
   };
 
+  const expensesByCategoryData = Object.entries(
+    filteredExpensesList.reduce((acc: Record<string, number>, e) => {
+      if (isCurrent(new Date(e.recordedAt))) {
+        acc[e.category] = (acc[e.category] || 0) + e.amountRub;
+      }
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
   return (
     <div className="space-y-8">
       {/* Header Panel */}
@@ -210,11 +219,8 @@ export default async function ExpensesDetailPage({
 
       {currentMetrics.revenue > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <RevenueExpensePieChart 
-            revenue={currentMetrics.revenue} 
-            expenses={currentMetrics.expenses} 
-            profit={currentMetrics.profit} 
-            lang={lang} 
+          <ExpensesBreakdownPieChart 
+            expensesByCategory={expensesByCategoryData} 
             dict={dict} 
           />
         </div>

@@ -1,5 +1,5 @@
 import { db } from './db';
-import { clients, drivers, orders, expenses, fuelLogs, warehouseIncome, users, sessions, dispatchers, safeTransactions } from './schema';
+import { clients, drivers, orders, expenses, fuelLogs, warehouseIncome, users, sessions, dispatchers, safeTransactions, utilizationLogs } from './schema';
 
 type OrderStatus = 'new' | 'assigned' | 'in_progress' | 'container_placed' | 'picked_up' | 'completed';
 
@@ -21,6 +21,7 @@ async function seed() {
   await db.delete(sessions);
   await db.delete(expenses);
   await db.delete(fuelLogs);
+  await db.delete(utilizationLogs);
   await db.delete(orders);
   await db.delete(warehouseIncome);
   await db.delete(safeTransactions);
@@ -165,23 +166,23 @@ async function seed() {
           const statusCycle = counter % 6;
           if (statusCycle === 0) {
             status = 'new';
-            paymentStatus = 'pending';
+            paymentStatus = (payType !== 'cash') ? 'entered' : 'pending';
             isClosed = false;
           } else if (statusCycle === 1) {
             status = 'assigned';
-            paymentStatus = 'pending';
+            paymentStatus = (payType !== 'cash') ? 'entered' : 'pending';
             isClosed = false;
           } else if (statusCycle === 2) {
             status = 'in_progress';
-            paymentStatus = 'pending';
+            paymentStatus = (payType !== 'cash') ? 'entered' : 'pending';
             isClosed = false;
           } else if (statusCycle === 3) {
             status = 'container_placed';
-            paymentStatus = 'pending';
+            paymentStatus = (payType !== 'cash') ? 'entered' : 'pending';
             isClosed = false;
           } else if (statusCycle === 4) {
             status = 'picked_up';
-            paymentStatus = 'received';
+            paymentStatus = (payType !== 'cash') ? 'entered' : 'received';
             isClosed = false;
           } else {
             status = 'completed';

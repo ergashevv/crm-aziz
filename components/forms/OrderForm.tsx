@@ -13,16 +13,23 @@ import { Plus, Edit2, MapPin, ExternalLink, Phone, User, Package, Clock, CreditC
 import { useRouter } from 'next/navigation';
 import { YMaps, Map as YandexMap, Placemark, SearchControl, ZoomControl } from '@pbe/react-yandex-maps';
 
-const formatLocalDate = (dateInput: any) => {
+const formatDateOnly = (dateInput: any) => {
   if (!dateInput) return '';
   const date = new Date(dateInput);
   if (isNaN(date.getTime())) return '';
   const y = date.getFullYear();
   const mo = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
+  return `${d}.${mo}.${y}`;
+};
+
+const formatTimeOnly = (dateInput: any) => {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return '';
   const h = String(date.getHours()).padStart(2, '0');
   const mi = String(date.getMinutes()).padStart(2, '0');
-  return `${y}-${mo}-${d}T${h}:${mi}`;
+  return `${h}:${mi}`;
 };
 
 const formatNum = (val: string | number) => {
@@ -60,8 +67,6 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
   const [ymapsInstance, setYmapsInstance] = useState<any>(null);
   const router = useRouter();
 
-  const defaultDateTime = formatLocalDate(new Date());
-
   const fresh = (): any => {
     if (order) {
       const client     = clients.find(c => c.id === order.clientId);
@@ -76,7 +81,8 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
         operatorNote:    order.operatorNote    || '',
         address:         order.address         || '',
         mapUrl:          order.mapUrl          || '',
-        scheduledAt:     formatLocalDate(order.scheduledAt),
+        scheduledDate:   formatDateOnly(order.scheduledAt),
+        scheduledTime:   formatTimeOnly(order.scheduledAt),
         containerSizeM3: String(order.containerSizeM3 || '8'),
         containerNumber: order.containerNumber || '',
         rentalDuration:  order.rentalDuration  || '1 день',
@@ -98,7 +104,8 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
     return {
       clientId: '', clientName: '', clientPhone: '', clientAddress: '', clientMapUrl: '',
       driverId: '', operatorNote: '', address: '', mapUrl: '',
-      scheduledAt: defaultDateTime,
+      scheduledDate: formatDateOnly(new Date()),
+      scheduledTime: formatTimeOnly(new Date()),
       containerSizeM3: '8', containerNumber: '',
       rentalDuration: '1 день',
       paymentAmount: '', paymentType: 'cash',
@@ -132,6 +139,23 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
     if (d) setForm((p: any) => ({ ...p, dispatcherId: id, dispatcherName: d.name, dispatcherPhone: d.phone }));
   };
 
+  const onDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^\d]/g, '');
+    if (val.length > 8) val = val.slice(0, 8);
+    let formatted = val;
+    if (val.length >= 3) formatted = val.slice(0, 2) + '.' + val.slice(2);
+    if (val.length >= 5) formatted = formatted.slice(0, 5) + '.' + val.slice(4);
+    set('scheduledDate', formatted);
+  };
+
+  const onTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^\d]/g, '');
+    if (val.length > 4) val = val.slice(0, 4);
+    let formatted = val;
+    if (val.length >= 3) formatted = val.slice(0, 2) + ':' + val.slice(2);
+    set('scheduledTime', formatted);
+  };
+
   /* ── NUMBER INPUTS ── */
   const onAmt = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
@@ -149,7 +173,8 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
     e.preventDefault();
     setLoading(true); setError(null);
     try {
-      const res = order ? await updateOrder(order.id, form) : await createOrder(form);
+      const payload = { ...form, scheduledAt: `${form.scheduledDate} ${form.scheduledTime}`.trim() };
+      const res = order ? await updateOrder(order.id, payload) : await createOrder(payload);
       if (res && !res.success) { setError(res.error); return; }
       setOpen(false);
       router.refresh();
@@ -164,8 +189,22 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
   
   // Calculate driver availability
   const isDriverBusy = (dId: number) => {
-    if (!form.scheduledAt) return false;
-    const selectedTime = new Date(form.scheduledAt).getTime();
+    const scheduledAtStr = `${form.scheduledDate} ${form.scheduledTime}`.trim();
+    if (!scheduledAtStr) return false;
+    
+    const match = scheduledAtStr.match(/^(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2}))?$/);
+    let selectedTime = NaN;
+    if (match) {
+      const day = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const year = parseInt(match[3], 10);
+      const hour = match[4] ? parseInt(match[4], 10) : 0;
+      const minute = match[5] ? parseInt(match[5], 10) : 0;
+      selectedTime = new Date(year, month, day, hour, minute).getTime();
+    } else {
+      selectedTime = new Date(scheduledAtStr).getTime();
+    }
+
     if (isNaN(selectedTime)) return false;
 
     // Buffer: 3 hours in milliseconds
@@ -270,12 +309,21 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
               </section>
 
               {/* Date and Time */}
-              <div>
-                <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-amber-500" /> {dict.scheduled_date || 'Дата и время'} *
-                </Label>
-                <Input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)}
-                  required className="h-9 rounded-xl text-sm" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-amber-500" /> Дата *
+                  </Label>
+                  <Input type="text" value={form.scheduledDate} onChange={onDateChange} placeholder="ДД.ММ.ГГГГ"
+                    required className="h-9 rounded-xl text-sm" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-amber-500" /> Время *
+                  </Label>
+                  <Input type="text" value={form.scheduledTime} onChange={onTimeChange} placeholder="ЧЧ:ММ"
+                    required className="h-9 rounded-xl text-sm" />
+                </div>
               </div>
 
               {/* Amount and Payment Type */}
@@ -428,12 +476,21 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
 
               {/* ══ DATE + CONTAINER SIZE ══ */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-amber-500" /> {dict.scheduled_date} *
-                  </Label>
-                  <Input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)}
-                    required className="h-9 rounded-xl text-sm" />
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-amber-500" /> Дата *
+                    </Label>
+                    <Input type="text" value={form.scheduledDate} onChange={onDateChange} placeholder="ДД.ММ.ГГГГ"
+                      required className="h-9 rounded-xl text-sm" />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] font-semibold text-slate-400 mb-1">
+                      Время *
+                    </Label>
+                    <Input type="text" value={form.scheduledTime} onChange={onTimeChange} placeholder="ЧЧ:ММ"
+                      required className="h-9 rounded-xl text-sm" />
+                  </div>
                 </div>
                 <div>
                   <Label className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">

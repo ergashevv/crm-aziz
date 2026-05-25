@@ -340,6 +340,10 @@ export default async function DashboardPage({
         financeData={chartFinanceData} 
         expensesByCategory={chartExpensesByCategory} 
         dict={dict} 
+        revenue={currentMetrics.revenue}
+        expenses={currentMetrics.expenses}
+        profit={currentMetrics.profit}
+        lang={lang}
       />
 
       {/* Revenue Allocation Analysis */}

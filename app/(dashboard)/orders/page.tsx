@@ -97,15 +97,16 @@ export default async function OrdersPage({
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="h-12 w-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-200/60">
-            <ClipboardList className="h-6 w-6 text-primary" />
+          <div className="h-14 w-14 bg-gradient-to-br from-white to-slate-50 rounded-2xl flex items-center justify-center shadow-sm border border-slate-200/60">
+            <ClipboardList className="h-7 w-7 text-primary" />
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.orders}</h1>
-            <p className="text-slate-500 mt-1 font-medium">
+            <p className="text-slate-500 mt-1.5 font-medium flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
               {lang === 'uz'
                 ? `Ko'rsatilmoqda: ${allOrders.length} ta${status === 'active' ? ' faol' : ''} · jami faol: ${activeCount}`
                 : `Показано: ${allOrders.length}${status === 'active' ? ' активных' : ''} · всего активных: ${activeCount}`}
@@ -126,29 +127,38 @@ export default async function OrdersPage({
 
       <AutoRefresh intervalMs={10000} />
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <StatusTabs 
-          options={[
-            { value: 'active', label: lang === 'uz' ? 'Faol (tugallanmagan)' : 'Активные' },
-          { value: 'pending_confirmation', label: lang === 'uz' ? 'Tasdiqlash kutilmoqda' : 'Ожидает подтверждения' },
-          { value: 'overdue_containers', label: lang === 'uz' ? 'Muddati o\'tgan konteynerlar' : 'Просроченные контейнеры' },
-          { value: 'all', label: lang === 'uz' ? 'Barchasi' : 'Все' },
-          { value: 'new', label: dict.new },
-          { value: 'assigned', label: dict.assigned },
-          { value: 'in_progress', label: dict.in_progress },
-          { value: 'container_placed', label: dict.container_placed },
-          { value: 'picked_up', label: dict.picked_up },
-          { value: 'completed', label: dict.completed },
-        ]}
-        defaultFilter="all"
-      />
-      <DashboardDatePicker />
-    </div>
-
-    <SearchAndFilter
-        dict={dict}
-        hideFilter={true}
-      />
+      <div className="bg-white/90 backdrop-blur-xl border border-slate-200/60 p-4 sm:p-5 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col gap-5">
+        <div className="overflow-x-auto pb-2 -mb-2 scrollbar-hide">
+          <StatusTabs 
+            options={[
+              { value: 'active', label: lang === 'uz' ? 'Faol (tugallanmagan)' : 'Активные' },
+              { value: 'pending_confirmation', label: lang === 'uz' ? 'Tasdiqlash kutilmoqda' : 'Ожидает подтверждения' },
+              { value: 'overdue_containers', label: lang === 'uz' ? 'Muddati o\'tgan konteynerlar' : 'Просроченные контейнеры' },
+              { value: 'all', label: lang === 'uz' ? 'Barchasi' : 'Все' },
+              { value: 'new', label: dict.new },
+              { value: 'assigned', label: dict.assigned },
+              { value: 'in_progress', label: dict.in_progress },
+              { value: 'container_placed', label: dict.container_placed },
+              { value: 'picked_up', label: dict.picked_up },
+              { value: 'completed', label: dict.completed },
+            ]}
+            defaultFilter="all"
+          />
+        </div>
+        
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between border-t border-slate-100 pt-4">
+          <div className="w-full md:max-w-md">
+            <SearchAndFilter
+              dict={dict}
+              hideFilter={true}
+              placeholder={lang === 'uz' ? "ID, Manzil, Mijoz yoki Haydovchi bo'yicha qidiruv..." : "Поиск по ID, Адресу, Клиенту или Водителю..."}
+            />
+          </div>
+          <div className="w-full md:w-auto">
+            <DashboardDatePicker />
+          </div>
+        </div>
+      </div>
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
         <CardContent className="p-0">

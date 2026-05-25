@@ -58,105 +58,110 @@ export function OrdersTable({
   const paginatedOrders = sortedData.slice((page - 1) * limit, page * limit);
 
   return (
-    <Table>
-      <TableHeader className="bg-slate-50/80 border-b border-slate-100">
-        <TableRow className="hover:bg-transparent">
-          <SortableTableHead sortKey="orderId" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort}>
+    <Table className="table-fixed min-w-[1200px]">
+      <TableHeader className="bg-slate-50/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-10 shadow-sm">
+        <TableRow className="hover:bg-transparent border-none">
+          <SortableTableHead sortKey="orderId" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="pl-6 w-[100px]">
             ID
           </SortableTableHead>
-          <SortableTableHead sortKey="clientName" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort}>
+          <SortableTableHead sortKey="clientName" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="w-[180px]">
             {dict.client}
           </SortableTableHead>
-          <SortableTableHead sortKey="address" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort}>
+          <SortableTableHead sortKey="address" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="w-[200px]">
             {dict.address}
           </SortableTableHead>
-          <SortableTableHead sortKey="scheduledAt" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort}>
+          <SortableTableHead sortKey="scheduledAt" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="w-[130px]">
             {dict.scheduled_date}
           </SortableTableHead>
-          <SortableTableHead sortKey="driverName" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort}>
+          <SortableTableHead sortKey="driverName" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="w-[150px]">
             {dict.driver}
           </SortableTableHead>
-          <SortableTableHead sortKey="statusStr" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort}>
+          <SortableTableHead sortKey="statusStr" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="w-[140px]">
             {dict.status}
           </SortableTableHead>
-          <SortableTableHead sortKey="paymentStatusStr" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort}>
+          <SortableTableHead sortKey="paymentStatusStr" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="w-[140px]">
             {dict.payment}
           </SortableTableHead>
-          <SortableTableHead sortKey="amount" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="text-right justify-end">
+          <SortableTableHead sortKey="amount" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="text-right justify-end w-[120px]">
             {dict.amount}
           </SortableTableHead>
-          <SortableTableHead sortKey="" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={() => {}} className="w-10"></SortableTableHead>
+          <SortableTableHead sortKey="" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={() => {}} className="w-[60px] pr-6"></SortableTableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody className="divide-y divide-slate-100/60">
         {paginatedOrders.map(({ order, client, driver, dispatcher, operator }: any) => (
-          <TableRowLink href={`/orders/${order.id}`} key={order.id}>
-            <TableCell className="font-medium text-slate-500">
-              <div>#{order.id}</div>
+          <TableRowLink href={`/orders/${order.id}`} key={order.id} className="group hover:bg-slate-50/60 transition-colors duration-200">
+            <TableCell className="font-medium text-slate-500 pl-6 py-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">#{order.id}</span>
+              </div>
               {operator && (
-                <div className="text-[9px] text-slate-400 font-bold mt-0.5 truncate max-w-[85px]" title={`${lang === 'uz' ? 'Operator' : 'Оператор'}: ${operator.name}`}>
+                <div className="text-[10px] text-slate-400 font-semibold mt-1.5 truncate max-w-[85px] flex items-center gap-1" title={`${lang === 'uz' ? 'Operator' : 'Оператор'}: ${operator.name}`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-300"></span>
                   {operator.name}
                 </div>
               )}
             </TableCell>
-            <TableCell>
+            <TableCell className="py-4">
               {order.isExternalVehicle ? (
                 <div className="flex items-center gap-1.5">
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 border border-orange-200">
                     {lang === 'uz' ? 'Begona' : 'Сторонняя'}
                   </span>
-                  <span className="font-semibold text-slate-800">{order.externalDriverName || 'Сторонняя машина'}</span>
+                  <span className="font-semibold text-slate-800 text-sm">{order.externalDriverName || 'Сторонняя машина'}</span>
                 </div>
               ) : (
                 <>
-                  <div className="font-semibold">{client?.name}</div>
+                  <div className="font-semibold text-slate-800 text-sm">{client?.name}</div>
                   {dispatcher && (
-                    <div className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 mt-0.5">
-                      <Phone className="h-2.5 w-2.5" />
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 mt-1 bg-indigo-50 w-fit px-1.5 py-0.5 rounded-md border border-indigo-100">
+                      <Phone className="h-3 w-3" />
                       {dispatcher.name}
                     </div>
                   )}
                 </>
               )}
             </TableCell>
-            <TableCell>
-              <div className="truncate max-w-[180px] text-sm">{order.address}</div>
+            <TableCell className="py-4">
+              <div className="truncate max-w-[200px] text-sm text-slate-700 font-medium">{order.address}</div>
               {order.containerNumber && (
-                <div className="text-[10px] text-slate-400 font-mono mt-0.5">#{order.containerNumber}</div>
+                <div className="text-[11px] text-slate-500 font-mono mt-1 bg-slate-100 w-fit px-1.5 py-0.5 rounded-md border border-slate-200">#{order.containerNumber}</div>
               )}
             </TableCell>
             <TableCell>
               <div className="font-semibold text-slate-800">
                 {format(new Date(order.scheduledAt), 'dd.MM.yyyy')}
               </div>
-              <div className="text-xs text-slate-400 font-medium">
+              <div className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 {format(new Date(order.scheduledAt), 'HH:mm')}
               </div>
             </TableCell>
-            <TableCell>
+            <TableCell className="py-4">
               {order.isExternalVehicle ? (
-                <span className="font-semibold text-orange-600">{order.externalDriverName || 'Сторонняя машина'}</span>
+                <span className="font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded-md text-sm border border-orange-100">{order.externalDriverName || 'Сторонняя машина'}</span>
               ) : (
-                driver?.name || <span className="text-muted-foreground italic">{dict.unassigned}</span>
+                <span className="font-semibold text-slate-700">{driver?.name || <span className="text-slate-400 italic font-normal">{dict.unassigned}</span>}</span>
               )}
             </TableCell>
-            <TableCell>
-              <span className={`inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 ${getStatusClasses(order.status)}`}>
+            <TableCell className="py-4">
+              <span className={`inline-flex items-center text-[11px] font-black uppercase tracking-wider border rounded-full px-2.5 py-1 ${getStatusClasses(order.status)}`}>
                 {dict[order.status] || order.status.replace('_', ' ')}
               </span>
             </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 ${getPaymentClasses(order.paymentStatus)}`}>
+            <TableCell className="py-4">
+              <div className="flex flex-col gap-2">
+                <span className={`inline-flex items-center w-fit text-[11px] font-bold border rounded-full px-2.5 py-1 ${getPaymentClasses(order.paymentStatus)}`}>
                   {dict[order.paymentStatus] || order.paymentStatus}
                 </span>
                 <ConfirmPaymentButton orderId={order.id} currentStatus={order.paymentStatus} />
               </div>
             </TableCell>
-            <TableCell className="text-right font-bold text-slate-700">
-              {order.paymentAmount.toLocaleString()} <span className="text-xs text-slate-400 font-medium">RUB</span>
+            <TableCell className="text-right py-4">
+              <div className="font-black text-slate-800 text-sm">{order.paymentAmount.toLocaleString()}</div>
+              <div className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">RUB</div>
             </TableCell>
-            <TableCell className="text-right flex items-center justify-end">
+            <TableCell className="text-right flex items-center justify-end pr-6 py-4 opacity-100 group-hover:opacity-100 transition-opacity">
               <OrderForm dict={dict} order={order} clients={clients} drivers={drivers} dispatchers={dispatchers} activeOrders={activeOrders} />
             </TableCell>
           </TableRowLink>

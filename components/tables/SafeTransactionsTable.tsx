@@ -8,7 +8,7 @@ import { useSortableTable } from '@/hooks/use-sortable-table';
 
 interface SafeTransactionData {
   transaction: {
-    id: string;
+    id: number;
     recordedAt: string | Date;
     type: string;
     note: string | null;
@@ -25,53 +25,50 @@ interface SafeTransactionsTableProps {
 }
 
 export function SafeTransactionsTable({ transactions, dict }: SafeTransactionsTableProps) {
-  const { items: sortedTransactions, requestSort, sortConfig } = useSortableTable({
-    items: transactions,
-    initialSort: { key: 'date', direction: 'desc' },
-  });
+  const { sortedData: sortedTransactions, sortKey, sortDirection, toggleSort } = useSortableTable(transactions);
 
   return (
     <Table>
       <TableHeader className="bg-slate-50">
         <TableRow>
           <SortableTableHead 
-            sortKey="date" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(t: SafeTransactionData) => new Date(t.transaction.recordedAt).getTime()}
+            sortKey="transaction.recordedAt" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.date}
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="type" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(t: SafeTransactionData) => t.transaction.type}
+            sortKey="transaction.type" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.transaction_type || 'Тип'}
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="note" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(t: SafeTransactionData) => t.transaction.note || ''}
+            sortKey="transaction.note" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.note}
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="operator" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(t: SafeTransactionData) => t.operator?.name || ''}
+            sortKey="operator.name" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             Оператор
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="amount" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
+            sortKey="transaction.amountRub" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
             className="text-right"
-            getValue={(t: SafeTransactionData) => t.transaction.amountRub}
           >
             {dict.amount} (RUB)
           </SortableTableHead>

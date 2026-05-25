@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 export type SortDirection = 'asc' | 'desc' | null;
 
 export function useSortableTable<T>(data: T[] | undefined | null) {
-  const [sortKey, setSortKey] = useState<keyof T | string | null>(null);
+  const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const sortedData = useMemo(() => {
@@ -16,8 +16,8 @@ export function useSortableTable<T>(data: T[] | undefined | null) {
         return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), obj);
       };
       
-      const valA = getVal(a, sortKey as string);
-      const valB = getVal(b, sortKey as string);
+      const valA = getVal(a, sortKey);
+      const valB = getVal(b, sortKey);
 
       if (valA === valB) return 0;
       if (valA === null || valA === undefined) return sortDirection === 'asc' ? -1 : 1;
@@ -48,7 +48,7 @@ export function useSortableTable<T>(data: T[] | undefined | null) {
     });
   }, [data, sortKey, sortDirection]);
 
-  const toggleSort = (key: keyof T | string) => {
+  const toggleSort = (key: string) => {
     if (sortKey === key) {
       if (sortDirection === 'asc') setSortDirection('desc');
       else if (sortDirection === 'desc') {

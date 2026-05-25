@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Table, TableBody, TableCell, SortableTableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, SortableTableHead, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useSortableTable } from '@/hooks/use-sortable-table';
 import { WarehouseIncomeForm } from '@/components/forms/WarehouseIncomeForm';
 
 interface WarehouseIncomeData {
-  id: string;
+  id: number;
   recordedAt: string | Date;
   source: string;
   note: string | null;
@@ -21,45 +21,42 @@ interface WarehouseIncomeTableProps {
 }
 
 export function WarehouseIncomeTable({ incomes, dict }: WarehouseIncomeTableProps) {
-  const { items: sortedIncomes, requestSort, sortConfig } = useSortableTable({
-    items: incomes,
-    initialSort: { key: 'date', direction: 'desc' },
-  });
+  const { sortedData: sortedIncomes, sortKey, sortDirection, toggleSort } = useSortableTable(incomes);
 
   return (
     <Table>
       <TableHeader className="bg-slate-50">
         <TableRow>
           <SortableTableHead 
-            sortKey="date" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(i: WarehouseIncomeData) => new Date(i.recordedAt).getTime()}
+            sortKey="recordedAt" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.date}
           </SortableTableHead>
           <SortableTableHead 
             sortKey="source" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(i: WarehouseIncomeData) => i.source}
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.source}
           </SortableTableHead>
           <SortableTableHead 
             sortKey="note" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(i: WarehouseIncomeData) => i.note || ''}
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.note}
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="amount" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
+            sortKey="amountRub" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
             className="text-right"
-            getValue={(i: WarehouseIncomeData) => i.amountRub}
           >
             {dict.amount} (RUB)
           </SortableTableHead>

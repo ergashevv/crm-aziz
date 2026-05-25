@@ -86,10 +86,7 @@ export function DispatcherSalaryTracker({ dict, dispatchers, expenses }: Dispatc
     );
   });
 
-  const { items: sortedAllExpenses, requestSort, sortConfig } = useSortableTable({
-    items: filteredAllExpenses,
-    initialSort: { key: 'date', direction: 'desc' },
-  });
+  const { sortedData: sortedAllExpenses, sortKey, sortDirection, toggleSort } = useSortableTable(filteredAllExpenses);
 
   const isUz = dict.fuel !== "Топливо";
 
@@ -439,10 +436,10 @@ export function DispatcherSalaryTracker({ dict, dispatchers, expenses }: Dispatc
             <Table>
               <TableHeader className="bg-slate-50/80">
                 <TableRow>
-                  <SortableTableHead sortKey="date" currentSort={sortConfig} onSort={requestSort} getValue={(e: SalaryExpense) => new Date(e.recordedAt).getTime()} className="w-[120px]">Дата</SortableTableHead>
-                  <SortableTableHead sortKey="dispatcher" currentSort={sortConfig} onSort={requestSort} getValue={(e: SalaryExpense) => { const d = dispatchers.find(x => x.id === e.dispatcherId); return d ? d.name : ''; }} className="w-[160px]">{dict.dispatcher || 'Диспетчер'}</SortableTableHead>
-                  <SortableTableHead sortKey="note" currentSort={sortConfig} onSort={requestSort} getValue={(e: SalaryExpense) => e.note || ''}>Описание / Заметка</SortableTableHead>
-                  <SortableTableHead sortKey="amount" currentSort={sortConfig} onSort={requestSort} getValue={(e: SalaryExpense) => e.amountRub} className="text-right w-[150px]">Сумма</SortableTableHead>
+                  <SortableTableHead sortKey="recordedAt" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="w-[120px]">Дата</SortableTableHead>
+                  <SortableTableHead sortKey="dispatcherId" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="w-[160px]">{dict.dispatcher || 'Диспетчер'}</SortableTableHead>
+                  <SortableTableHead sortKey="note" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort}>Описание / Заметка</SortableTableHead>
+                  <SortableTableHead sortKey="amountRub" currentSortKey={sortKey} currentSortDirection={sortDirection} onSort={toggleSort} className="text-right w-[150px]">Сумма</SortableTableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>

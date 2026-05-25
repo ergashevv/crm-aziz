@@ -3,7 +3,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { Table, TableBody, TableCell, SortableTableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, SortableTableHead, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import { useSortableTable } from '@/hooks/use-sortable-table';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
 
@@ -27,45 +27,42 @@ interface ExpenseLedgerTableProps {
 }
 
 export function ExpenseLedgerTable({ expenses, dict, allDrivers, allDispatchers, lang }: ExpenseLedgerTableProps) {
-  const { items: sortedExpenses, requestSort, sortConfig } = useSortableTable({
-    items: expenses,
-    initialSort: { key: 'date', direction: 'desc' },
-  });
+  const { sortedData: sortedExpenses, sortKey, sortDirection, toggleSort } = useSortableTable(expenses);
 
   return (
     <Table>
       <TableHeader className="bg-slate-50/80">
         <TableRow>
           <SortableTableHead 
-            sortKey="date" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(e: MappedExpense) => new Date(e.recordedAt).getTime()}
+            sortKey="recordedAt" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.date}
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="category" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(e: MappedExpense) => e.resolvedCategoryLabel}
+            sortKey="resolvedCategoryLabel" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.category}
           </SortableTableHead>
           <SortableTableHead 
             sortKey="note" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(e: MappedExpense) => e.note || `Заказ #${e.orderId || ''}`}
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.note}
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="amount" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
+            sortKey="amountRub" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
             className="text-right"
-            getValue={(e: MappedExpense) => e.amountRub}
           >
             {dict.amount}
           </SortableTableHead>

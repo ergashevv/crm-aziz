@@ -24,52 +24,44 @@ interface IncomeLedgerTableProps {
 }
 
 export function IncomeLedgerTable({ incomes, dict }: IncomeLedgerTableProps) {
-  const { items: sortedIncomes, requestSort, sortConfig } = useSortableTable({
-    items: incomes,
-    initialSort: { key: 'date', direction: 'desc' },
-  });
+  const { sortedData: sortedIncomes, sortKey, sortDirection, toggleSort } = useSortableTable(incomes);
 
   return (
     <Table>
-      <TableHeader className="bg-slate-50/80">
+      <TableHeader className="bg-slate-50">
         <TableRow>
           <SortableTableHead 
             sortKey="date" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(i: IncomeItem) => new Date(i.date).getTime()}
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.date}
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="source" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(i: IncomeItem) => i.sourceLabel}
+            sortKey="sourceLabel" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
-            {dict.source || "Manba"}
+            {dict.source}
           </SortableTableHead>
           <SortableTableHead 
-            sortKey="details" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
-            getValue={(i: IncomeItem) => {
-              if (i.type === 'order') {
-                return `${i.clientName} ${i.address} ${i.note}`;
-              }
-              return i.note || '';
-            }}
+            sortKey="clientName" 
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
           >
             {dict.details || "Batafsil"}
           </SortableTableHead>
           <SortableTableHead 
             sortKey="amount" 
-            currentSort={sortConfig} 
-            onSort={requestSort}
+            currentSortKey={sortKey as string} 
+            currentSortDirection={sortDirection} 
+            onSort={toggleSort}
             className="text-right"
-            getValue={(i: IncomeItem) => i.amount}
           >
-            {dict.amount}
+            {dict.amount} (RUB)
           </SortableTableHead>
         </TableRow>
       </TableHeader>

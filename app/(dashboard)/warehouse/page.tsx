@@ -10,6 +10,7 @@ import { getDictionary } from '@/lib/dictionaries';
 import { WarehouseIncomeForm } from '@/components/forms/WarehouseIncomeForm';
 import { WarehouseIncomeTable } from '@/components/tables/WarehouseIncomeTable';
 import { getCurrentUser } from '@/lib/auth';
+import { cookies } from 'next/headers';
 
 export default async function WarehousePage({
   searchParams,

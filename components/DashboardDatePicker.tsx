@@ -89,7 +89,7 @@ export function DashboardDatePicker() {
 
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
-          <button className={`flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border ${hasFilter ? 'border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-700'} hover:bg-slate-50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500`}>
+          <button className={`flex justify-center items-center min-w-[260px] gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border ${hasFilter ? 'border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-700'} hover:bg-slate-50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500`}>
             <CalendarIcon className={`w-4 h-4 ${hasFilter ? 'text-indigo-500' : 'text-slate-400'}`} />
             {date?.from ? (
               date.to ? (

@@ -35,23 +35,31 @@ export function ClientsTable({ clients, dict, lang }: { clients: any[], dict: an
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedData.map((client) => (
-          <TableRowLink href={`/clients/${client.id}`} key={client.id}>
-            <TableCell className="font-medium text-slate-500">#{client.id}</TableCell>
-            <TableCell className="font-semibold">{client.name}</TableCell>
-            <TableCell>{client.phone}</TableCell>
-            <TableCell className="truncate max-w-[200px]">{client.address}</TableCell>
-            <TableCell className="text-center font-medium text-blue-600">
-              {client.statsCount}
-            </TableCell>
-            <TableCell className="text-right font-medium text-green-600">
-              {client.statsSpent.toLocaleString()} RUB
-            </TableCell>
-            <TableCell className="text-right">
-              <ClientForm dict={dict} client={client} />
-            </TableCell>
-          </TableRowLink>
-        ))}
+        {sortedData.map((client) => {
+          const params = new URLSearchParams();
+          if (client.fromParam) params.set('from', client.fromParam);
+          if (client.toParam) params.set('to', client.toParam);
+          const qs = params.toString();
+          const href = `/clients/${client.id}${qs ? `?${qs}` : ''}`;
+
+          return (
+            <TableRowLink href={href} key={client.id}>
+              <TableCell className="font-medium text-slate-500">#{client.id}</TableCell>
+              <TableCell className="font-semibold">{client.name}</TableCell>
+              <TableCell>{client.phone}</TableCell>
+              <TableCell className="truncate max-w-[200px]">{client.address}</TableCell>
+              <TableCell className="text-center font-medium text-blue-600">
+                {client.statsCount}
+              </TableCell>
+              <TableCell className="text-right font-medium text-green-600">
+                {client.statsSpent.toLocaleString()} RUB
+              </TableCell>
+              <TableCell className="text-right">
+                <ClientForm dict={dict} client={client} />
+              </TableCell>
+            </TableRowLink>
+          );
+        })}
         {sortedData.length === 0 && (
           <TableRow>
             <TableCell colSpan={7} className="text-center py-8 text-slate-500">

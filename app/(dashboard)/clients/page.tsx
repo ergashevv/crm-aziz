@@ -66,6 +66,8 @@ export default async function ClientsPage({
     ...c,
     statsCount: statsByClient[c.id]?.count || 0,
     statsSpent: statsByClient[c.id]?.spent || 0,
+    fromParam: from,
+    toParam: to,
   }));
 
   const exportClientsData = enrichedClients.map(c => ({

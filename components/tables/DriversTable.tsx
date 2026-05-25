@@ -39,30 +39,38 @@ export function DriversTable({ drivers, dict, lang }: { drivers: any[], dict: an
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedData.map((driver) => (
-          <TableRowLink href={`/drivers/${driver.id}`} key={driver.id}>
-            <TableCell className="font-medium text-slate-500">#{driver.id}</TableCell>
-            <TableCell className="font-semibold">{driver.name}</TableCell>
-            <TableCell>{driver.phone}</TableCell>
-            <TableCell>
-              <span className="px-2 py-1 bg-slate-100 border rounded-md font-mono text-xs">
-                {driver.vehiclePlate}
-              </span>
-            </TableCell>
-            <TableCell>
-              <span className={`font-bold ${driver.activeOrders > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                {driver.activeOrders}
-              </span>
-            </TableCell>
-            <TableCell className="font-medium text-slate-600">
-              {driver.totalOrders}
-            </TableCell>
-            <TableCell>{format(new Date(driver.createdAt), 'dd.MM.yyyy')}</TableCell>
-            <TableCell className="text-right">
-              <DriverForm dict={dict} driver={driver} />
-            </TableCell>
-          </TableRowLink>
-        ))}
+        {sortedData.map((driver) => {
+          const params = new URLSearchParams();
+          if (driver.fromParam) params.set('from', driver.fromParam);
+          if (driver.toParam) params.set('to', driver.toParam);
+          const qs = params.toString();
+          const href = `/drivers/${driver.id}${qs ? `?${qs}` : ''}`;
+
+          return (
+            <TableRowLink href={href} key={driver.id}>
+              <TableCell className="font-medium text-slate-500">#{driver.id}</TableCell>
+              <TableCell className="font-semibold">{driver.name}</TableCell>
+              <TableCell>{driver.phone}</TableCell>
+              <TableCell>
+                <span className="px-2 py-1 bg-slate-100 border rounded-md font-mono text-xs">
+                  {driver.vehiclePlate}
+                </span>
+              </TableCell>
+              <TableCell>
+                <span className={`font-bold ${driver.activeOrders > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                  {driver.activeOrders}
+                </span>
+              </TableCell>
+              <TableCell className="font-medium text-slate-600">
+                {driver.totalOrders}
+              </TableCell>
+              <TableCell>{format(new Date(driver.createdAt), 'dd.MM.yyyy')}</TableCell>
+              <TableCell className="text-right">
+                <DriverForm dict={dict} driver={driver} />
+              </TableCell>
+            </TableRowLink>
+          );
+        })}
         {sortedData.length === 0 && (
           <TableRow>
             <TableCell colSpan={8} className="text-center py-8 text-slate-500">

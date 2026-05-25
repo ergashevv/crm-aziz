@@ -12,6 +12,7 @@ import { Car } from 'lucide-react';
 import { DriverForm } from '@/components/forms/DriverForm';
 import { ExportButton } from '@/components/ExportButton';
 import { DriversTable } from '@/components/tables/DriversTable';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,8 @@ export default async function DriversPage({
   const allOrders = await getDashboardData();
 
   const q = typeof searchParams.q === 'string' ? searchParams.q.toLowerCase() : '';
+  const from = typeof searchParams.from === 'string' ? searchParams.from : undefined;
+  const to = typeof searchParams.to === 'string' ? searchParams.to : undefined;
   
   let filteredDrivers = allDrivers;
   if (q) {
@@ -39,8 +42,18 @@ export default async function DriversPage({
     );
   }
 
+  let allOrdersFiltered = allOrders;
+  if (from) {
+    allOrdersFiltered = allOrdersFiltered.filter(r => new Date(r.scheduledAt) >= new Date(from));
+  }
+  if (to) {
+    const toDate = new Date(to);
+    toDate.setDate(toDate.getDate() + 1);
+    allOrdersFiltered = allOrdersFiltered.filter(r => new Date(r.scheduledAt) < toDate);
+  }
+
   const statsByDriver: Record<number, { total: number; active: number }> = {};
-  allOrders.forEach(o => {
+  allOrdersFiltered.forEach(o => {
     if (o.driverId) {
       if (!statsByDriver[o.driverId]) statsByDriver[o.driverId] = { total: 0, active: 0 };
       statsByDriver[o.driverId].total++;
@@ -48,10 +61,16 @@ export default async function DriversPage({
     }
   });
 
+  if (from || to) {
+    filteredDrivers = filteredDrivers.filter(d => statsByDriver[d.id]?.total > 0);
+  }
+
   const enrichedDrivers = filteredDrivers.map(d => ({
     ...d,
     activeOrders: statsByDriver[d.id]?.active || 0,
     totalOrders: statsByDriver[d.id]?.total || 0,
+    fromParam: from,
+    toParam: to,
   }));
 
   const exportDriversData = enrichedDrivers.map(d => ({
@@ -98,11 +117,18 @@ export default async function DriversPage({
         </div>
       </div>
       
-      <SearchAndFilter 
-        dict={dict} 
-        hideFilter={true} 
-        placeholder={lang === 'uz' ? "Ism, telefon, raqam yoki ID bo'yicha qidiruv..." : "Поиск по имени, телефону, номеру авто или ID..."} 
-      />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="w-full md:max-w-md">
+          <SearchAndFilter 
+            dict={dict} 
+            hideFilter={true} 
+            placeholder={lang === 'uz' ? "Ism, telefon, raqam yoki ID bo'yicha qidiruv..." : "Поиск по имени, телефону, номеру авто или ID..."} 
+          />
+        </div>
+        <div className="w-full md:w-auto">
+          <DashboardDatePicker />
+        </div>
+      </div>
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
         <CardContent className="p-0">

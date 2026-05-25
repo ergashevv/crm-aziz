@@ -50,7 +50,7 @@ export function DashboardDatePicker() {
     }
     
     setOpen(false);
-    router.push(`?${params.toString()}`);
+    router.push(`?${params.toString()}`, { scroll: false });
   };
 
   const handleReset = () => {
@@ -58,7 +58,7 @@ export function DashboardDatePicker() {
     params.delete("from");
     params.delete("to");
     setOpen(false);
-    router.push(`?${params.toString()}`);
+    router.push(`?${params.toString()}`, { scroll: false });
   };
 
   const setPreset = (type: 'today' | 'week' | 'month') => {
@@ -107,7 +107,12 @@ export function DashboardDatePicker() {
           </button>
         </Popover.Trigger>
         <Popover.Portal>
-          <Popover.Content className="z-50 bg-white rounded-2xl shadow-xl border border-slate-100 p-4 mt-2" align="end" sideOffset={4}>
+          <Popover.Content 
+            className="z-50 bg-white rounded-2xl shadow-xl border border-slate-100 p-4 mt-2" 
+            align="end" 
+            sideOffset={4}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+          >
             <style>{`
               .rdp {
                 --rdp-cell-size: 40px;
@@ -132,7 +137,8 @@ export function DashboardDatePicker() {
               onSelect={setDate}
               numberOfMonths={2}
               locale={ru}
-              showOutsideDays={false}
+              showOutsideDays={true}
+              fixedWeeks={true}
               className="p-0 font-sans"
             />
             <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100">

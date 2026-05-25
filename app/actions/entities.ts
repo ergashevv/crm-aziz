@@ -10,11 +10,27 @@ import {
   warehouseTransactions,
   dispatchers,
   safeTransactions,
-  utilizationLogs
+  utilizationLogs,
+  gasStationInbounds
 } from '@/lib/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
+
+// Gas Station Inbounds
+export async function addGasStationInbound(data: { liters: number; note?: string; recordedAt?: Date }) {
+  const user = await getCurrentUser();
+  await db.insert(gasStationInbounds).values({
+    liters: data.liters,
+    note: data.note || null,
+    operatorId: user ? user.id : null,
+    recordedAt: data.recordedAt || new Date(),
+  });
+  revalidateTag('gasStation');
+  revalidateTag('expenses');
+  revalidatePath('/fuel');
+}
+
 
 // Clients
 export async function createClient(data: any) {

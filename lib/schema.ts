@@ -139,3 +139,10 @@ export const safeTransactions = pgTable('safe_transactions', {
   recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 });
 
+export const gasStationInbounds = pgTable('gas_station_inbounds', {
+  id: serial('id').primaryKey(),
+  liters: integer('liters').notNull(),
+  note: text('note'),
+  operatorId: integer('operator_id').references(() => users.id),
+  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
+});

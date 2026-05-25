@@ -12,6 +12,7 @@ import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { MetricCard } from '@/components/MetricCard';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import { getCurrentUser } from '@/lib/auth';
+import { RevenueExpensePieChart } from '@/components/RevenueExpensePieChart';
 import { DriverFuelTracker } from '@/components/DriverFuelTracker';
 import { DriverGaiTracker } from '@/components/DriverGaiTracker';
 import { DriverSalaryTracker } from '@/components/DriverSalaryTracker';
@@ -30,7 +31,7 @@ export default async function ExpensesDetailPage({
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
 
-  const [allOrders, { allExpenses }, user, allDispatchers, allDrivers] = await Promise.all([
+  const [allOrders, { allExpenses, allWarehouseIncome }, user, allDispatchers, allDrivers] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
     getCurrentUser(),
@@ -72,10 +73,12 @@ export default async function ExpensesDetailPage({
   const isPrev = (d: Date) => d >= prevFrom && d <= prevTo;
 
   let currentMetrics = {
+    revenue: 0,
+    profit: 0,
     expenses: 0,
     fuel: 0,
     gai: 0,
-    utilizationM3: 0, // tracked from orders
+    utilizationM3: 0,
     spareParts: 0,
     driverSalary: 0,
     dispatcherOrders: 0,
@@ -136,7 +139,13 @@ export default async function ExpensesDetailPage({
   }
 
   for (const order of allOrders) {
+    if (isOperator && order.operatorId !== currentUserId) continue;
     const orderDate = new Date(order.createdAt);
+    
+    if (order.paymentStatus === 'entered' && isCurrent(orderDate)) {
+      currentMetrics.revenue += order.paymentAmount;
+    }
+
     if (order.dispatcherId) {
       if (isCurrent(orderDate)) {
         currentMetrics.dispatcherOrders++;
@@ -150,6 +159,20 @@ export default async function ExpensesDetailPage({
       if (isPrev(orderDate)) prevMetrics.utilizationM3 += (order.containerSizeM3 || 0);
     }
   }
+
+  if (allWarehouseIncome) {
+    for (const w of allWarehouseIncome) {
+      if (w.source === 'client_payment') continue;
+      if (isOperator && w.operatorId !== currentUserId) continue;
+
+      const wDate = new Date(w.recordedAt);
+      if (isCurrent(wDate)) {
+        currentMetrics.revenue += w.amountRub;
+      }
+    }
+  }
+
+  currentMetrics.profit = currentMetrics.revenue - currentMetrics.expenses;
 
   filteredExpensesList.sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
 
@@ -184,6 +207,18 @@ export default async function ExpensesDetailPage({
           <ExpenseForm dict={dict} drivers={allDrivers} dispatchers={allDispatchers} />
         </div>
       </div>
+
+      {currentMetrics.revenue > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <RevenueExpensePieChart 
+            revenue={currentMetrics.revenue} 
+            expenses={currentMetrics.expenses} 
+            profit={currentMetrics.profit} 
+            lang={lang} 
+            dict={dict} 
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <MetricCard 

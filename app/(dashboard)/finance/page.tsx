@@ -12,6 +12,8 @@ import { ExportButton } from '@/components/ExportButton';
 import { FinanceFilter } from '@/components/FinanceFilter';
 import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { MetricCard } from '@/components/MetricCard';
+import { ExpenseLedgerTable } from '@/components/tables/ExpenseLedgerTable';
+import { IncomeLedgerTable } from '@/components/tables/IncomeLedgerTable';
 
 import { getCurrentUser } from '@/lib/auth';
 
@@ -535,51 +537,22 @@ export default async function FinancePage({
               <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">{dict.expense_ledger || dict.recent_expenses}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow>
-                    <TableHead>{dict.date}</TableHead>
-                    <TableHead>{dict.category}</TableHead>
-                    <TableHead>{dict.note}</TableHead>
-                    <TableHead className="text-right">{dict.amount}</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredExpenses.slice(0, 50).map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell className="text-xs text-slate-500">{format(new Date(expense.recordedAt), 'dd.MM.yyyy')}</TableCell>
-                      <TableCell>
-                        <span className="capitalize text-xs font-semibold px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-md inline-flex">
-                          {expense.category === 'dispatcher_salary' && expense.orderId && ordersMap.get(expense.orderId)?.dispatcherId
-                            ? dispatchersMap.get(ordersMap.get(expense.orderId)!.dispatcherId!) || dict.dispatcher_salary
-                            : (dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' '))}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-600">
-                        {expense.orderId ? (
-                          <Link href={`/orders/${expense.orderId}`} className="text-blue-600 hover:underline">
-                            {expense.note || `Заказ #${expense.orderId}`}
-                          </Link>
-                        ) : (
-                          expense.note || '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right text-sm text-rose-600 font-extrabold">-{expense.amountRub.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">
-                        <ExpenseForm dict={dict} expense={expense} drivers={allDrivers} dispatchers={allDispatchers} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredExpenses.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
-                        {lang === 'uz' ? "Xarajatlar topilmadi." : "Расходы не найдены."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <ExpenseLedgerTable 
+                expenses={filteredExpenses.map(expense => {
+                  let resolvedCategoryLabel = dict[expense.category as keyof typeof dict] || expense.category.replace('_', ' ');
+                  if (expense.category === 'dispatcher_salary' && expense.orderId) {
+                    const order = ordersMap.get(expense.orderId);
+                    if (order && order.dispatcherId) {
+                      resolvedCategoryLabel = dispatchersMap.get(order.dispatcherId) || dict.dispatcher_salary;
+                    }
+                  }
+                  return { ...expense, resolvedCategoryLabel };
+                })} 
+                dict={dict} 
+                allDrivers={allDrivers} 
+                allDispatchers={allDispatchers} 
+                lang={lang} 
+              />
             </CardContent>
           </Card>
         </div>
@@ -625,51 +598,7 @@ export default async function FinancePage({
               <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">{dict.income_ledger || "Daromadlar daftari"}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow>
-                    <TableHead>{dict.date}</TableHead>
-                    <TableHead>{dict.source || "Manba"}</TableHead>
-                    <TableHead>{dict.details || "Batafsil"}</TableHead>
-                    <TableHead className="text-right">{dict.amount}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredIncomes.slice(0, 50).map((income) => (
-                    <TableRow key={income.id}>
-                      <TableCell className="text-xs text-slate-500">{format(income.date, 'dd.MM.yyyy')}</TableCell>
-                      <TableCell>
-                        <span className={`capitalize text-xs font-semibold px-2 py-0.5 border rounded-md inline-flex ${income.sourceKey === 'client_payment'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                            : 'bg-blue-50 text-blue-700 border-blue-100'
-                          }`}>
-                          {income.sourceLabel}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs truncate max-w-[200px] font-medium text-slate-600">
-                        {income.type === 'order' ? (
-                          <span>
-                            <strong>{income.clientName}</strong> {income.address ? `- ${income.address}` : ''}
-                            {income.note && <em className="text-slate-400 block font-normal text-[10px] truncate max-w-[180px]">{income.note}</em>}
-                          </span>
-                        ) : (
-                          <span>
-                            {income.note || '-'}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right text-sm text-emerald-600 font-extrabold">+{income.amount.toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredIncomes.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-slate-500 font-medium">
-                        {dict.no_income_found || "Daromadlar topilmadi."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <IncomeLedgerTable incomes={filteredIncomes} dict={dict} />
             </CardContent>
           </Card>
         </div>

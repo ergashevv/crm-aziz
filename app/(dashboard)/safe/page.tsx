@@ -9,6 +9,7 @@ import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import { SafeTransactionForm } from '@/components/forms/SafeTransactionForm';
 import { getCurrentUser } from '@/lib/auth';
+import { SafeTransactionsTable } from '@/components/tables/SafeTransactionsTable';
 
 export default async function SafePage({
   searchParams,
@@ -80,41 +81,7 @@ export default async function SafePage({
           <CardTitle>{dict.safe_transactions || 'Транзакции сейфа'}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead>{dict.date}</TableHead>
-                <TableHead>{dict.transaction_type || 'Тип'}</TableHead>
-                <TableHead>{dict.note}</TableHead>
-                <TableHead>Оператор</TableHead>
-                <TableHead className="text-right">{dict.amount} (RUB)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransactions.map((t) => (
-                <TableRow key={t.transaction.id}>
-                  <TableCell>{format(new Date(t.transaction.recordedAt), 'dd.MM.yyyy')}</TableCell>
-                  <TableCell>
-                    <Badge variant={t.transaction.type === 'income' ? 'outline' : 'secondary'} className={t.transaction.type === 'income' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}>
-                      {t.transaction.type === 'income' ? (dict.safe_income || 'Приход') : (dict.safe_expense || 'Расход')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{t.transaction.note || '-'}</TableCell>
-                  <TableCell>{t.operator?.name || 'Система'}</TableCell>
-                  <TableCell className={`text-right font-medium ${t.transaction.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {t.transaction.type === 'income' ? '+' : '-'}{t.transaction.amountRub.toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredTransactions.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                    {dict.no_safe_transactions || 'Транзакций в сейфе не найдено.'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <SafeTransactionsTable transactions={filteredTransactions} dict={dict} />
         </CardContent>
       </Card>
     </div>

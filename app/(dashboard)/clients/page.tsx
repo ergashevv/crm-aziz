@@ -10,6 +10,7 @@ import { TableRowLink } from '@/components/TableRowLink';
 import { Users } from 'lucide-react';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { ExportButton } from '@/components/ExportButton';
+import { ClientsTable } from '@/components/tables/ClientsTable';
 
 export default async function ClientsPage({
   searchParams,
@@ -44,13 +45,19 @@ export default async function ClientsPage({
     }
   });
 
-  const exportClientsData = filteredClients.map(c => ({
+  const enrichedClients = filteredClients.map(c => ({
+    ...c,
+    statsCount: statsByClient[c.id]?.count || 0,
+    statsSpent: statsByClient[c.id]?.spent || 0,
+  }));
+
+  const exportClientsData = enrichedClients.map(c => ({
     id: `#${c.id}`,
     name: c.name,
     phone: c.phone,
     address: c.address,
-    total_orders: statsByClient[c.id]?.count || 0,
-    total_spent: `${(statsByClient[c.id]?.spent || 0).toLocaleString()} RUB`
+    total_orders: c.statsCount,
+    total_spent: `${c.statsSpent.toLocaleString()} RUB`
   }));
 
   const exportColumns = [
@@ -94,45 +101,7 @@ export default async function ClientsPage({
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50/80 border-b border-slate-100">
-              <TableRow className="hover:bg-transparent">
-                <TableHead>ID</TableHead>
-                <TableHead>{dict.name}</TableHead>
-                <TableHead>{dict.phone}</TableHead>
-                <TableHead>{dict.address}</TableHead>
-                <TableHead className="text-center">{dict.total_orders}</TableHead>
-                <TableHead className="text-right">{dict.total_spent}</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRowLink href={`/clients/${client.id}`} key={client.id}>
-                  <TableCell className="font-medium text-slate-500">#{client.id}</TableCell>
-                  <TableCell className="font-semibold">{client.name}</TableCell>
-                  <TableCell>{client.phone}</TableCell>
-                  <TableCell className="truncate max-w-[200px]">{client.address}</TableCell>
-                  <TableCell className="text-center font-medium text-blue-600">
-                    {statsByClient[client.id]?.count || 0}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-green-600">
-                    {statsByClient[client.id]?.spent?.toLocaleString() || 0} RUB
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <ClientForm dict={dict} client={client} />
-                  </TableCell>
-                </TableRowLink>
-              ))}
-              {filteredClients.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                    {lang === 'uz' ? "Mijozlar topilmadi." : "Клиенты не найдены."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <ClientsTable clients={enrichedClients} dict={dict} lang={lang} />
         </CardContent>
       </Card>
     </div>

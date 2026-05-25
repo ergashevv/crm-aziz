@@ -6,9 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { cookies } from 'next/headers';
 import { getDictionary } from '@/lib/dictionaries';
 import { WarehouseIncomeForm } from '@/components/forms/WarehouseIncomeForm';
+import { WarehouseIncomeTable } from '@/components/tables/WarehouseIncomeTable';
 import { getCurrentUser } from '@/lib/auth';
 
 export default async function WarehousePage({
@@ -82,43 +82,7 @@ export default async function WarehousePage({
           <CardTitle>{dict.warehouse_income_ledger}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead>{dict.date}</TableHead>
-                <TableHead>{dict.source}</TableHead>
-                <TableHead>{dict.note}</TableHead>
-                <TableHead className="text-right">{dict.amount} (RUB)</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredIncomes.map((inc) => (
-                <TableRow key={inc.id}>
-                  <TableCell>{format(new Date(inc.recordedAt), 'dd.MM.yyyy')}</TableCell>
-                  <TableCell>
-                    <Badge variant={inc.source === 'external_vehicle_rental' ? 'secondary' : 'outline'}>
-                      {dict[inc.source as keyof typeof dict] || inc.source.replace(/_/g, ' ')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{inc.note}</TableCell>
-                  <TableCell className="text-right font-medium text-green-600">
-                    +{inc.amountRub.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <WarehouseIncomeForm dict={dict} income={inc} />
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredIncomes.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                    {dict.no_warehouse_income}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <WarehouseIncomeTable incomes={filteredIncomes} dict={dict} />
         </CardContent>
       </Card>
     </div>

@@ -129,12 +129,19 @@ export function DashboardCharts({
             )}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-y-3 gap-x-2 text-[11px] max-h-[85px] overflow-y-auto pr-1">
-            {translatedExpenses.map((entry, index) => (
-              <div key={entry.name} className="flex items-center gap-2 min-w-0 bg-white/50 p-1.5 rounded-lg">
-                <span className="h-2.5 w-2.5 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                <span className="text-slate-700 font-bold truncate capitalize">{entry.name}</span>
-              </div>
-            ))}
+            {translatedExpenses.map((entry, index) => {
+              const total = translatedExpenses.reduce((sum, e) => sum + e.value, 0);
+              const percent = total > 0 ? Math.round((entry.value / total) * 100) : 0;
+              return (
+                <div key={entry.name} className="flex items-center justify-between min-w-0 bg-white/50 p-1.5 rounded-lg">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <span className="h-2.5 w-2.5 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                    <span className="text-slate-700 font-bold truncate capitalize" title={entry.name}>{entry.name}</span>
+                  </div>
+                  <span className="text-slate-500 font-extrabold ml-1 flex-shrink-0">{percent}%</span>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

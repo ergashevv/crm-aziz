@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, SortableTableHead, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
@@ -18,6 +18,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { UtilizationForm } from '@/components/forms/UtilizationForm';
+import { ExpenseForm } from '@/components/forms/ExpenseForm';
+import { useSortableTable } from '@/hooks/use-sortable-table';
 import Link from 'next/link';
 
 interface Driver {
@@ -86,6 +88,11 @@ export function DriverUtilizationTracker({ dict, drivers, expenses }: DriverUtil
       (driver?.name || '').toLowerCase().includes(term) ||
       (driver?.vehiclePlate || '').toLowerCase().includes(term)
     );
+  });
+
+  const { items: sortedAllExpenses, requestSort, sortConfig } = useSortableTable({
+    items: filteredAllExpenses,
+    initialSort: { key: 'date', direction: 'desc' },
   });
 
   return (
@@ -424,16 +431,16 @@ export function DriverUtilizationTracker({ dict, drivers, expenses }: DriverUtil
             <Table>
               <TableHeader className="bg-slate-50/80">
                 <TableRow>
-                  <TableHead className="w-[120px]">Дата</TableHead>
-                  <TableHead className="w-[160px]">Водитель</TableHead>
-                  <TableHead>Описание / Заметка</TableHead>
-                  <TableHead className="text-right w-[100px]">Объем</TableHead>
-                  <TableHead className="text-right w-[150px]">Сумма</TableHead>
+                  <SortableTableHead sortKey="date" currentSort={sortConfig} onSort={requestSort} getValue={(e: any) => new Date(e.recordedAt).getTime()} className="w-[120px]">Дата</SortableTableHead>
+                  <SortableTableHead sortKey="driver" currentSort={sortConfig} onSort={requestSort} getValue={(e: any) => { const d = drivers.find(x => x.id === e.driverId); return d ? d.name : ''; }} className="w-[160px]">Водитель</SortableTableHead>
+                  <SortableTableHead sortKey="note" currentSort={sortConfig} onSort={requestSort} getValue={(e: any) => e.note || ''}>Описание / Заметка</SortableTableHead>
+                  <SortableTableHead sortKey="liters" currentSort={sortConfig} onSort={requestSort} getValue={(e: any) => e.liters || 0} className="text-right w-[100px]">Объем</SortableTableHead>
+                  <SortableTableHead sortKey="amount" currentSort={sortConfig} onSort={requestSort} getValue={(e: any) => e.amountRub} className="text-right w-[150px]">Сумма</SortableTableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAllExpenses.map((expense) => {
+                {sortedAllExpenses.map((expense) => {
                   const driver = drivers.find(d => d.id === expense.driverId);
                   return (
                     <TableRow key={expense.id} className="hover:bg-slate-50/30">

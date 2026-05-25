@@ -11,7 +11,7 @@ import { getDictionary } from '@/lib/dictionaries';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
-import { TableRowLink } from '@/components/TableRowLink';
+import { ClientOrdersTable } from '@/components/tables/ClientOrdersTable';
 
 
 
@@ -87,39 +87,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           </CardHeader>
           <CardContent>
             {clientOrders.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>{dict.scheduled_date}</TableHead>
-                    <TableHead>{dict.driver}</TableHead>
-                    <TableHead>{dict.status}</TableHead>
-                    <TableHead className="text-right">{dict.amount}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clientOrders.map(({ order, driver }) => (
-                    <TableRowLink href={`/orders/${order.id}`} key={order.id}>
-                      <TableCell className="font-medium text-slate-500">#{order.id}</TableCell>
-                      <TableCell>
-                        <div className="font-semibold text-slate-800">
-                          {format(new Date(order.scheduledAt), 'dd.MM.yyyy')}
-                        </div>
-                        <div className="text-xs text-slate-400 font-medium">
-                          {format(new Date(order.scheduledAt), 'HH:mm')}
-                        </div>
-                      </TableCell>
-                      <TableCell>{driver?.name || <span className="text-muted-foreground italic">{dict.unassigned}</span>}</TableCell>
-                      <TableCell>
-                        <span className="px-2 py-1 bg-slate-100 rounded text-xs font-semibold">
-                          {dict[order.status as keyof typeof dict] || order.status.replace('_', ' ')}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{order.paymentAmount.toLocaleString()} RUB</TableCell>
-                    </TableRowLink>
-                  ))}
-                </TableBody>
-              </Table>
+              <ClientOrdersTable clientOrders={clientOrders} dict={dict} />
             ) : (
               <p className="text-muted-foreground text-center py-4">{dict.no_orders_found}</p>
             )}

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, SortableTableHead, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
@@ -18,6 +18,7 @@ import {
   Phone
 } from 'lucide-react';
 import { ExpenseForm } from '@/components/forms/ExpenseForm';
+import { useSortableTable } from '@/hooks/use-sortable-table';
 import Link from 'next/link';
 
 interface Dispatcher {
@@ -83,6 +84,11 @@ export function DispatcherSalaryTracker({ dict, dispatchers, expenses }: Dispatc
       (dispatcher?.name || '').toLowerCase().includes(term) ||
       (dispatcher?.phone || '').toLowerCase().includes(term)
     );
+  });
+
+  const { items: sortedAllExpenses, requestSort, sortConfig } = useSortableTable({
+    items: filteredAllExpenses,
+    initialSort: { key: 'date', direction: 'desc' },
   });
 
   const isUz = dict.fuel !== "Топливо";
@@ -433,15 +439,15 @@ export function DispatcherSalaryTracker({ dict, dispatchers, expenses }: Dispatc
             <Table>
               <TableHeader className="bg-slate-50/80">
                 <TableRow>
-                  <TableHead className="w-[120px]">Дата</TableHead>
-                  <TableHead className="w-[160px]">{dict.dispatcher || 'Диспетчер'}</TableHead>
-                  <TableHead>Описание / Заметка</TableHead>
-                  <TableHead className="text-right w-[150px]">Сумма</TableHead>
+                  <SortableTableHead sortKey="date" currentSort={sortConfig} onSort={requestSort} getValue={(e: SalaryExpense) => new Date(e.recordedAt).getTime()} className="w-[120px]">Дата</SortableTableHead>
+                  <SortableTableHead sortKey="dispatcher" currentSort={sortConfig} onSort={requestSort} getValue={(e: SalaryExpense) => { const d = dispatchers.find(x => x.id === e.dispatcherId); return d ? d.name : ''; }} className="w-[160px]">{dict.dispatcher || 'Диспетчер'}</SortableTableHead>
+                  <SortableTableHead sortKey="note" currentSort={sortConfig} onSort={requestSort} getValue={(e: SalaryExpense) => e.note || ''}>Описание / Заметка</SortableTableHead>
+                  <SortableTableHead sortKey="amount" currentSort={sortConfig} onSort={requestSort} getValue={(e: SalaryExpense) => e.amountRub} className="text-right w-[150px]">Сумма</SortableTableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAllExpenses.map((expense) => {
+                {sortedAllExpenses.map((expense) => {
                   const dispatcher = dispatchers.find(d => d.id === expense.dispatcherId);
                   return (
                     <TableRow key={expense.id} className="hover:bg-slate-50/30">

@@ -11,6 +11,7 @@ import { TableRowLink } from '@/components/TableRowLink';
 import { Car } from 'lucide-react';
 import { DriverForm } from '@/components/forms/DriverForm';
 import { ExportButton } from '@/components/ExportButton';
+import { DriversTable } from '@/components/tables/DriversTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,13 +48,19 @@ export default async function DriversPage({
     }
   });
 
-  const exportDriversData = filteredDrivers.map(d => ({
+  const enrichedDrivers = filteredDrivers.map(d => ({
+    ...d,
+    activeOrders: statsByDriver[d.id]?.active || 0,
+    totalOrders: statsByDriver[d.id]?.total || 0,
+  }));
+
+  const exportDriversData = enrichedDrivers.map(d => ({
     id: `#${d.id}`,
     name: d.name,
     phone: d.phone,
     vehicle_plate: d.vehiclePlate,
-    active_orders: statsByDriver[d.id]?.active || 0,
-    total_orders: statsByDriver[d.id]?.total || 0,
+    active_orders: d.activeOrders,
+    total_orders: d.totalOrders,
     joined_date: format(new Date(d.createdAt), 'dd.MM.yyyy')
   }));
 
@@ -99,53 +106,7 @@ export default async function DriversPage({
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50/80 border-b border-slate-100">
-              <TableRow className="hover:bg-transparent">
-                <TableHead>ID</TableHead>
-                <TableHead>{dict.name}</TableHead>
-                <TableHead>{dict.phone}</TableHead>
-                <TableHead>{dict.vehicle_plate}</TableHead>
-                <TableHead>{dict.active_orders}</TableHead>
-                <TableHead>{dict.total_orders}</TableHead>
-                <TableHead>{dict.joined_date}</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDrivers.map((driver) => (
-                <TableRowLink href={`/drivers/${driver.id}`} key={driver.id}>
-                  <TableCell className="font-medium text-slate-500">#{driver.id}</TableCell>
-                  <TableCell className="font-semibold">{driver.name}</TableCell>
-                  <TableCell>{driver.phone}</TableCell>
-                  <TableCell>
-                    <span className="px-2 py-1 bg-slate-100 border rounded-md font-mono text-xs">
-                      {driver.vehiclePlate}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`font-bold ${(statsByDriver[driver.id]?.active || 0) > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                      {statsByDriver[driver.id]?.active || 0}
-                    </span>
-                  </TableCell>
-                  <TableCell className="font-medium text-slate-600">
-                    {statsByDriver[driver.id]?.total || 0}
-                  </TableCell>
-                  <TableCell>{format(new Date(driver.createdAt), 'dd.MM.yyyy')}</TableCell>
-                  <TableCell className="text-right">
-                    <DriverForm dict={dict} driver={driver} />
-                  </TableCell>
-                </TableRowLink>
-              ))}
-              {filteredDrivers.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-                    {lang === 'uz' ? "Haydovchilar topilmadi." : "Водители не найдены."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <DriversTable drivers={enrichedDrivers} dict={dict} lang={lang} />
         </CardContent>
       </Card>
     </div>

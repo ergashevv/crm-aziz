@@ -17,6 +17,7 @@ import { ConfirmPaymentButton } from '@/components/ConfirmPaymentButton';
 import { isOverdue } from '@/lib/utils';
 import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 import { Pagination } from '@/components/Pagination';
+import { OrdersTable } from '@/components/tables/OrdersTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,10 +72,6 @@ export default async function OrdersPage({
 
   const page = typeof searchParams.page === 'string' ? parseInt(searchParams.page) : 1;
   const limit = 10;
-  const paginatedOrders = allOrders.slice((page - 1) * limit, page * limit);
-
-
-
   const exportOrdersData = allOrders.map(({ order, client, driver }) => ({
     id: `#${order.id}`,
     client: order.isExternalVehicle 
@@ -155,95 +152,17 @@ export default async function OrdersPage({
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50/80 border-b border-slate-100">
-              <TableRow className="hover:bg-transparent">
-                <TableHead>ID</TableHead>
-                <TableHead>{dict.client}</TableHead>
-                <TableHead>{dict.address}</TableHead>
-                <TableHead>{dict.scheduled_date}</TableHead>
-                <TableHead>{dict.driver}</TableHead>
-                <TableHead>{dict.status}</TableHead>
-                <TableHead>{dict.payment}</TableHead>
-                <TableHead className="text-right">{dict.amount}</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedOrders.map(({ order, client, driver, dispatcher, operator }) => (
-                <TableRowLink href={`/orders/${order.id}`} key={order.id}>
-                  <TableCell className="font-medium text-slate-500">
-                    <div>#{order.id}</div>
-                    {operator && (
-                      <div className="text-[9px] text-slate-400 font-bold mt-0.5 truncate max-w-[85px]" title={`${lang === 'uz' ? 'Operator' : 'Оператор'}: ${operator.name}`}>
-                        {operator.name}
-                      </div>
-                    )}
-                  </TableCell>
-                   <TableCell>
-                    {order.isExternalVehicle ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 border border-orange-200">
-                          {lang === 'uz' ? 'Begona' : 'Сторонняя'}
-                        </span>
-                        <span className="font-semibold text-slate-800">{order.externalDriverName || 'Сторонняя машина'}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="font-semibold">{client?.name}</div>
-                        {dispatcher && (
-                          <div className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 mt-0.5">
-                            <Phone className="h-2.5 w-2.5" />
-                            {dispatcher.name}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="truncate max-w-[180px] text-sm">{order.address}</div>
-                    {order.containerNumber && (
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">#{order.containerNumber}</div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-semibold text-slate-800">
-                      {format(new Date(order.scheduledAt), 'dd.MM.yyyy')}
-                    </div>
-                    <div className="text-xs text-slate-400 font-medium">
-                      {format(new Date(order.scheduledAt), 'HH:mm')}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {order.isExternalVehicle ? (
-                      <span className="font-semibold text-orange-600">{order.externalDriverName || 'Сторонняя машина'}</span>
-                    ) : (
-                      driver?.name || <span className="text-muted-foreground italic">{dict.unassigned}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 ${getStatusClasses(order.status)}`}>
-                      {dict[order.status] || order.status.replace('_', ' ')}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center text-xs font-bold border rounded-full px-3 py-1 ${getPaymentClasses(order.paymentStatus)}`}>
-                        {dict[order.paymentStatus] || order.paymentStatus}
-                      </span>
-                      <ConfirmPaymentButton orderId={order.id} currentStatus={order.paymentStatus} />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-slate-700">
-                    {order.paymentAmount.toLocaleString()} <span className="text-xs text-slate-400 font-medium">RUB</span>
-                  </TableCell>
-                  <TableCell className="text-right flex items-center justify-end">
-                    <OrderForm dict={dict} order={order} clients={clients} drivers={drivers} dispatchers={dispatchers} activeOrders={activeOrders} />
-                  </TableCell>
-                </TableRowLink>
-              ))}
-            </TableBody>
-          </Table>
+          <OrdersTable 
+            orders={allOrders} 
+            page={page} 
+            limit={limit} 
+            dict={dict} 
+            lang={lang} 
+            clients={clients} 
+            drivers={drivers} 
+            dispatchers={dispatchers} 
+            activeOrders={activeOrders} 
+          />
         </CardContent>
       </Card>
 

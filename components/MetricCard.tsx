@@ -14,10 +14,11 @@ interface MetricCardProps {
   href?: string;
   isActive?: boolean;
   percentageOfTotal?: number;
+  percentageLabel?: string;
   subText?: React.ReactNode;
 }
 
-export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href, isActive, percentageOfTotal, subText }: MetricCardProps) {
+export function MetricCard({ title, value, prevValue, unit, trend, icon, colorScheme, href, isActive, percentageOfTotal, percentageLabel, subText }: MetricCardProps) {
   const isPositive = trend > 0;
   const isNegative = trend < 0;
   const isNeutral = trend === 0;
@@ -76,7 +77,7 @@ export function MetricCard({ title, value, prevValue, unit, trend, icon, colorSc
             </span>
             {percentageOfTotal !== undefined && (
               <span className="ml-auto text-xs font-extrabold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 shadow-sm">
-                {percentageOfTotal}% от общ.
+                {percentageOfTotal}% {percentageLabel || 'от общ.'}
               </span>
             )}
           </div>

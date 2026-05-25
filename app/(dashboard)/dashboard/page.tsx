@@ -309,6 +309,8 @@ export default async function DashboardPage({
           colorScheme="rose"
           icon={<DollarSign className="w-12 h-12" />}
           href={`/dashboard/expenses?from=${resolvedFromParam}&to=${resolvedToParam}`}
+          percentageOfTotal={currentMetrics.revenue > 0 ? Math.round((currentMetrics.expenses / currentMetrics.revenue) * 100) : undefined}
+          percentageLabel={lang === 'uz' ? 'aylanmadan' : 'от оборота'}
         />
         <MetricCard 
           title={dict.net_profit || 'Чистая прибыль'} 
@@ -319,6 +321,8 @@ export default async function DashboardPage({
           colorScheme={currentMetrics.profit >= 0 ? "cyan" : "orange"}
           icon={<HandCoins className="w-12 h-12" />}
           href={`/finance?tab=income&startDate=${resolvedFromParam}&endDate=${resolvedToParam}`}
+          percentageOfTotal={currentMetrics.revenue > 0 ? Math.round((currentMetrics.profit / currentMetrics.revenue) * 100) : undefined}
+          percentageLabel={lang === 'uz' ? 'aylanmadan' : 'от оборота'}
         />
         <MetricCard 
           title={dict.safe || 'Сейф'} 

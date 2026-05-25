@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(({ className, ...props }, ref) => (
   <div className="relative w-full overflow-auto">
@@ -33,4 +34,42 @@ const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<
 ))
 TableCell.displayName = "TableCell"
 
-export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell }
+const SortableTableHead = React.forwardRef<
+  HTMLTableCellElement,
+  React.ThHTMLAttributes<HTMLTableCellElement> & {
+    sortKey: string;
+    currentSortKey: string | null;
+    currentSortDirection: 'asc' | 'desc' | null;
+    onSort: (key: string) => void;
+  }
+>(({ className, children, sortKey, currentSortKey, currentSortDirection, onSort, ...props }, ref) => {
+  const isSorted = currentSortKey === sortKey;
+  
+  return (
+    <th
+      ref={ref}
+      className={cn(
+        "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 cursor-pointer select-none hover:bg-muted/50 transition-colors",
+        className
+      )}
+      onClick={() => onSort(sortKey)}
+      {...props}
+    >
+      <div className="flex items-center gap-1 whitespace-nowrap">
+        {children}
+        <span className="inline-flex items-center text-muted-foreground/70">
+          {isSorted && currentSortDirection === 'asc' ? (
+            <ArrowUp className="h-3.5 w-3.5" />
+          ) : isSorted && currentSortDirection === 'desc' ? (
+            <ArrowDown className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowUpDown className="h-3.5 w-3.5 opacity-50 hover:opacity-100" />
+          )}
+        </span>
+      </div>
+    </th>
+  )
+})
+SortableTableHead.displayName = "SortableTableHead"
+
+export { Table, TableHeader, TableBody, TableHead, SortableTableHead, TableRow, TableCell }

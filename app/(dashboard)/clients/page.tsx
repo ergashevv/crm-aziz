@@ -11,6 +11,7 @@ import { Users } from 'lucide-react';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { ExportButton } from '@/components/ExportButton';
 import { ClientsTable } from '@/components/tables/ClientsTable';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 
 export default async function ClientsPage({
   searchParams,
@@ -24,6 +25,8 @@ export default async function ClientsPage({
   const allOrders = await getDashboardData();
 
   const q = typeof searchParams.q === 'string' ? searchParams.q.toLowerCase() : '';
+  const from = typeof searchParams.from === 'string' ? searchParams.from : undefined;
+  const to = typeof searchParams.to === 'string' ? searchParams.to : undefined;
   
   let filteredClients = allClients;
   if (q) {
@@ -36,14 +39,28 @@ export default async function ClientsPage({
     );
   }
 
+  let allOrdersFiltered = allOrders;
+  if (from) {
+    allOrdersFiltered = allOrdersFiltered.filter(r => new Date(r.scheduledAt) >= new Date(from));
+  }
+  if (to) {
+    const toDate = new Date(to);
+    toDate.setDate(toDate.getDate() + 1);
+    allOrdersFiltered = allOrdersFiltered.filter(r => new Date(r.scheduledAt) < toDate);
+  }
+
   const statsByClient: Record<number, { count: number, spent: number }> = {};
-  allOrders.forEach(o => {
+  allOrdersFiltered.forEach(o => {
     if (o.clientId !== null) {
       if (!statsByClient[o.clientId]) statsByClient[o.clientId] = { count: 0, spent: 0 };
       statsByClient[o.clientId].count++;
       statsByClient[o.clientId].spent += o.paymentAmount;
     }
   });
+
+  if (from || to) {
+    filteredClients = filteredClients.filter(c => statsByClient[c.id]?.count > 0);
+  }
 
   const enrichedClients = filteredClients.map(c => ({
     ...c,
@@ -93,11 +110,18 @@ export default async function ClientsPage({
         </div>
       </div>
       
-      <SearchAndFilter 
-        dict={dict} 
-        hideFilter={true} 
-        placeholder={lang === 'uz' ? "Ism, telefon, manzil yoki ID bo'yicha qidiruv..." : "Поиск по имени, телефону, адресу или ID..."} 
-      />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="w-full md:max-w-md">
+          <SearchAndFilter 
+            dict={dict} 
+            hideFilter={true} 
+            placeholder={lang === 'uz' ? "Ism, telefon, manzil yoki ID bo'yicha qidiruv..." : "Поиск по имени, телефону, адресу или ID..."} 
+          />
+        </div>
+        <div className="w-full md:w-auto">
+          <DashboardDatePicker />
+        </div>
+      </div>
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
         <CardContent className="p-0">

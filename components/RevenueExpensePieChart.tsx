@@ -32,7 +32,7 @@ export function RevenueExpensePieChart({
   const profitVal = Math.max(0, profit);
   const data = [
     { name: lang === 'uz' ? 'Xarajatlar' : 'Расходы', value: expenses, color: '#f43f5e' }, // rose-500
-    { name: lang === 'uz' ? 'Sof foyda' : 'Чистая прибыль', value: profitVal, color: '#10b981' } // emerald-500
+    { name: lang === 'uz' ? 'Daromad' : 'Доход', value: profitVal, color: '#10b981' } // emerald-500
   ];
 
   const total = expenses + profitVal;
@@ -53,8 +53,14 @@ export function RevenueExpensePieChart({
       </CardHeader>
       <CardContent className="pt-6 px-6">
         <div className="h-[230px] w-full flex items-center justify-center relative">
+          {revenue > 0 && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
+              <span className="text-sm font-bold text-slate-700">{revenue.toLocaleString()} RUB</span>
+              <span className="text-xs font-semibold text-slate-400">{lang === 'uz' ? 'Oborot' : 'Оборот'}</span>
+            </div>
+          )}
           {revenue > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" className="z-10">
               <PieChart>
                 <Pie
                   data={data}
@@ -72,22 +78,21 @@ export function RevenueExpensePieChart({
                   ))}
                 </Pie>
                 <Tooltip 
+                  wrapperStyle={{ zIndex: 50 }}
                   contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '1rem', border: '1px solid #f1f5f9', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', padding: '12px' }}
                   itemStyle={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}
-                  formatter={(value: number) => [`${value.toLocaleString()} RUB`, '']}
+                  formatter={(value: number, name: string) => {
+                    const isExpense = name === (lang === 'uz' ? 'Xarajatlar' : 'Расходы');
+                    const pct = isExpense ? expensePct : profitPct;
+                    return [`${value.toLocaleString()} RUB (${pct}%)`, name];
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-slate-400 text-sm font-bold flex flex-col items-center">
+            <div className="text-slate-400 text-sm font-bold flex flex-col items-center z-10 relative">
               <div className="h-16 w-16 mb-2 rounded-full bg-slate-100 flex items-center justify-center">📉</div>
               {dict.no_data || "Нет данных"}
-            </div>
-          )}
-          {revenue > 0 && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xl font-bold text-slate-700">100%</span>
-              <span className="text-xs font-semibold text-slate-400">Оборот</span>
             </div>
           )}
         </div>

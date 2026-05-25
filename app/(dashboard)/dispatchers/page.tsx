@@ -9,6 +9,7 @@ import { TableRowLink } from '@/components/TableRowLink';
 import { Phone } from 'lucide-react';
 import { DispatcherForm } from '@/components/forms/DispatcherForm';
 import { ExportButton } from '@/components/ExportButton';
+import { DashboardDatePicker } from '@/components/DashboardDatePicker';
 
 export default async function DispatchersPage({
   searchParams,
@@ -22,6 +23,8 @@ export default async function DispatchersPage({
   const allOrders = await getDashboardData();
 
   const q = typeof searchParams.q === 'string' ? searchParams.q.toLowerCase() : '';
+  const from = typeof searchParams.from === 'string' ? searchParams.from : undefined;
+  const to = typeof searchParams.to === 'string' ? searchParams.to : undefined;
   
   let filteredDispatchers = allDispatchers;
   if (q) {
@@ -33,14 +36,28 @@ export default async function DispatchersPage({
     );
   }
 
+  let allOrdersFiltered = allOrders;
+  if (from) {
+    allOrdersFiltered = allOrdersFiltered.filter(r => new Date(r.scheduledAt) >= new Date(from));
+  }
+  if (to) {
+    const toDate = new Date(to);
+    toDate.setDate(toDate.getDate() + 1);
+    allOrdersFiltered = allOrdersFiltered.filter(r => new Date(r.scheduledAt) < toDate);
+  }
+
   const statsByDisp: Record<number, { count: number, volume: number }> = {};
-  allOrders.forEach(o => {
+  allOrdersFiltered.forEach(o => {
     if (o.dispatcherId !== null) {
       if (!statsByDisp[o.dispatcherId]) statsByDisp[o.dispatcherId] = { count: 0, volume: 0 };
       statsByDisp[o.dispatcherId].count++;
       statsByDisp[o.dispatcherId].volume += o.paymentAmount;
     }
   });
+
+  if (from || to) {
+    filteredDispatchers = filteredDispatchers.filter(d => statsByDisp[d.id]?.count > 0);
+  }
 
   const exportDispatchersData = filteredDispatchers.map(d => ({
     id: `#${d.id}`,
@@ -85,11 +102,18 @@ export default async function DispatchersPage({
         </div>
       </div>
       
-      <SearchAndFilter 
-        dict={dict} 
-        hideFilter={true} 
-        placeholder={lang === 'uz' ? "Ism, telefon yoki ID bo'yicha qidiruv..." : "Поиск по имени, телефону или ID..."} 
-      />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="w-full md:max-w-md">
+          <SearchAndFilter 
+            dict={dict} 
+            hideFilter={true} 
+            placeholder={lang === 'uz' ? "Ism, telefon yoki ID bo'yicha qidiruv..." : "Поиск по имени, телефону или ID..."} 
+          />
+        </div>
+        <div className="w-full md:w-auto">
+          <DashboardDatePicker />
+        </div>
+      </div>
 
       <Card className="border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
         <CardContent className="p-0">
@@ -105,22 +129,30 @@ export default async function DispatchersPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDispatchers.map((disp) => (
-                <TableRowLink href={`/dispatchers/${disp.id}/dispatcher_salary`} key={disp.id}>
-                  <TableCell className="font-medium text-slate-500">#{disp.id}</TableCell>
-                  <TableCell className="font-semibold">{disp.name}</TableCell>
-                  <TableCell>{disp.phone}</TableCell>
-                  <TableCell className="text-center font-medium text-blue-600">
-                    {statsByDisp[disp.id]?.count || 0}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-green-600">
-                    {statsByDisp[disp.id]?.volume?.toLocaleString() || 0} RUB
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DispatcherForm dict={dict} dispatcher={disp} />
-                  </TableCell>
-                </TableRowLink>
-              ))}
+              {filteredDispatchers.map((disp) => {
+                const params = new URLSearchParams();
+                if (from) params.set('from', from);
+                if (to) params.set('to', to);
+                const qs = params.toString();
+                const href = `/dispatchers/${disp.id}/dispatcher_salary${qs ? `?${qs}` : ''}`;
+                
+                return (
+                  <TableRowLink href={href} key={disp.id}>
+                    <TableCell className="font-medium text-slate-500">#{disp.id}</TableCell>
+                    <TableCell className="font-semibold">{disp.name}</TableCell>
+                    <TableCell>{disp.phone}</TableCell>
+                    <TableCell className="text-center font-medium text-blue-600">
+                      {statsByDisp[disp.id]?.count || 0}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-green-600">
+                      {statsByDisp[disp.id]?.volume?.toLocaleString() || 0} RUB
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DispatcherForm dict={dict} dispatcher={disp} />
+                    </TableCell>
+                  </TableRowLink>
+                );
+              })}
               {filteredDispatchers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-slate-500">

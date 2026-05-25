@@ -971,7 +971,9 @@ function AppInner() {
         return (
           <View style={large ? styles.heroPayBlock : styles.compactPayRow}>
             <View style={{ backgroundColor: '#10b981', padding: 8, borderRadius: 8, marginBottom: large ? 12 : 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-               <CheckCircle size={18} color="#fff" style={{ marginRight: 6 }}/>
+               <View style={{ marginRight: 6 }}>
+                 <CheckCircle size={18} color="#fff" />
+               </View>
                <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t(locale, 'paidBeznal')}</Text>
             </View>
             <TouchableOpacity

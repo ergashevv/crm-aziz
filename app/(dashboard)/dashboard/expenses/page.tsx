@@ -16,6 +16,7 @@ import { ExpensesBreakdownPieChart } from '@/components/ExpensesBreakdownPieChar
 import { DriverFuelTracker } from '@/components/DriverFuelTracker';
 import { DriverGaiTracker } from '@/components/DriverGaiTracker';
 import { DriverSalaryTracker } from '@/components/DriverSalaryTracker';
+import { ExpensesLineChart } from '@/components/ExpensesLineChart';
 import { DriverSparePartsTracker } from '@/components/DriverSparePartsTracker';
 import { DriverMasterFeeTracker } from '@/components/DriverMasterFeeTracker';
 import { DispatcherSalaryTracker } from '@/components/DispatcherSalaryTracker';
@@ -190,6 +191,34 @@ export default async function ExpensesDetailPage({
     }, {})
   ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
+  // Timeline Data Generation
+  const daysDiff = Math.max(1, Math.ceil((currentTo.getTime() - currentFrom.getTime()) / (1000 * 60 * 60 * 24)));
+  const numDays = Math.min(daysDiff, 30); // Cap at 30 days
+  const chartDays = Array.from({ length: numDays }, (_, i) => {
+    const d = new Date(currentTo.getTime());
+    d.setDate(d.getDate() - (numDays - 1) + i);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const timelineCategories = new Set<string>();
+  const expensesTimelineData = chartDays.map(date => {
+    const dateStr = format(date, 'dd.MM');
+    const targetDateStr = format(date, 'yyyy-MM-dd');
+    let dataPoint: any = { date: dateStr };
+    
+    filteredExpensesList.forEach(e => {
+       const eDate = new Date(e.recordedAt);
+       if (format(eDate, 'yyyy-MM-dd') === targetDateStr) {
+           dataPoint[e.category] = (dataPoint[e.category] || 0) + e.amountRub;
+           timelineCategories.add(e.category);
+       }
+    });
+    
+    return dataPoint;
+  });
+  const timelineCategoriesArray = Array.from(timelineCategories);
+
   return (
     <div className="space-y-8">
       {/* Header Panel */}
@@ -217,8 +246,14 @@ export default async function ExpensesDetailPage({
         </div>
       </div>
 
-      {currentMetrics.revenue > 0 && (
+      {currentMetrics.expenses > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <ExpensesLineChart 
+            data={expensesTimelineData} 
+            categories={timelineCategoriesArray} 
+            dict={dict} 
+            lang={lang} 
+          />
           <ExpensesBreakdownPieChart 
             expensesByCategory={expensesByCategoryData} 
             dict={dict} 

@@ -47,7 +47,7 @@ export default async function OrdersPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
 
   const q = typeof searchParams.q === 'string' ? searchParams.q : '';

@@ -53,7 +53,7 @@ export default async function DriverDetailPage({
   params: { id: string };
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
   const isUz = lang === 'uz';
   const driverId = parseInt(params.id);

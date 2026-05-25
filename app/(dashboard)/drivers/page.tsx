@@ -20,7 +20,7 @@ export default async function DriversPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
 
   const allDrivers = await getDrivers();

@@ -15,7 +15,7 @@ export default async function DispatchersPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
 
   const allDispatchers = await getDispatchers();

@@ -13,7 +13,7 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  const lang = 'ru';
+  const lang: string = 'ru';
 
   return (
     <SidebarWrapper lang={lang} userRole={user.role}>

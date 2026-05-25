@@ -19,7 +19,7 @@ export default async function RevenueDetailPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
 
   const allOrders = await getDashboardData();

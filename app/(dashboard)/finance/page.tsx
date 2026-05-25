@@ -22,7 +22,7 @@ export default async function FinancePage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
 
   // Fetch all database records

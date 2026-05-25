@@ -7,7 +7,7 @@ import { MapPin } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function MapPage() {
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
 
   return (

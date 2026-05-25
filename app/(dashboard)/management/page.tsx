@@ -16,7 +16,7 @@ export default async function ManagementPage() {
     redirect('/dashboard');
   }
 
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
 
   const operators = await getOperators();

@@ -18,7 +18,7 @@ export default async function OperatorsPage() {
     redirect('/dashboard');
   }
 
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
 
   const operators = await getOperators();

@@ -16,7 +16,7 @@ import { ClientOrdersTable } from '@/components/tables/ClientOrdersTable';
 
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
-  const lang = 'ru';
+  const lang: string = 'ru';
   const dict = getDictionary(lang);
   const clientId = parseInt(params.id);
 

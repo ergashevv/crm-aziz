@@ -32,7 +32,7 @@ export default async function ExpensesDetailPage({
   const lang: string = 'ru';
   const dict = getDictionary(lang);
 
-  const [allOrders, { allExpenses }, user, allDispatchers, allDrivers] = await Promise.all([
+  const [allOrders, { allExpenses, allGasStationInbounds }, user, allDispatchers, allDrivers] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
     getCurrentUser(),

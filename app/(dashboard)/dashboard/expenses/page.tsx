@@ -387,14 +387,58 @@ export default async function ExpensesDetailPage({
       </div>
 
       {categoryParam === 'fuel' || categoryParam === 'diesel' ? (
-        <DriverFuelTracker 
-          dict={dict} 
-          drivers={allDrivers} 
-          expenses={filteredExpensesList.map(e => ({
-            ...e,
-            category: e.category as 'fuel' | 'diesel'
-          }))} 
-        />
+        <div className="space-y-6">
+          <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50 to-white shadow-sm overflow-hidden relative">
+            <div className="absolute right-0 top-0 text-indigo-100/50 transform translate-x-4 -translate-y-4">
+              <Fuel className="w-48 h-48" />
+            </div>
+            <CardContent className="p-6 relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+              <div className="flex items-center gap-6">
+                <div className="h-16 w-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                  <Fuel className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold tracking-wider text-indigo-600/80 uppercase mb-1">
+                    Остаток на заправке
+                  </p>
+                  <div className="flex items-end gap-3">
+                    <h2 className="text-4xl font-black text-slate-900">
+                      {(
+                        (allGasStationInbounds || []).reduce((acc, curr) => acc + curr.liters, 0) -
+                        allExpenses.filter(e => e.category === 'fuel' || e.category === 'diesel').reduce((acc, curr) => acc + (curr.liters || 0), 0)
+                      ).toLocaleString()} <span className="text-2xl text-slate-500 font-bold">L</span>
+                    </h2>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-8 px-6 py-4 bg-white/60 backdrop-blur-md rounded-2xl border border-white/40">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3 text-green-500" /> Всего залито
+                  </p>
+                  <p className="text-lg font-bold text-slate-800">{(allGasStationInbounds || []).reduce((acc, curr) => acc + curr.liters, 0).toLocaleString()} L</p>
+                </div>
+                <div className="w-px bg-slate-200"></div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                    <TrendingDown className="w-3 h-3 text-rose-500" /> Всего выдано
+                  </p>
+                  <p className="text-lg font-bold text-slate-800">{allExpenses.filter(e => e.category === 'fuel' || e.category === 'diesel').reduce((acc, curr) => acc + (curr.liters || 0), 0).toLocaleString()} L</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <DriverFuelTracker 
+            dict={dict} 
+            drivers={allDrivers} 
+            expenses={filteredExpensesList.map(e => ({
+              ...e,
+              category: e.category as 'fuel' | 'diesel'
+            }))} 
+          />
+        </div>
       ) : categoryParam === 'gai' ? (
         <DriverGaiTracker 
           dict={dict} 

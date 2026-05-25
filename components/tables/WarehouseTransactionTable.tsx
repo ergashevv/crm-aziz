@@ -11,6 +11,7 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
         <TableRow>
           <TableHead>{dict.date || 'Дата'}</TableHead>
           <TableHead>Тип</TableHead>
+          <TableHead>Заказ</TableHead>
           <TableHead>{dict.note || 'Заметка'}</TableHead>
           <TableHead className="text-right">Объем (m³)</TableHead>
         </TableRow>
@@ -32,11 +33,18 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
                 </Badge>
               )}
             </TableCell>
-            <TableCell className="text-xs text-slate-600 font-medium">
+            <TableCell>
               {tx.orderId ? (
                 <Link href={`/orders/${tx.orderId}`} className="text-indigo-600 font-semibold hover:underline flex items-center gap-1 w-max">
                   Заказ #{tx.orderId}
                 </Link>
+              ) : (
+                <span className="text-slate-400">-</span>
+              )}
+            </TableCell>
+            <TableCell className="text-xs text-slate-600 font-medium">
+              {tx.orderId ? (
+                <span className="text-slate-400">-</span>
               ) : (
                 <span className="text-slate-600">{tx.note || '-'}</span>
               )}
@@ -53,7 +61,7 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
         ))}
         {transactions.length === 0 && (
           <TableRow>
-            <TableCell colSpan={4} className="text-center py-8 text-slate-500 font-medium">
+            <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
               Данные не найдены.
             </TableCell>
           </TableRow>

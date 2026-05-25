@@ -40,9 +40,6 @@ export function Sidebar({
     { label: dict.clients,                       icon: Users,            href: "/clients",     color: "text-violet-400" },
     { label: dict.drivers,                       icon: Car,              href: "/drivers",     color: "text-amber-400" },
     { label: lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры', icon: Phone, href: "/dispatchers", color: "text-teal-400" },
-    { label: dict.management_panel, icon: Sliders, href: "/management", color: "text-pink-400" },
-    { label: dict.finance,                       icon: Wallet,           href: "/finance",     color: "text-emerald-400" },
-    { label: dict.fuel_logs,                     icon: Fuel,             href: "/fuel",        color: "text-orange-400" },
     { label: dict.warehouse,                     icon: Warehouse,        href: "/warehouse",   color: "text-rose-400" },
     { label: dict.safe,                          icon: Wallet,           href: "/safe",        color: "text-green-400" },
   ];

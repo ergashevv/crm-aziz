@@ -60,16 +60,6 @@ export function GasStationRefillForm({ dict }: { dict: any }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="date">{dict.date || 'Дата'}</Label>
-            <Input 
-              id="date" 
-              type="date" 
-              value={formData.date} 
-              onChange={e => setFormData({...formData, date: e.target.value})} 
-              required 
-            />
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="note">{dict.note || 'Примечание (необязательно)'}</Label>
             <Input 
               id="note" 

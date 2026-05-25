@@ -202,22 +202,29 @@ export default async function ExpensesDetailPage({
   });
 
   const timelineCategories = new Set<string>();
+  filteredExpensesList.forEach(e => {
+    timelineCategories.add(e.category);
+  });
+  const timelineCategoriesArray = Array.from(timelineCategories);
+
   const expensesTimelineData = chartDays.map(date => {
     const dateStr = format(date, 'dd.MM');
     const targetDateStr = format(date, 'yyyy-MM-dd');
     let dataPoint: any = { date: dateStr };
     
+    timelineCategoriesArray.forEach(cat => {
+      dataPoint[cat] = 0;
+    });
+    
     filteredExpensesList.forEach(e => {
        const eDate = new Date(e.recordedAt);
        if (format(eDate, 'yyyy-MM-dd') === targetDateStr) {
-           dataPoint[e.category] = (dataPoint[e.category] || 0) + e.amountRub;
-           timelineCategories.add(e.category);
+           dataPoint[e.category] += e.amountRub;
        }
     });
     
     return dataPoint;
   });
-  const timelineCategoriesArray = Array.from(timelineCategories);
 
   return (
     <div className="space-y-8">

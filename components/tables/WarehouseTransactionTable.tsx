@@ -34,11 +34,11 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
             </TableCell>
             <TableCell className="text-xs text-slate-600 font-medium">
               {tx.orderId ? (
-                <Link href={`/orders/${tx.orderId}`} className="text-blue-600 hover:underline">
-                  {tx.note || `Заказ #${tx.orderId}`}
+                <Link href={`/orders/${tx.orderId}`} className="text-indigo-600 font-semibold hover:underline flex items-center gap-1 w-max">
+                  Заказ #{tx.orderId}
                 </Link>
               ) : (
-                tx.note || '-'
+                <span className="text-slate-600">{tx.note || '-'}</span>
               )}
             </TableCell>
             <TableCell className="text-right font-extrabold text-slate-800">

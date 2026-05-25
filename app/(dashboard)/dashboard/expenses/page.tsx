@@ -14,6 +14,7 @@ import { ExpenseForm } from '@/components/forms/ExpenseForm';
 import { getCurrentUser } from '@/lib/auth';
 import { ExpensesBreakdownPieChart } from '@/components/ExpensesBreakdownPieChart';
 import { DriverFuelTracker } from '@/components/DriverFuelTracker';
+import { GasStationRefillForm } from '@/components/forms/GasStationRefillForm';
 import { DriverGaiTracker } from '@/components/DriverGaiTracker';
 import { DriverSalaryTracker } from '@/components/DriverSalaryTracker';
 import { ExpensesLineChart } from '@/components/ExpensesLineChart';
@@ -388,7 +389,10 @@ export default async function ExpensesDetailPage({
 
       {categoryParam === 'fuel' || categoryParam === 'diesel' ? (
         <div className="space-y-6">
-          <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50 to-white shadow-sm overflow-hidden relative">
+          <div className="flex justify-end mb-2">
+            <GasStationRefillForm dict={dict} />
+          </div>
+          <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50 to-white shadow-sm overflow-hidden relative mt-0">
             <div className="absolute right-0 top-0 text-indigo-100/50 transform translate-x-4 -translate-y-4">
               <Fuel className="w-48 h-48" />
             </div>

@@ -22,8 +22,8 @@ async function seed() {
   await db.delete(expenses);
   await db.delete(fuelLogs);
   await db.delete(utilizationLogs);
-  await db.delete(orders);
   await db.delete(warehouseTransactions);
+  await db.delete(orders);
   await db.delete(safeTransactions);
   await db.delete(clients);
   await db.delete(dispatchers);
@@ -211,8 +211,8 @@ async function seed() {
           updatedAt: createdAt
         }).returning();
 
-        // If payment has been completed / processed
-        if (paymentStatus === 'entered' || paymentStatus === 'received') {
+        // Only log transactions and expenses if the order is completed
+        if (status === 'completed') {
           // Log warehouse transaction (inbound)
           await db.insert(warehouseTransactions).values({
             type: 'inbound',

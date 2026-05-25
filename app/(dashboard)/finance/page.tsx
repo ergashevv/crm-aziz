@@ -26,7 +26,7 @@ export default async function FinancePage({
   const dict = getDictionary(lang);
 
   // Fetch all database records
-  const [allOrders, { allExpenses, allWarehouseIncome }, user, allClients, allDispatchers, allDrivers] = await Promise.all([
+  const [allOrders, { allExpenses }, user, allClients, allDispatchers, allDrivers] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
     getCurrentUser(),
@@ -146,21 +146,7 @@ export default async function FinancePage({
     }
   });
 
-  // 2. Warehouse incomes excluding client_payment source to prevent double-counting
-  allWarehouseIncome.forEach(w => {
-    if (w.source !== 'client_payment' && (!isOperator || w.operatorId === currentUserId)) {
-      combinedIncomes.push({
-        id: `warehouse-${w.id}`,
-        type: 'warehouse',
-        rawId: w.id,
-        date: new Date(w.recordedAt),
-        amount: w.amountRub,
-        sourceKey: w.source,
-        sourceLabel: dict[w.source as keyof typeof dict] || w.source.replace('_', ' '),
-        note: w.note || ''
-      });
-    }
-  });
+  // 2. Warehouse incomes removed as warehouse no longer tracks finance
 
   // Sort timeline descending by date
   combinedIncomes.sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -296,14 +282,7 @@ export default async function FinancePage({
       }
     });
 
-    allWarehouseIncome.forEach(w => {
-      if (w.source === 'client_payment') return;
-      if (isOperator && w.operatorId !== currentUserId) return;
-      const wDate = new Date(w.recordedAt);
-      if (wDate.getMonth() === date.getMonth() && wDate.getFullYear() === date.getFullYear()) {
-        income += w.amountRub;
-      }
-    });
+
 
     allExpenses.forEach(e => {
       if (isOperator && e.operatorId !== currentUserId) return;

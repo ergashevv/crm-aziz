@@ -37,7 +37,7 @@ export default async function DashboardPage({
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
 
-  const [allOrders, { allExpenses, allWarehouseIncome }, allClients, allDrivers, user, safeData] = await Promise.all([
+  const [allOrders, { allExpenses }, allClients, allDrivers, user, safeData] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
     getClients(),
@@ -146,20 +146,7 @@ export default async function DashboardPage({
     if (!order.isClosed && order.status !== 'completed') activeOrders++;
   }
 
-  for (const w of allWarehouseIncome) {
-     if (w.source === 'client_payment') continue;
-     if (isOperator && w.operatorId !== currentUserId) continue;
-
-     const wDate = new Date(w.recordedAt);
-     if (isCurrent(wDate)) {
-       currentMetrics.revenue += w.amountRub;
-       currentMetrics.revenueExternal += w.amountRub;
-     }
-     if (isPrev(wDate)) {
-       prevMetrics.revenue += w.amountRub;
-       prevMetrics.revenueExternal += w.amountRub;
-     }
-  }
+  // Warehouse incomes removed from revenue tracking
 
   for (const s of safeData) {
     if (isOperator && s.transaction.operatorId !== currentUserId) continue;
@@ -238,14 +225,7 @@ export default async function DashboardPage({
       }
     });
 
-    allWarehouseIncome.forEach(w => {
-      if (w.source === 'client_payment') return;
-      if (isOperator && w.operatorId !== currentUserId) return;
-      const wDate = new Date(w.recordedAt);
-      if (format(wDate, 'yyyy-MM-dd') === targetDateStr) {
-        income += w.amountRub;
-      }
-    });
+
 
     allExpenses.forEach(e => {
       if (isOperator && e.operatorId !== currentUserId) return;

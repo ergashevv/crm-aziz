@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { orders, expenses, warehouseIncome, fuelLogs } from '@/lib/schema';
+import { orders, expenses, warehouseTransactions, fuelLogs } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
@@ -22,10 +22,10 @@ export async function bulkReassignOperator(fromOperatorId: number, toOperatorId:
     .set({ operatorId: toOperatorId })
     .where(eq(expenses.operatorId, fromOperatorId));
 
-  // Update Warehouse Income
-  await db.update(warehouseIncome)
+  // Update Warehouse Transactions
+  await db.update(warehouseTransactions)
     .set({ operatorId: toOperatorId })
-    .where(eq(warehouseIncome.operatorId, fromOperatorId));
+    .where(eq(warehouseTransactions.operatorId, fromOperatorId));
 
   // Update Fuel Logs
   await db.update(fuelLogs)

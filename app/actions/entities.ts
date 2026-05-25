@@ -7,7 +7,7 @@ import {
   orders, 
   fuelLogs, 
   expenses, 
-  warehouseIncome,
+  warehouseTransactions,
   dispatchers,
   safeTransactions,
   utilizationLogs
@@ -200,29 +200,17 @@ export async function updateExpense(id: number, data: any) {
   revalidatePath('/warehouse');
 }
 
-// Warehouse Income
-export async function createWarehouseIncome(data: any) {
+// Warehouse Transactions
+export async function addWarehouseTransaction(data: { type: 'inbound' | 'outbound', volumeM3: number, note?: string }) {
   const user = await getCurrentUser();
-  await db.insert(warehouseIncome).values({
-    source: data.source,
-    amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
+  await db.insert(warehouseTransactions).values({
+    type: data.type,
+    volumeM3: parseInt(String(data.volumeM3).replace(/\D/g, '')) || 0,
     note: data.note,
     operatorId: user ? user.id : null,
   });
   revalidateTag('warehouse');
   revalidatePath('/warehouse');
-  revalidatePath('/finance');
-}
-
-export async function updateWarehouseIncome(id: number, data: any) {
-  await db.update(warehouseIncome).set({
-    source: data.source,
-    amountRub: parseInt(String(data.amountRub).replace(/\D/g, '')) || 0,
-    note: data.note,
-  }).where(eq(warehouseIncome.id, id));
-  revalidateTag('warehouse');
-  revalidatePath('/warehouse');
-  revalidatePath('/finance');
 }
 
 // Safe Transactions
@@ -389,17 +377,7 @@ export async function createOrder(data: any) {
       isClosed,
     }).returning();
 
-    // If created with 'entered' status directly
-    if (newPaymentStatus === 'entered') {
-      await db.insert(warehouseIncome).values({
-        source: 'client_payment',
-        amountRub: paymentAmount,
-        note: isExternalVehicle 
-          ? `Оплата стороннего авто (Водитель: ${data.externalDriverName || 'Неизвестно'})` 
-          : `Оплата за заказ #${newOrder.id}`,
-        operatorId: user ? user.id : null,
-      });
-    }
+    // (Removed warehouse income insert)
 
     // Generate dispatcher and referral expenses when order is 'completed' or closed
     if (status === 'completed' || isClosed || newPaymentStatus === 'entered' || newPaymentStatus === 'received') {
@@ -575,17 +553,7 @@ export async function updateOrder(id: number, data: any) {
       isClosed,
     }).where(eq(orders.id, id));
 
-    // If transitioned to 'entered'
-    if (newPaymentStatus === 'entered' && previousPaymentStatus !== 'entered') {
-      await db.insert(warehouseIncome).values({
-        source: 'client_payment',
-        amountRub: paymentAmount,
-        note: isExternalVehicle
-          ? `Оплата стороннего авто (Водитель: ${data.externalDriverName || 'Неизвестно'})`
-          : `Оплата за заказ #${id}`,
-        operatorId: user ? user.id : null,
-      });
-    }
+    // (Removed warehouse income insert)
 
     // If completed or closed, add dispatcher fee and referral fee as expenses
     if (status === 'completed' || isClosed || newPaymentStatus === 'entered' || newPaymentStatus === 'received') {

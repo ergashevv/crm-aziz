@@ -1,5 +1,5 @@
 import { db } from './db';
-import { clients, drivers, orders, expenses, fuelLogs, warehouseIncome, users, sessions, dispatchers, safeTransactions, utilizationLogs } from './schema';
+import { clients, drivers, orders, expenses, fuelLogs, warehouseTransactions, users, sessions, dispatchers, safeTransactions, utilizationLogs } from './schema';
 
 type OrderStatus = 'new' | 'assigned' | 'in_progress' | 'container_placed' | 'picked_up' | 'completed';
 
@@ -23,7 +23,7 @@ async function seed() {
   await db.delete(fuelLogs);
   await db.delete(utilizationLogs);
   await db.delete(orders);
-  await db.delete(warehouseIncome);
+  await db.delete(warehouseTransactions);
   await db.delete(safeTransactions);
   await db.delete(clients);
   await db.delete(dispatchers);
@@ -122,14 +122,7 @@ async function seed() {
           updatedAt: createdAt
         }).returning();
 
-        // Warehouse income for this arrival
-        await db.insert(warehouseIncome).values({
-          source: 'client_payment',
-          amountRub: paymentAmount,
-          note: `Оплата стороннего авто (Водитель: ${extDriverName})`,
-          operatorId: opUser.id,
-          recordedAt: createdAt
-        });
+        // Warehouse income removed for external vehicles as warehouse tracks only volume now
 
       } else {
         // Standard order flow
@@ -220,11 +213,12 @@ async function seed() {
 
         // If payment has been completed / processed
         if (paymentStatus === 'entered' || paymentStatus === 'received') {
-          // Log warehouse income
-          await db.insert(warehouseIncome).values({
-            source: 'client_payment',
-            amountRub: paymentAmount,
-            note: `Оплата за заказ #${order.id}`,
+          // Log warehouse transaction (inbound)
+          await db.insert(warehouseTransactions).values({
+            type: 'inbound',
+            volumeM3: containerSizeM3,
+            note: `Автоматический приход с заказа #${order.id}`,
+            orderId: order.id,
             operatorId: opUser.id,
             recordedAt: createdAt
           });
@@ -317,6 +311,15 @@ async function seed() {
         category: 'utilization',
         amountRub: 120000,
         note: `Оплата за свалку / утилизацию отходов`,
+        operatorId: opUser.id,
+        recordedAt: expenseDate
+      });
+
+      // Also log an outbound transaction since waste is being utilized
+      await db.insert(warehouseTransactions).values({
+        type: 'outbound',
+        volumeM3: 30,
+        note: 'Вывоз на свалку (Утилизация)',
         operatorId: opUser.id,
         recordedAt: expenseDate
       });

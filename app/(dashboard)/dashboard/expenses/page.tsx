@@ -32,7 +32,7 @@ export default async function ExpensesDetailPage({
   const lang = cookies().get('lang')?.value;
   const dict = getDictionary(lang);
 
-  const [allOrders, { allExpenses, allWarehouseIncome }, user, allDispatchers, allDrivers] = await Promise.all([
+  const [allOrders, { allExpenses }, user, allDispatchers, allDrivers] = await Promise.all([
     getDashboardData(),
     getFinanceData(),
     getCurrentUser(),
@@ -161,17 +161,7 @@ export default async function ExpensesDetailPage({
     }
   }
 
-  if (allWarehouseIncome) {
-    for (const w of allWarehouseIncome) {
-      if (w.source === 'client_payment') continue;
-      if (isOperator && w.operatorId !== currentUserId) continue;
 
-      const wDate = new Date(w.recordedAt);
-      if (isCurrent(wDate)) {
-        currentMetrics.revenue += w.amountRub;
-      }
-    }
-  }
 
   currentMetrics.profit = currentMetrics.revenue - currentMetrics.expenses;
 

@@ -23,7 +23,7 @@ export default async function RevenueDetailPage({
   const dict = getDictionary(lang);
 
   const allOrders = await getDashboardData();
-  const { allWarehouseIncome } = await getFinanceData();
+  const { allExpenses } = await getFinanceData();
   const driversList = await getDrivers();
   const driverMap = new Map(driversList.map(d => [d.id, d.name]));
 
@@ -110,28 +110,7 @@ export default async function RevenueDetailPage({
     }
   }
 
-  // Include warehouse income
-  for (const w of allWarehouseIncome) {
-     if (w.source === 'client_payment') continue;
-     const wDate = new Date(w.recordedAt);
-     if (isCurrent(wDate)) {
-       currentMetrics.revenue += w.amountRub;
-       currentMetrics.revenueExternal += w.amountRub;
-       externalOrdersList.push({
-         id: `W-${w.id}`,
-         date: wDate,
-         amount: w.amountRub,
-         driverName: w.note || (lang === 'uz' ? 'Tashqi mashina' : 'Сторонняя машина'),
-         type: 'warehouse',
-         paymentType: 'cash',
-         address: 'База'
-       });
-     }
-     if (isPrev(wDate)) {
-       prevMetrics.revenue += w.amountRub;
-       prevMetrics.revenueExternal += w.amountRub;
-     }
-  }
+
 
   // Sort timeline lists by date desc
   ownOrdersList.sort((a, b) => b.date.getTime() - a.date.getTime());

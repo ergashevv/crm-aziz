@@ -5,9 +5,9 @@ export const orderStatusEnum = pgEnum('status', ['new', 'assigned', 'in_progress
 export const paymentTypeEnum = pgEnum('payment_type', ['cash', 'card', 'online']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'received', 'entered']);
 export const expenseCategoryEnum = pgEnum('expense_category', ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'other', 'master_fee', 'tractor']);
-export const incomeSourceEnum = pgEnum('income_source', ['client_payment', 'external_vehicle_rental']);
 export const usersRoleEnum = pgEnum('user_role', ['admin', 'operator']);
 export const safeTransactionTypeEnum = pgEnum('safe_transaction_type', ['income', 'expense']);
+export const warehouseTransactionTypeEnum = pgEnum('warehouse_transaction_type', ['inbound', 'outbound']);
 
 export const clients = pgTable('clients', {
   id: serial('id').primaryKey(),
@@ -117,11 +117,12 @@ export const expenses = pgTable('expenses', {
   recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 });
 
-export const warehouseIncome = pgTable('warehouse_income', {
+export const warehouseTransactions = pgTable('warehouse_transactions', {
   id: serial('id').primaryKey(),
-  source: incomeSourceEnum('source').notNull(),
-  amountRub: integer('amount_rub').notNull(),
+  type: warehouseTransactionTypeEnum('type').notNull(),
+  volumeM3: integer('volume_m3').notNull(),
   note: text('note'),
+  orderId: integer('order_id').references(() => orders.id),
   operatorId: integer('operator_id').references(() => users.id),
   recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 });

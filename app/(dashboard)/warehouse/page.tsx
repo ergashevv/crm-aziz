@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { getDictionary } from '@/lib/dictionaries';
-import { WarehouseIncomeForm } from '@/components/forms/WarehouseIncomeForm';
-import { WarehouseIncomeTable } from '@/components/tables/WarehouseIncomeTable';
+import { WarehouseTransactionForm } from '@/components/forms/WarehouseTransactionForm';
+import { WarehouseTransactionTable } from '@/components/tables/WarehouseTransactionTable';
+import { Box, ArrowUpRight, ArrowDownRight, Package } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
@@ -22,68 +23,116 @@ export default async function WarehousePage({
   const user = await getCurrentUser();
   const isOperator = user?.role === 'operator';
 
-  const { allIncomes: incomes } = await getWarehouseData();
+  const { allTransactions } = await getWarehouseData();
 
   const q = typeof searchParams.q === 'string' ? searchParams.q.toLowerCase() : '';
-  const sourceFilter = typeof searchParams.source === 'string' ? searchParams.source : '';
+  const typeFilter = typeof searchParams.type === 'string' ? searchParams.type : '';
 
-  let filteredIncomes = incomes;
+  let filteredTransactions = allTransactions;
   if (isOperator) {
-    filteredIncomes = filteredIncomes.filter(i => i.operatorId === user?.id);
+    filteredTransactions = filteredTransactions.filter((i: any) => i.operatorId === user?.id);
   }
 
-  if (sourceFilter && sourceFilter !== 'all') {
-    filteredIncomes = filteredIncomes.filter(i => i.source === sourceFilter);
+  if (typeFilter && typeFilter !== 'all') {
+    filteredTransactions = filteredTransactions.filter((i: any) => i.type === typeFilter);
   }
   if (q) {
-    filteredIncomes = filteredIncomes.filter(i => 
+    filteredTransactions = filteredTransactions.filter((i: any) => 
       i.note?.toLowerCase().includes(q)
     );
   }
 
-  const totalWarehouseIncome = incomes.reduce((acc, curr) => acc + curr.amountRub, 0);
+  let totalInbound = 0;
+  let totalOutbound = 0;
+  
+  allTransactions.forEach((tx: any) => {
+    if (tx.type === 'inbound') {
+      totalInbound += tx.volumeM3;
+    } else if (tx.type === 'outbound') {
+      totalOutbound += tx.volumeM3;
+    }
+  });
+
+  const currentBalance = totalInbound - totalOutbound;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{dict.warehouse}</h1>
-          <p className="text-muted-foreground mt-2">{dict.manage_warehouse}</p>
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-200/60">
+            <Package className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.warehouse || 'Sklad (Ombor)'}</h1>
+            <p className="text-slate-500 mt-1 font-medium">{lang === 'uz' ? 'Chiqindi hajmini boshqarish' : 'Управление объемом отходов'}</p>
+          </div>
         </div>
-        <div className="flex space-x-2 w-full sm:w-auto justify-end">
-          <Button variant="outline">{dict.log_waste}</Button>
-          <WarehouseIncomeForm dict={dict} />
+        <div className="flex space-x-3 w-full sm:w-auto justify-end">
+          <WarehouseTransactionForm dict={dict} />
         </div>
       </div>
       
       <SearchAndFilter 
         dict={dict} 
         filterOptions={[
-          { value: 'client_payment', label: dict.client_payment || 'Оплата клиента' },
-          { value: 'external_vehicle_rental', label: dict.external_vehicle_rental || 'Аренда стороннего авто' },
+          { value: 'inbound', label: 'Kiruvchi (Inbound)' },
+          { value: 'outbound', label: 'Chiquvchi (Outbound)' },
         ]} 
-        filterParam="source" 
-        filterPlaceholder={lang === 'uz' ? "Barcha manbalar" : "Все источники"} 
+        filterParam="type" 
+        filterPlaceholder={lang === 'uz' ? "Barcha turlar" : "Все типы"} 
         placeholder={lang === 'uz' ? "Izoh bo'yicha qidiruv..." : "Поиск по заметке..."} 
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-slate-900 text-white border-slate-800">
+        <Card className="border-0 shadow-lg shadow-emerald-500/5 ring-1 ring-emerald-100 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-50/50 to-white relative">
+          <div className="absolute top-0 right-0 p-6 opacity-5 text-emerald-950">
+            <ArrowDownRight className="w-16 h-16" />
+          </div>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">{dict.total_warehouse_income}</CardTitle>
+            <CardTitle className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Jami Kirim</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalWarehouseIncome.toLocaleString()} RUB</div>
+            <div className="text-4xl font-extrabold text-emerald-600 tracking-tight">
+              {totalInbound.toLocaleString()} <span className="text-xl font-semibold opacity-70">m³</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg shadow-rose-500/5 ring-1 ring-rose-100 rounded-3xl overflow-hidden bg-gradient-to-br from-rose-50/50 to-white relative">
+          <div className="absolute top-0 right-0 p-6 opacity-5 text-rose-950">
+            <ArrowUpRight className="w-16 h-16" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-bold text-rose-800 uppercase tracking-wider">Jami Chiqim</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-extrabold text-rose-600 tracking-tight">
+              {totalOutbound.toLocaleString()} <span className="text-xl font-semibold opacity-70">m³</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg shadow-indigo-500/5 ring-1 ring-indigo-100 rounded-3xl overflow-hidden bg-gradient-to-br from-indigo-50/50 to-white relative">
+          <div className="absolute top-0 right-0 p-6 opacity-5 text-indigo-950">
+            <Box className="w-16 h-16" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-bold text-indigo-800 uppercase tracking-wider">Ombordagi Qoldiq</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-extrabold text-indigo-600 tracking-tight">
+              {currentBalance.toLocaleString()} <span className="text-xl font-semibold opacity-70">m³</span>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{dict.warehouse_income_ledger}</CardTitle>
+      <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden">
+        <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100">
+          <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">Tarix</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <WarehouseIncomeTable incomes={filteredIncomes} dict={dict} />
+          <WarehouseTransactionTable transactions={filteredTransactions} dict={dict} />
         </CardContent>
       </Card>
     </div>

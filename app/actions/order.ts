@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { orders, warehouseIncome, expenses } from '@/lib/schema';
+import { orders, warehouseTransactions, expenses } from '@/lib/schema';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
@@ -49,6 +49,22 @@ export async function updateOrderStatus(orderId: number, status: any) {
         });
       }
     }
+
+    // Insert inbound warehouse transaction if internal vehicle
+    if (!order.isExternalVehicle) {
+      const [existingTx] = await db.select().from(warehouseTransactions).where(
+        eq(warehouseTransactions.orderId, order.id)
+      );
+      if (!existingTx) {
+        await db.insert(warehouseTransactions).values({
+          type: 'inbound',
+          volumeM3: order.containerSizeM3,
+          note: `Автоматический приход с заказа #${order.id}`,
+          orderId: order.id,
+          operatorId: user ? user.id : undefined,
+        });
+      }
+    }
   }
 
   revalidateTag('expenses');
@@ -84,14 +100,7 @@ export async function updateOrderPayment(orderId: number, paymentStatus: any) {
   // If transitioned to 'entered'
   if (paymentStatus === 'entered' && previousStatus !== 'entered') {
     const user = await getCurrentUser();
-    // 1. Add to warehouse income
-    await db.insert(warehouseIncome).values({
-      source: 'client_payment',
-      amountRub: order.paymentAmount,
-      note: `Оплата за заказ #${order.id}`,
-      operatorId: user ? user.id : undefined,
-    });
-
+    // 1. (Removed warehouse income insert)
     // 2. ALSO generate dispatcher fee if it doesn't exist yet!
     if (order.dispatcherFee && order.dispatcherFee > 0 && order.dispatcherId) {
       const [existingDisp] = await db.select().from(expenses).where(

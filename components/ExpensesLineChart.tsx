@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -60,7 +60,18 @@ export function ExpensesLineChart({
       <CardContent className="pt-6 px-4">
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                {categories.map((cat, i) => {
+                  const color = CATEGORY_COLORS[cat] || DEFAULT_COLORS[i % DEFAULT_COLORS.length];
+                  return (
+                    <linearGradient key={`color-${cat}`} id={`color-${cat}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={color} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={color} stopOpacity={0}/>
+                    </linearGradient>
+                  );
+                })}
+              </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
               <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} dy={10} />
               <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${val >= 1000 ? (val / 1000) + 'k' : val}`} />
@@ -78,17 +89,24 @@ export function ExpensesLineChart({
                 wrapperStyle={{ paddingTop: '10px', fontSize: '12px', fontWeight: '600' }}
                 formatter={(value) => getCategoryLabel(value)}
               />
-              {categories.map((cat, i) => (
-                <Bar
-                  key={cat}
-                  name={cat}
-                  dataKey={cat}
-                  stackId="a"
-                  fill={CATEGORY_COLORS[cat] || DEFAULT_COLORS[i % DEFAULT_COLORS.length]}
-                  radius={[0, 0, 0, 0]}
-                />
-              ))}
-            </BarChart>
+              {categories.map((cat, i) => {
+                const color = CATEGORY_COLORS[cat] || DEFAULT_COLORS[i % DEFAULT_COLORS.length];
+                return (
+                  <Area
+                    key={cat}
+                    type="monotone"
+                    name={cat}
+                    dataKey={cat}
+                    stackId="a"
+                    stroke={color}
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill={`url(#color-${cat})`}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                );
+              })}
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

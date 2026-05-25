@@ -35,7 +35,7 @@ async function seedMissing() {
       rentalDuration: '1 день',
       status: 'completed', // completed by driver
       paymentAmount: 200000,
-      paymentType: 'cash',
+      paymentType: 'cash' as const,
       paymentStatus: 'received', // driver received it
       clientCategory: 'direct',
       isExternalVehicle: false,
@@ -64,7 +64,7 @@ async function seedMissing() {
       rentalDuration: '1 день',
       status: 'assigned', // just assigned
       paymentAmount: 180000,
-      paymentType: 'cash',
+      paymentType: 'cash' as const,
       paymentStatus: 'pending',
       clientCategory: 'direct',
       isExternalVehicle: false,

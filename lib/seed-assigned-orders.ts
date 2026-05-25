@@ -33,7 +33,7 @@ async function seedAssigned() {
       rentalDuration: '1 день',
       status: 'assigned',
       paymentAmount: 180000,
-      paymentType: 'cash',
+      paymentType: 'cash' as const,
       paymentStatus: 'pending',
       clientCategory: 'direct',
       isExternalVehicle: false,

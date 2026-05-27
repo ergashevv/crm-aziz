@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { createOrder, updateOrder } from '@/app/actions/entities';
 import { Plus, Edit2, MapPin, ExternalLink, Phone, User, Package, Clock, CreditCard, Truck, Navigation, Map as MapIcon, Banknote, Smartphone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -32,11 +33,6 @@ const formatTimeOnly = (dateInput: any) => {
   return `${h}:${mi}`;
 };
 
-const formatNum = (val: string | number) => {
-  const n = String(val).replace(/\D/g, '');
-  if (!n) return '';
-  return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
-};
 
 const CONTAINER_SIZES = [8, 20, 27];
 const RENTAL_PRESETS = ['2 часа', '24 часа', '1 день', '1 неделя', '1 месяц'];
@@ -119,8 +115,6 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
   };
 
   const [form, setForm]     = useState(fresh);
-  const [dispAmt, setDispAmt] = useState(order ? formatNum(order.dispatcherFee || '') : '');
-  const [amt, setAmt]         = useState(order ? formatNum(order.paymentAmount || '') : '');
   const [customRental, setCustomRental] = useState(!RENTAL_PRESETS.includes(order?.rentalDuration || '1 день'));
 
   const set = (k: string, v: string) => setForm((p: any) => ({ ...p, [k]: v }));
@@ -157,15 +151,11 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
   };
 
   /* ── NUMBER INPUTS ── */
-  const onAmt = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    setAmt(raw ? formatNum(raw) : '');
-    set('paymentAmount', raw);
+  const onAmt = (val: string) => {
+    set('paymentAmount', val);
   };
-  const onDispAmt = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    setDispAmt(raw ? formatNum(raw) : '');
-    set('dispatcherFee', raw);
+  const onDispAmt = (val: string) => {
+    set('dispatcherFee', val);
   };
 
   /* ── SUBMIT ── */
@@ -178,7 +168,7 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
       if (res && !res.success) { setError(res.error); return; }
       setOpen(false);
       router.refresh();
-      if (!order) { setForm(fresh()); setAmt(''); setDispAmt(''); setCustomRental(false); }
+      if (!order) { setForm(fresh()); setCustomRental(false); }
     } catch (err: any) {
       setError(err.message || 'Произошла ошибка');
     } finally { setLoading(false); }
@@ -333,7 +323,7 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
                     <CreditCard className="h-3.5 w-3.5 text-emerald-500" /> {dict.amount} *
                   </Label>
                   <div className="relative">
-                    <Input type="text" inputMode="numeric" placeholder="0" value={amt} onChange={onAmt}
+                    <FormattedNumberInput placeholder="0" value={form.paymentAmount} onChange={onAmt}
                       className="h-9 rounded-xl text-sm font-bold pr-14" required />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
                   </div>
@@ -431,7 +421,7 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
                       <CreditCard className="h-3 w-3" /> Услуга диспетчера (сумма)
                     </Label>
                     <div className="relative">
-                      <Input type="text" inputMode="numeric" placeholder="0" value={dispAmt} onChange={onDispAmt}
+                      <FormattedNumberInput placeholder="0" value={form.dispatcherFee} onChange={onDispAmt}
                         className="h-9 rounded-xl text-sm font-semibold pr-14 bg-white" />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
                     </div>
@@ -551,7 +541,7 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
                     <CreditCard className="h-3.5 w-3.5 text-emerald-500" /> {dict.amount} *
                   </Label>
                   <div className="relative">
-                    <Input type="text" inputMode="numeric" placeholder="0" value={amt} onChange={onAmt}
+                    <FormattedNumberInput placeholder="0" value={form.paymentAmount} onChange={onAmt}
                       className="h-9 rounded-xl text-sm font-bold pr-14" required />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">RUB</span>
                   </div>

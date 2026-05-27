@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { addWarehouseTransaction } from '@/app/actions/entities';
@@ -129,22 +130,20 @@ export function WarehouseTransactionForm({ dict, drivers = [] }: { dict: any, dr
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="driverAmount">Оплата водителю</Label>
-              <Input
+              <FormattedNumberInput
                 id="driverAmount"
-                type="number"
                 placeholder="Сумма"
                 value={driverAmount}
-                onChange={e => setDriverAmount(e.target.value)}
+                onChange={setDriverAmount}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="svalkaAmount">Оплата свалке</Label>
-              <Input
+              <FormattedNumberInput
                 id="svalkaAmount"
-                type="number"
                 placeholder="Сумма"
                 value={svalkaAmount}
-                onChange={e => setSvalkaAmount(e.target.value)}
+                onChange={setSvalkaAmount}
               />
             </div>
           </div>

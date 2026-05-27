@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,12 +12,6 @@ import { createExpense, updateExpense, getRecentOrders } from '@/app/actions/ent
 import { Plus, Edit2 } from 'lucide-react';
 
 const EXPENSE_CATEGORIES = ['fuel', 'diesel', 'spare_parts', 'repair', 'utilization', 'base_rent', 'gai', 'driver_salary', 'worker_salary', 'dispatcher_salary', 'referral_fee', 'master_fee', 'other', 'tractor'];
-
-const formatNum = (val: string | number) => {
-  const n = String(val).replace(/\D/g, '');
-  if (!n) return '';
-  return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
-};
 
 export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: { dict: any, expense?: any, drivers?: any[], dispatchers?: any[] }) {
   const [open, setOpen] = useState(false);
@@ -39,7 +34,6 @@ export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: {
     liters: ''
   });
 
-  const [amt, setAmt] = useState(expense ? formatNum(expense.amountRub) : '');
   const [ordersList, setOrdersList] = useState<any[]>([]);
 
   useEffect(() => {
@@ -50,11 +44,6 @@ export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: {
     }
   }, [open]);
 
-  const handleAmtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    setAmt(raw ? formatNum(raw) : '');
-    setFormData({ ...formData, amountRub: raw });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +57,6 @@ export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: {
       setOpen(false);
       if (!expense) {
         setFormData({ category: '', amountRub: '', note: '', orderId: '', driverId: '', dispatcherId: '', liters: '' });
-        setAmt('');
       }
     } finally {
       setLoading(false);
@@ -173,23 +161,20 @@ export function ExpenseForm({ dict, expense, drivers = [], dispatchers = [] }: {
           {(formData.category === 'fuel' || formData.category === 'diesel' || formData.category === 'utilization') && (
             <div className="space-y-2">
               <Label htmlFor="liters">{formData.category === 'utilization' ? 'Объем (м³)' : 'Литры'}</Label>
-              <Input 
+              <FormattedNumberInput 
                 id="liters" 
-                type="number" 
                 value={formData.liters || ''} 
-                onChange={e => setFormData({...formData, liters: e.target.value})} 
+                onChange={(val: string) => setFormData({...formData, liters: val})} 
                 placeholder="Например: 40"
               />
             </div>
           )}
           <div className="space-y-2">
             <Label htmlFor="amountRub">{dict.amount} (RUB)</Label>
-            <Input 
+            <FormattedNumberInput 
               id="amountRub" 
-              type="text" 
-              inputMode="numeric"
-              value={amt} 
-              onChange={handleAmtChange} 
+              value={formData.amountRub} 
+              onChange={(val: string) => setFormData({ ...formData, amountRub: val })} 
               required 
               placeholder="0"
             />

@@ -3,29 +3,18 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { createExpense } from '@/app/actions/entities';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
-const formatNum = (val: string | number) => {
-  const n = String(val).replace(/\D/g, '');
-  if (!n) return '';
-  return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
-};
 
 export function QuickExpenseForm({ dict, category }: { dict: any, category: string }) {
   const [loading, setLoading] = useState(false);
   const [amountRub, setAmountRub] = useState('');
-  const [amt, setAmt] = useState('');
   const [note, setNote] = useState('');
-
-  const handleAmtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    setAmt(raw ? formatNum(raw) : '');
-    setAmountRub(raw);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +26,6 @@ export function QuickExpenseForm({ dict, category }: { dict: any, category: stri
         note
       });
       setAmountRub('');
-      setAmt('');
       setNote('');
       toast.success(dict.save);
     } catch (err: any) {
@@ -51,11 +39,9 @@ export function QuickExpenseForm({ dict, category }: { dict: any, category: stri
     <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-slate-100 mt-4">
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-500 uppercase">{dict.amount} (RUB)</Label>
-        <Input 
-          type="text" 
-          inputMode="numeric"
-          value={amt} 
-          onChange={handleAmtChange} 
+        <FormattedNumberInput 
+          value={amountRub} 
+          onChange={setAmountRub} 
           required 
           placeholder="0"
           className="font-bold text-lg"

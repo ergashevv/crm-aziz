@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -22,24 +23,21 @@ export function CloseShiftForm({ dict }: { dict: any }) {
   const router = useRouter();
 
   // Auto calculate withdrawal based on net profit and to safe
-  const handleNetProfitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+  const handleNetProfitChange = (val: string) => {
     setNetProfit(val);
     if (toSafe && val) {
       setWithdrawal((Number(val) - Number(toSafe)).toString());
     }
   };
 
-  const handleToSafeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+  const handleToSafeChange = (val: string) => {
     setToSafe(val);
     if (netProfit && val) {
       setWithdrawal((Number(netProfit) - Number(val)).toString());
     }
   };
 
-  const handleWithdrawalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+  const handleWithdrawalChange = (val: string) => {
     setWithdrawal(val);
     if (netProfit && val) {
       setToSafe((Number(netProfit) - Number(val)).toString());
@@ -112,13 +110,11 @@ export function CloseShiftForm({ dict }: { dict: any }) {
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Чистая прибыль за смену (RUB)</Label>
-            <Input 
-              type="number" 
+            <FormattedNumberInput 
               required 
-              min="0"
               value={netProfit} 
               onChange={handleNetProfitChange} 
-              placeholder="100000"
+              placeholder="100 000"
               className="text-lg font-bold"
             />
             <p className="text-xs text-muted-foreground">Общая чистая прибыль после всех расходов.</p>
@@ -127,25 +123,21 @@ export function CloseShiftForm({ dict }: { dict: any }) {
           <div className="grid grid-cols-2 gap-4 border-t pt-4">
             <div className="space-y-2">
               <Label className="text-emerald-600 font-semibold">В сейф (RUB)</Label>
-              <Input 
-                type="number" 
+              <FormattedNumberInput 
                 required 
-                min="0"
                 value={toSafe} 
                 onChange={handleToSafeChange} 
-                placeholder="60000"
+                placeholder="60 000"
                 className="border-emerald-200 focus-visible:ring-emerald-500"
               />
             </div>
             <div className="space-y-2">
               <Label className="text-indigo-600 font-semibold">Забрать (Дивиденды)</Label>
-              <Input 
-                type="number" 
+              <FormattedNumberInput 
                 required 
-                min="0"
                 value={withdrawal} 
                 onChange={handleWithdrawalChange} 
-                placeholder="40000"
+                placeholder="40 000"
                 className="border-indigo-200 focus-visible:ring-indigo-500"
               />
             </div>

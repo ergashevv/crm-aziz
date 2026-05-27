@@ -4,16 +4,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { createSafeTransaction } from '@/app/actions/entities';
 import { Plus, Minus } from 'lucide-react';
 
-const formatNum = (val: string | number) => {
-  const n = String(val).replace(/\D/g, '');
-  if (!n) return '';
-  return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
-};
 
 export function SafeTransactionForm({ dict, type }: { dict: any, type: 'income' | 'expense' }) {
   const [open, setOpen] = useState(false);
@@ -23,13 +19,7 @@ export function SafeTransactionForm({ dict, type }: { dict: any, type: 'income' 
     note: ''
   });
 
-  const [amt, setAmt] = useState('');
 
-  const handleAmtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    setAmt(raw ? formatNum(raw) : '');
-    setFormData({ ...formData, amountRub: raw });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +32,6 @@ export function SafeTransactionForm({ dict, type }: { dict: any, type: 'income' 
       });
       setOpen(false);
       setFormData({ amountRub: '', note: '' });
-      setAmt('');
     } finally {
       setLoading(false);
     }
@@ -73,12 +62,10 @@ export function SafeTransactionForm({ dict, type }: { dict: any, type: 'income' 
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="amountRub">{dict.amount} (RUB)</Label>
-            <Input 
+            <FormattedNumberInput 
               id="amountRub" 
-              type="text" 
-              inputMode="numeric"
-              value={amt} 
-              onChange={handleAmtChange} 
+              value={formData.amountRub} 
+              onChange={(val: string) => setFormData({ ...formData, amountRub: val })} 
               required 
               placeholder="0"
             />

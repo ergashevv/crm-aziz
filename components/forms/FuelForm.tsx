@@ -4,16 +4,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createFuelLog, updateFuelLog } from '@/app/actions/entities';
 import { Plus, Edit2 } from 'lucide-react';
 
-const formatNum = (val: string | number) => {
-  const n = String(val).replace(/\D/g, '');
-  if (!n) return '';
-  return new Intl.NumberFormat('ru-RU').format(parseInt(n, 10));
-};
 
 export function FuelForm({ dict, log, drivers }: { dict: any, log?: any, drivers: any[] }) {
   const [open, setOpen] = useState(false);
@@ -34,13 +30,6 @@ export function FuelForm({ dict, log, drivers }: { dict: any, log?: any, drivers
   };
 
   const [formData, setFormData] = useState(initialData);
-  const [amt, setAmt] = useState(log ? formatNum(log.priceRub) : '');
-
-  const handleAmtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    setAmt(raw ? formatNum(raw) : '');
-    setFormData({ ...formData, priceRub: raw });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +43,6 @@ export function FuelForm({ dict, log, drivers }: { dict: any, log?: any, drivers
       setOpen(false);
       if (!log) {
         setFormData({ driverId: '', stationName: '', liters: '', priceRub: '', vehicle: '' });
-        setAmt('');
       }
     } finally {
       setLoading(false);
@@ -110,16 +98,14 @@ export function FuelForm({ dict, log, drivers }: { dict: any, log?: any, drivers
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="liters">{dict.liters}</Label>
-              <Input id="liters" type="number" value={formData.liters} onChange={e => setFormData({...formData, liters: e.target.value})} required />
+              <FormattedNumberInput id="liters" value={formData.liters} onChange={(val: string) => setFormData({...formData, liters: val})} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="priceRub">{dict.cost} (RUB)</Label>
-              <Input 
+              <FormattedNumberInput 
                 id="priceRub" 
-                type="text" 
-                inputMode="numeric"
-                value={amt} 
-                onChange={handleAmtChange} 
+                value={formData.priceRub} 
+                onChange={(val: string) => setFormData({ ...formData, priceRub: val })} 
                 required 
                 placeholder="0"
               />

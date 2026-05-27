@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { Label } from '@/components/ui/label';
 import { addGasStationInbound } from '@/app/actions/entities';
 import { Plus, Fuel } from 'lucide-react';
@@ -50,11 +51,10 @@ export function GasStationRefillForm({ dict }: { dict: any }) {
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="liters">{dict.liters || 'Литры'}</Label>
-            <Input 
+            <FormattedNumberInput 
               id="liters" 
-              type="number" 
               value={formData.liters} 
-              onChange={e => setFormData({...formData, liters: e.target.value})} 
+              onChange={(val: string) => setFormData({...formData, liters: val})} 
               required 
               placeholder="0"
             />

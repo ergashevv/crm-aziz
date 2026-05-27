@@ -159,7 +159,7 @@ export function WarehouseTransactionForm({ dict, drivers = [] }: { dict: any, dr
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading || !formData.volumeM3}>
+          <Button type="submit" className="w-full" disabled={loading || !containerSizeM3}>
             {loading ? '...' : (dict.create || 'Сохранить')}
           </Button>
         </form>

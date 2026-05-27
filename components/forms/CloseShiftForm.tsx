@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Lock } from 'lucide-react';
 import { createSafeTransaction } from '@/app/actions/entities';
 
+const formatNum = (val: string | number) => {
+  if (!val) return '0';
+  return new Intl.NumberFormat('ru-RU').format(Number(val));
+};
+
 export function CloseShiftForm({ dict }: { dict: any }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -146,8 +151,8 @@ export function CloseShiftForm({ dict }: { dict: any }) {
           <div className="bg-slate-50 p-3 rounded-md text-sm">
             <p><strong>Итог:</strong></p>
             <ul className="list-disc pl-5 mt-1 space-y-1 text-slate-600">
-              <li>Сейф пополнится на: <strong>{toSafe || 0} RUB</strong></li>
-              <li>Изъято наличными: <strong>{withdrawal || 0} RUB</strong></li>
+              <li>Сейф пополнится на: <strong>{formatNum(toSafe)} RUB</strong></li>
+              <li>Изъято наличными: <strong>{formatNum(withdrawal)} RUB</strong></li>
             </ul>
           </div>
 

@@ -96,7 +96,7 @@ export function ExpenseLedgerTable({ expenses, dict, allDrivers, allDispatchers,
         {sortedExpenses.length === 0 && (
           <TableRow>
             <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
-              {lang === 'uz' ? "Xarajatlar topilmadi." : "Расходы не найдены."}
+              {"Расходы не найдены."}
             </TableCell>
           </TableRow>
         )}

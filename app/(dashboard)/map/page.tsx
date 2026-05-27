@@ -21,9 +21,7 @@ export default async function MapPage() {
             {dict.live_tracking || 'Onlayn xarita'}
           </h1>
           <p className="text-slate-500 mt-1 font-medium">
-            {lang === 'uz' 
-              ? 'Haydovchilarning faol harakatlanishini real-time kuzatish.' 
-              : 'Отслеживание перемещения водителей в реальном времени.'}
+            {'Отслеживание перемещения водителей в реальном времени.'}
           </p>
         </div>
       </div>

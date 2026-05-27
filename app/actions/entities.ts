@@ -16,6 +16,7 @@ import {
 import { eq, and, desc } from 'drizzle-orm';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
+import { sendPushNotification } from '@/lib/push-notifications';
 
 // Gas Station Inbounds
 export async function addGasStationInbound(data: { liters: number; note?: string; recordedAt?: Date }) {
@@ -220,6 +221,8 @@ export async function updateExpense(id: number, data: any) {
 export async function addWarehouseTransaction(data: { 
   type: 'inbound' | 'outbound', 
   volumeM3: number, 
+  containerSizeM3?: number,
+  containerCount?: number,
   note?: string,
   driverId?: number,
   driverAmount?: number,
@@ -233,6 +236,8 @@ export async function addWarehouseTransaction(data: {
     await tx.insert(warehouseTransactions).values({
       type: data.type,
       volumeM3: data.volumeM3,
+      containerSizeM3: data.containerSizeM3,
+      containerCount: data.containerCount,
       note: data.note,
       driverId: data.driverId,
       driverAmount: data.driverAmount,
@@ -434,6 +439,19 @@ export async function createOrder(data: any) {
       isClosed,
     }).returning();
 
+    // Send Push Notification if assigned to a driver
+    if (!isExternalVehicle && newOrder.driverId) {
+      const [driver] = await db.select().from(drivers).where(eq(drivers.id, newOrder.driverId));
+      if (driver && driver.expoPushToken) {
+        await sendPushNotification(
+          driver.expoPushToken,
+          "Новый заказ!",
+          `Вам назначен новый заказ. Адрес: ${address}`,
+          { orderId: newOrder.id }
+        );
+      }
+    }
+
     // (Removed warehouse income insert)
 
     // Generate dispatcher and referral expenses when order is 'completed' or closed
@@ -609,6 +627,19 @@ export async function updateOrder(id: number, data: any) {
       externalDriverName: isExternalVehicle ? data.externalDriverName : null,
       isClosed,
     }).where(eq(orders.id, id));
+
+    // Send Push Notification if driver changed or assigned
+    if (!isExternalVehicle && data.driverId && order.driverId !== parseInt(data.driverId)) {
+      const [driver] = await db.select().from(drivers).where(eq(drivers.id, parseInt(data.driverId)));
+      if (driver && driver.expoPushToken) {
+        await sendPushNotification(
+          driver.expoPushToken,
+          "Новый заказ!",
+          `Вам назначен новый заказ. Адрес: ${address}`,
+          { orderId: id }
+        );
+      }
+    }
 
     // (Removed warehouse income insert)
 

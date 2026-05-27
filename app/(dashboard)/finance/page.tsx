@@ -135,10 +135,10 @@ export default async function FinancePage({
         amount: o.paymentAmount,
         sourceKey: o.isExternalVehicle ? 'external_vehicle_rental' : 'client_payment',
         sourceLabel: o.isExternalVehicle
-          ? (lang === 'uz' ? 'Begona moshina' : 'Сторонняя машина')
+          ? ('Сторонняя машина')
           : dict.client_payment,
         clientName: o.isExternalVehicle
-          ? (o.externalDriverName || (lang === 'uz' ? 'Begona haydovchi' : 'Сторонний водитель'))
+          ? (o.externalDriverName || ('Сторонний водитель'))
           : (client?.name || dict.client),
         note: o.operatorNote || '',
         address: o.isExternalVehicle ? 'База' : o.address
@@ -375,8 +375,8 @@ export default async function FinancePage({
             filename={currentTab === 'expenses' ? "expenses_report" : "income_report"}
             title={
               currentTab === 'expenses'
-                ? (lang === 'uz' ? "Xarajatlar Ro'yxati" : "Список расходов")
-                : (lang === 'uz' ? "Daromadlar Ro'yxati" : "Список доходов")
+                ? ("Список расходов")
+                : ("Список доходов")
             }
             dict={dict}
           />
@@ -403,7 +403,7 @@ export default async function FinancePage({
             </div>
             {isFiltered && (
               <p className="text-xs font-semibold text-emerald-700/60 mt-1">
-                {lang === 'uz' ? `Jami (all-time): ${overallTotalIncome.toLocaleString()} RUB` : `Всего (all-time): ${overallTotalIncome.toLocaleString()} RUB`}
+                {`Всего (all-time): ${overallTotalIncome.toLocaleString()} RUB`}
               </p>
             )}
           </CardContent>
@@ -426,7 +426,7 @@ export default async function FinancePage({
             </div>
             {isFiltered && (
               <p className="text-xs font-semibold text-rose-700/60 mt-1">
-                {lang === 'uz' ? `Jami (all-time): ${overallTotalExpenses.toLocaleString()} RUB` : `Всего (all-time): ${overallTotalExpenses.toLocaleString()} RUB`}
+                {`Всего (all-time): ${overallTotalExpenses.toLocaleString()} RUB`}
               </p>
             )}
           </CardContent>
@@ -449,7 +449,7 @@ export default async function FinancePage({
             </div>
             {isFiltered && (
               <p className={`text-xs font-semibold mt-1 ${filteredNetProfit >= 0 ? "text-blue-700/60" : "text-orange-700/60"}`}>
-                {lang === 'uz' ? `Jami (all-time): ${overallNetProfit.toLocaleString()} RUB` : `Всего (all-time): ${overallNetProfit.toLocaleString()} RUB`}
+                {`Всего (all-time): ${overallNetProfit.toLocaleString()} RUB`}
               </p>
             )}
           </CardContent>
@@ -501,7 +501,7 @@ export default async function FinancePage({
                   {Object.keys(filteredExpensesByCategory).length === 0 && (
                     <TableRow>
                       <TableCell colSpan={2} className="text-center py-8 text-slate-500 font-medium">
-                        {lang === 'uz' ? "Xarajatlar taqsimoti mavjud emas." : "Нет данных о распределении расходов."}
+                        {"Нет данных о распределении расходов."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -540,7 +540,7 @@ export default async function FinancePage({
           {/* Income Breakdown */}
           <Card className="border-0 shadow-sm ring-1 ring-slate-100 rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl">
             <CardHeader className="bg-white/50 backdrop-blur-sm border-b border-slate-100">
-              <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">{lang === 'uz' ? "Daromad manbalari taqsimoti" : "Распределение доходов по источникам"}</CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">{"Распределение доходов по источникам"}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -562,7 +562,7 @@ export default async function FinancePage({
                   {Object.keys(filteredIncomeBySource).length === 0 && (
                     <TableRow>
                       <TableCell colSpan={2} className="text-center py-8 text-slate-500 font-medium">
-                        {lang === 'uz' ? "Daromadlar taqsimoti mavjud emas." : "Нет данных о распределении доходов."}
+                        {"Нет данных о распределении доходов."}
                       </TableCell>
                     </TableRow>
                   )}

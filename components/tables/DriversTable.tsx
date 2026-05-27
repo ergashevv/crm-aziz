@@ -74,7 +74,7 @@ export function DriversTable({ drivers, dict, lang }: { drivers: any[], dict: an
         {sortedData.length === 0 && (
           <TableRow>
             <TableCell colSpan={8} className="text-center py-8 text-slate-500">
-              {lang === 'uz' ? "Haydovchilar topilmadi." : "Водители не найдены."}
+              {"Водители не найдены."}
             </TableCell>
           </TableRow>
         )}

@@ -35,7 +35,6 @@ export default async function DriverDetailPage({
 }) {
   const lang: string = 'ru';
   const dict = getDictionary(lang);
-  const isUz = lang === 'uz';
   const driverId = parseInt(params.id);
 
   if (isNaN(driverId)) return notFound();
@@ -116,7 +115,7 @@ export default async function DriverDetailPage({
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{driver.name}</h1>
             <p className="text-slate-500 mt-1 font-medium">
-              {isUz ? "Haydovchi profili va buyurtmalar tarixi" : "Профиль водителя и история заказов"}
+              {"Профиль водителя и история заказов"}
             </p>
           </div>
         </div>
@@ -129,7 +128,7 @@ export default async function DriverDetailPage({
           <CardHeader className="pb-3 border-b border-slate-100">
             <CardTitle className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
-              {isUz ? "Haydovchi ma'lumotlari" : "Данные водителя"}
+              {"Данные водителя"}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
@@ -177,13 +176,13 @@ export default async function DriverDetailPage({
                 <Package className="h-5 w-5 text-white" />
               </div>
               <span className="text-[10px] font-extrabold text-blue-100 uppercase tracking-widest bg-white/10 px-2 py-1 rounded-lg">
-                {isUz ? "Jami" : "Всего"}
+                {"Всего"}
               </span>
             </div>
             <div>
               <div className="text-4xl font-black text-white tracking-tight">{totalOrders}</div>
               <p className="text-xs font-semibold text-blue-100 mt-1">
-                {isUz ? "Barcha buyurtmalar" : "Все заказы"}
+                {"Все заказы"}
               </p>
             </div>
           </Link>
@@ -204,7 +203,7 @@ export default async function DriverDetailPage({
             <div>
               <div className="text-4xl font-black text-white tracking-tight">{completedOrders}</div>
               <p className="text-xs font-semibold text-emerald-100 mt-1">
-                {isUz ? "Yakunlangan" : "Завершено"}
+                {"Завершено"}
               </p>
             </div>
           </Link>
@@ -219,13 +218,13 @@ export default async function DriverDetailPage({
                 <Clock className="h-5 w-5 text-white" />
               </div>
               <span className="text-[10px] font-extrabold text-amber-100 uppercase tracking-widest bg-white/10 px-2 py-1 rounded-lg">
-                {isUz ? "Faol" : "Активно"}
+                {"Активно"}
               </span>
             </div>
             <div>
               <div className="text-4xl font-black text-white tracking-tight">{activeOrders}</div>
               <p className="text-xs font-semibold text-amber-100 mt-1">
-                {isUz ? "Jarayondagi" : "В работе"}
+                {"В работе"}
               </p>
             </div>
           </Link>
@@ -246,7 +245,7 @@ export default async function DriverDetailPage({
                 {totalRevenue.toLocaleString()}
               </div>
               <p className="text-xs font-semibold text-violet-100 mt-1">
-                {isUz ? "Hisoblangan to'lov" : "Учтённая выручка"}
+                {"Учтённая выручка"}
               </p>
             </div>
           </Link>
@@ -260,7 +259,7 @@ export default async function DriverDetailPage({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4">
             <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
               <Package className="h-4.5 w-4.5 text-primary" />
-              {isUz ? "Barcha buyurtmalar" : "Все заказы"}
+              {"Все заказы"}
               <span className="text-sm font-semibold text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full ml-1">
                 {filtered.length}
               </span>
@@ -273,11 +272,11 @@ export default async function DriverDetailPage({
                 {/* Status Filter */}
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    { value: '', label: isUz ? 'Barchasi' : 'Все', color: 'bg-slate-100 text-slate-600 hover:bg-slate-200' },
-                    { value: 'new', label: isUz ? 'Yangi' : 'Новые', color: 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200' },
-                    { value: 'in_progress', label: isUz ? "Yo'lda" : 'В пути', color: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' },
-                    { value: 'completed', label: isUz ? 'Tugallangan' : 'Завершены', color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' },
-                    { value: 'active', label: isUz ? 'Faol' : 'Активные', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' },
+                    { value: '', label: 'Все', color: 'bg-slate-100 text-slate-600 hover:bg-slate-200' },
+                    { value: 'new', label: 'Новые', color: 'bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200' },
+                    { value: 'in_progress', label: 'В пути', color: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' },
+                    { value: 'completed', label: 'Завершены', color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' },
+                    { value: 'active', label: 'Активные', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' },
                   ].map(opt => (
                     <Link
                       key={opt.value || 'all'}
@@ -294,10 +293,10 @@ export default async function DriverDetailPage({
                 {/* Payment Filter */}
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    { value: '', label: isUz ? "To'lov barchasi" : 'Все оплаты' },
-                    { value: 'pending', label: isUz ? 'Kutilmoqda' : 'Ожидает' },
-                    { value: 'received', label: isUz ? 'Qabul' : 'Получен' },
-                    { value: 'entered', label: isUz ? 'Hisobda' : 'Учтён' },
+                    { value: '', label: 'Все оплаты' },
+                    { value: 'pending', label: 'Ожидает' },
+                    { value: 'received', label: 'Получен' },
+                    { value: 'entered', label: 'Учтён' },
                   ].map(opt => (
                     <Link
                       key={opt.value || 'all-payment'}
@@ -329,7 +328,7 @@ export default async function DriverDetailPage({
             page={page}
             limit={PAGE_SIZE}
             dict={dict}
-            isUz={isUz}
+            isUz={false}
           />
           <Pagination totalItems={filtered.length} itemsPerPage={PAGE_SIZE} />
         </CardContent>

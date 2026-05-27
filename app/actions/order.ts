@@ -59,6 +59,8 @@ export async function updateOrderStatus(orderId: number, status: any) {
         await db.insert(warehouseTransactions).values({
           type: 'inbound',
           volumeM3: order.containerSizeM3,
+          containerSizeM3: order.containerSizeM3,
+          containerCount: 1, // Defaulting to 1 for orders as order schema doesn't have count
           note: `Автоматический приход с заказа #${order.id}`,
           orderId: order.id,
           operatorId: user ? user.id : undefined,

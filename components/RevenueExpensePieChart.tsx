@@ -31,8 +31,8 @@ export function RevenueExpensePieChart({
 
   const profitVal = Math.max(0, profit);
   const data = [
-    { name: lang === 'uz' ? 'Xarajatlar' : 'Расходы', value: expenses, color: '#f43f5e' }, // rose-500
-    { name: lang === 'uz' ? 'Daromad' : 'Доход', value: profitVal, color: '#10b981' } // emerald-500
+    { name: 'Расходы', value: expenses, color: '#f43f5e' }, // rose-500
+    { name: 'Доход', value: profitVal, color: '#10b981' } // emerald-500
   ];
 
   const total = expenses + profitVal;
@@ -47,7 +47,7 @@ export function RevenueExpensePieChart({
             <div className="h-3 w-3 rounded-full bg-emerald-500" />
           </div>
           <CardTitle className="text-lg font-black tracking-tight text-slate-800">
-            {lang === 'uz' ? 'Oborot taqsimoti' : 'Распределение оборота'}
+            {'Распределение оборота'}
           </CardTitle>
         </div>
       </CardHeader>
@@ -56,7 +56,7 @@ export function RevenueExpensePieChart({
           {revenue > 0 && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
               <span className="text-sm font-bold text-slate-700">{revenue.toLocaleString()} RUB</span>
-              <span className="text-xs font-semibold text-slate-400">{lang === 'uz' ? 'Oborot' : 'Оборот'}</span>
+              <span className="text-xs font-semibold text-slate-400">{'Оборот'}</span>
             </div>
           )}
           {revenue > 0 ? (
@@ -82,7 +82,7 @@ export function RevenueExpensePieChart({
                   contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '1rem', border: '1px solid #f1f5f9', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', padding: '12px' }}
                   itemStyle={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}
                   formatter={(value: number, name: string) => {
-                    const isExpense = name === (lang === 'uz' ? 'Xarajatlar' : 'Расходы');
+                    const isExpense = name === ('Расходы');
                     const pct = isExpense ? expensePct : profitPct;
                     return [`${value.toLocaleString()} RUB (${pct}%)`, name];
                   }}
@@ -98,7 +98,7 @@ export function RevenueExpensePieChart({
         </div>
         <div className="mt-4 grid grid-cols-2 gap-y-3 gap-x-2 text-[12px] px-2">
           {data.map((entry) => {
-            const pct = entry.name === (lang === 'uz' ? 'Xarajatlar' : 'Расходы') ? expensePct : profitPct;
+            const pct = entry.name === ('Расходы') ? expensePct : profitPct;
             return (
               <div key={entry.name} className="flex items-center justify-between min-w-0 bg-white/50 p-2 rounded-lg border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2 overflow-hidden">

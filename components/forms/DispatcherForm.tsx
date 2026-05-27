@@ -38,8 +38,8 @@ export function DispatcherForm({ dict, dispatcher }: { dict: any, dispatcher?: a
     }
   };
 
-  const addLabel = dict.lang === 'uz' ? "+ Yangi dispetcher" : "+ Новый диспетчер";
-  const editLabel = dict.lang === 'uz' ? "Dispetcherni tahrirlash" : "Редактировать диспетчера";
+  const addLabel = dict['+ Новый диспетчер'] || '+ Новый диспетчер';
+  const editLabel = dict['Редактировать диспетчера'] || 'Редактировать диспетчера';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

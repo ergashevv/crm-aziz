@@ -249,12 +249,10 @@ export default async function ExpensesDetailPage({
           </Button>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              {lang === 'uz' ? 'Xarajatlar Tafsilotlari' : 'Детализация расходов'}
+              {'Детализация расходов'}
             </h1>
             <p className="text-slate-500 mt-1 font-medium">
-              {lang === 'uz' 
-                ? 'Barcha xarajatlar turlari bo\'yicha taqsimot' 
-                : 'Распределение расходов по всем категориям'}
+              {'Распределение расходов по всем категориям'}
             </p>
           </div>
         </div>
@@ -281,11 +279,11 @@ export default async function ExpensesDetailPage({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <MetricCard 
-          title={lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры'} 
+          title={'Диспетчеры'} 
           value={currentMetrics.dispatcherSalary} 
           prevValue={prevMetrics.dispatcherSalary}
           unit="RUB" 
-          subText={`${currentMetrics.dispatcherOrders} ${lang === 'uz' ? 'ta' : 'зак.'}`}
+          subText={`${currentMetrics.dispatcherOrders} ${'зак.'}`}
           trend={calcTrend(currentMetrics.dispatcherSalary, prevMetrics.dispatcherSalary)} 
           colorScheme="indigo"
           icon={<Briefcase className="w-8 h-8" />}
@@ -318,7 +316,7 @@ export default async function ExpensesDetailPage({
           percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.gai / currentMetrics.expenses) * 100) : 0}
         />
         <MetricCard 
-          title={lang === 'uz' ? 'Svalka' : 'Свалка'} 
+          title={'Свалка'} 
           value={currentMetrics.utilizationCost} 
           prevValue={prevMetrics.utilizationCost}
           unit="RUB" 
@@ -343,7 +341,7 @@ export default async function ExpensesDetailPage({
           percentageOfTotal={currentMetrics.expenses > 0 ? Math.round((currentMetrics.spareParts / currentMetrics.expenses) * 100) : 0}
         />
         <MetricCard 
-          title={lang === 'uz' ? 'Haydovchilar' : 'Зарплата вод.'} 
+          title={'Зарплата вод.'} 
           value={currentMetrics.driverSalary} 
           prevValue={prevMetrics.driverSalary}
           unit="RUB" 
@@ -381,7 +379,7 @@ export default async function ExpensesDetailPage({
         {categoryParam && categoryParam !== 'all' && (
           <Button variant="outline" asChild className="h-full rounded-2xl border-dashed border-2 flex items-center justify-center">
             <Link href={`/dashboard/expenses?from=${fromParam || ''}&to=${toParam || ''}`}>
-              {lang === 'uz' ? 'Barchasini ko\'rish' : 'Показать все'}
+              {'Показать все'}
             </Link>
           </Button>
         )}
@@ -504,7 +502,7 @@ export default async function ExpensesDetailPage({
               {categoryParam && categoryParam !== 'all' ? (dict[categoryParam as keyof typeof dict] || categoryParam) : dict.expense_ledger || dict.recent_expenses}
             </CardTitle>
             <div className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-              {filteredExpensesList.length} {lang === 'uz' ? 'ta yozuv' : 'записей'}
+              {filteredExpensesList.length} {'записей'}
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -567,7 +565,7 @@ export default async function ExpensesDetailPage({
                 {filteredExpensesList.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-slate-500 font-medium">
-                      {lang === 'uz' ? "Xarajatlar topilmadi." : "Расходы не найдены."}
+                      {"Расходы не найдены."}
                     </TableCell>
                   </TableRow>
                 )}

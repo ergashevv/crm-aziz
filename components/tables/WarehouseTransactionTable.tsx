@@ -65,12 +65,21 @@ export function WarehouseTransactionTable({ transactions, dict }: { transactions
               )}
             </TableCell>
             <TableCell className="text-right font-extrabold text-slate-800">
-              {tx.type === 'inbound' ? (
-                <span className="text-emerald-600">+{tx.volumeM3}</span>
-              ) : (
-                <span className="text-rose-600">-{tx.volumeM3}</span>
-              )}
-              <span className="text-[10px] text-slate-400 ml-1">m³</span>
+              <div className="flex flex-col items-end">
+                <span>
+                  {tx.type === 'inbound' ? (
+                    <span className="text-emerald-600">+{tx.volumeM3}</span>
+                  ) : (
+                    <span className="text-rose-600">-{tx.volumeM3}</span>
+                  )}
+                  <span className="text-[10px] text-slate-400 ml-1">m³</span>
+                </span>
+                {(tx.containerCount && tx.containerSizeM3) ? (
+                  <span className="text-[11px] font-medium text-slate-500">
+                    ({tx.containerCount} шт x {tx.containerSizeM3} m³)
+                  </span>
+                ) : null}
+              </div>
             </TableCell>
           </TableRow>
         ))}

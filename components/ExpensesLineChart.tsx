@@ -53,7 +53,7 @@ export function ExpensesLineChart({
             <div className="h-3 w-3 rounded-full bg-indigo-500" />
           </div>
           <CardTitle className="text-lg font-black tracking-tight text-slate-800">
-            {lang === 'uz' ? 'Xarajatlar dinamikasi' : 'Динамика расходов'}
+            {'Динамика расходов'}
           </CardTitle>
         </div>
       </CardHeader>

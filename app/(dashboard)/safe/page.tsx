@@ -10,6 +10,7 @@ import { getDictionary } from '@/lib/dictionaries';
 import { SafeTransactionForm } from '@/components/forms/SafeTransactionForm';
 import { getCurrentUser } from '@/lib/auth';
 import { SafeTransactionsTable } from '@/components/tables/SafeTransactionsTable';
+import { CloseShiftForm } from '@/components/forms/CloseShiftForm';
 
 export default async function SafePage({
   searchParams,
@@ -49,6 +50,7 @@ export default async function SafePage({
           <p className="text-muted-foreground mt-2">{dict.safe_overview || 'Учет наличных средств в сейфе.'}</p>
         </div>
         <div className="flex space-x-2 w-full sm:w-auto justify-end">
+          <CloseShiftForm dict={dict} />
           <SafeTransactionForm dict={dict} type="expense" />
           <SafeTransactionForm dict={dict} type="income" />
         </div>
@@ -61,8 +63,8 @@ export default async function SafePage({
           { value: 'expense', label: dict.safe_expense || 'Расход' },
         ]} 
         filterParam="type" 
-        filterPlaceholder={lang === 'uz' ? "Barcha turlar" : "Все типы"} 
-        placeholder={lang === 'uz' ? "Izoh bo'yicha qidiruv..." : "Поиск по заметке..."} 
+        filterPlaceholder={"Все типы"} 
+        placeholder={"Поиск по заметке..."} 
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

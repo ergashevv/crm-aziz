@@ -71,12 +71,12 @@ export default async function DispatchersPage({
     { key: 'id', label: 'ID' },
     { key: 'name', label: dict.name },
     { key: 'phone', label: dict.phone },
-    { key: 'total_orders', label: lang === 'uz' ? "Buyurtmalar soni" : "Количество заказов" },
-    { key: 'total_volume', label: lang === 'uz' ? "Umumiy aylanma" : "Общий оборот" }
+    { key: 'total_orders', label: "Количество заказов" },
+    { key: 'total_volume', label: "Общий оборот" }
   ];
 
-  const titleText = lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры';
-  const descText = lang === 'uz' ? 'Dispetcherlarni boshqarish va buyurtmalar tahlili.' : 'Управление всеми диспетчерами и анализ их заказов.';
+  const titleText = 'Диспетчеры';
+  const descText = 'Управление всеми диспетчерами и анализ их заказов.';
 
   return (
     <div className="space-y-8">
@@ -95,7 +95,7 @@ export default async function DispatchersPage({
             data={exportDispatchersData} 
             columns={exportColumns} 
             filename="dispatchers_report" 
-            title={lang === 'uz' ? "Dispetcherlar Ro'yxati" : "Список диспетчеров"} 
+            title={"Список диспетчеров"} 
             dict={dict} 
           />
           <DispatcherForm dict={dict} />
@@ -107,7 +107,7 @@ export default async function DispatchersPage({
           <SearchAndFilter 
             dict={dict} 
             hideFilter={true} 
-            placeholder={lang === 'uz' ? "Ism, telefon yoki ID bo'yicha qidiruv..." : "Поиск по имени, телефону или ID..."} 
+            placeholder={"Поиск по имени, телефону или ID..."} 
           />
         </div>
         <div className="w-full md:w-auto">
@@ -123,8 +123,8 @@ export default async function DispatchersPage({
                 <TableHead>ID</TableHead>
                 <TableHead>{dict.name}</TableHead>
                 <TableHead>{dict.phone}</TableHead>
-                <TableHead className="text-center">{lang === 'uz' ? "Buyurtmalar soni" : "Реферальные заказы"}</TableHead>
-                <TableHead className="text-right">{lang === 'uz' ? "Umumiy aylanma" : "Общий оборот"}</TableHead>
+                <TableHead className="text-center">{"Реферальные заказы"}</TableHead>
+                <TableHead className="text-right">{"Общий оборот"}</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
@@ -156,7 +156,7 @@ export default async function DispatchersPage({
               {filteredDispatchers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                    {lang === 'uz' ? "Dispetcherlar topilmadi." : "Диспетчеры не найдены."}
+                    {"Диспетчеры не найдены."}
                   </TableCell>
                 </TableRow>
               )}

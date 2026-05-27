@@ -51,6 +51,7 @@ export const drivers = pgTable('drivers', {
   latitude: text('latitude'),
   longitude: text('longitude'),
   locationUpdatedAt: timestamp('location_updated_at'),
+  expoPushToken: text('expo_push_token'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -121,6 +122,8 @@ export const warehouseTransactions = pgTable('warehouse_transactions', {
   id: serial('id').primaryKey(),
   type: warehouseTransactionTypeEnum('type').notNull(),
   volumeM3: integer('volume_m3').notNull(),
+  containerSizeM3: integer('container_size_m3'),
+  containerCount: integer('container_count'),
   note: text('note'),
   orderId: integer('order_id').references(() => orders.id),
   driverId: integer('driver_id').references(() => drivers.id),

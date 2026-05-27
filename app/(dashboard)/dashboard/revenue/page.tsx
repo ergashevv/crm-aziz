@@ -84,7 +84,7 @@ export default async function RevenueDetailPage({
             id: order.id,
             date: orderDate,
             amount: amt,
-            driverName: order.externalDriverName || (lang === 'uz' ? 'Begona' : 'Сторонняя'),
+            driverName: order.externalDriverName || ('Сторонняя'),
             type: 'order',
             paymentType: order.paymentType,
             address: order.address
@@ -95,7 +95,7 @@ export default async function RevenueDetailPage({
             id: order.id,
             date: orderDate,
             amount: amt,
-            driverName: order.driverId ? (driverMap.get(order.driverId) || `ID: ${order.driverId}`) : (lang === 'uz' ? 'Biriktirilmagan' : 'Не назначен'),
+            driverName: order.driverId ? (driverMap.get(order.driverId) || `ID: ${order.driverId}`) : ('Не назначен'),
             type: 'order',
             paymentType: order.paymentType,
             address: order.address
@@ -158,12 +158,10 @@ export default async function RevenueDetailPage({
           </Button>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              {lang === 'uz' ? 'Aylanma Tafsilotlari' : 'Детализация оборота'}
+              {'Детализация оборота'}
             </h1>
             <p className="text-slate-500 mt-1 font-medium">
-              {lang === 'uz' 
-                ? 'Swoy moshinalar va begona moshinalardan tushgan pul taqsimoti' 
-                : 'Распределение оборота между своими и сторонними машинами'}
+              {'Распределение оборота между своими и сторонними машинами'}
             </p>
           </div>
         </div>
@@ -179,7 +177,7 @@ export default async function RevenueDetailPage({
           </div>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-              {lang === 'uz' ? 'Jami Aylanma' : 'Общий оборот'}
+              {'Общий оборот'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -189,9 +187,7 @@ export default async function RevenueDetailPage({
             </div>
             {renderTrendBadge(totalTrend)}
             <p className="text-xs font-medium text-slate-400">
-              {lang === 'uz' 
-                ? `O'tgan davrdagi jami aylanma: ${prevMetrics.revenue.toLocaleString()} RUB` 
-                : `Общий оборот за прошлый период: ${prevMetrics.revenue.toLocaleString()} RUB`}
+              {`Общий оборот за прошлый период: ${prevMetrics.revenue.toLocaleString()} RUB`}
             </p>
           </CardContent>
         </Card>
@@ -200,7 +196,7 @@ export default async function RevenueDetailPage({
         <Card className="border-0 shadow-lg shadow-emerald-500/5 ring-1 ring-emerald-100 rounded-3xl overflow-hidden bg-white relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-              <span>{lang === 'uz' ? 'Svoj Mashinalar' : 'Свои машины'}</span>
+              <span>{'Свои машины'}</span>
               <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-black">
                 {ownPct}%
               </span>
@@ -213,9 +209,7 @@ export default async function RevenueDetailPage({
             </div>
             {renderTrendBadge(ownTrend)}
             <p className="text-xs font-medium text-slate-400">
-              {lang === 'uz' 
-                ? `O'tgan davrda: ${prevMetrics.revenueOwn.toLocaleString()} RUB` 
-                : `В прошлом периоде: ${prevMetrics.revenueOwn.toLocaleString()} RUB`}
+              {`В прошлом периоде: ${prevMetrics.revenueOwn.toLocaleString()} RUB`}
             </p>
           </CardContent>
         </Card>
@@ -224,7 +218,7 @@ export default async function RevenueDetailPage({
         <Card className="border-0 shadow-lg shadow-blue-500/5 ring-1 ring-blue-100 rounded-3xl overflow-hidden bg-white relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-              <span>{lang === 'uz' ? 'Begona Mashinalar' : 'Сторонние машины'}</span>
+              <span>{'Сторонние машины'}</span>
               <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-black">
                 {extPct}%
               </span>
@@ -237,9 +231,7 @@ export default async function RevenueDetailPage({
             </div>
             {renderTrendBadge(extTrend)}
             <p className="text-xs font-medium text-slate-400">
-              {lang === 'uz' 
-                ? `O'tgan davrda: ${prevMetrics.revenueExternal.toLocaleString()} RUB` 
-                : `В прошлом периоде: ${prevMetrics.revenueExternal.toLocaleString()} RUB`}
+              {`В прошлом периоде: ${prevMetrics.revenueExternal.toLocaleString()} RUB`}
             </p>
           </CardContent>
         </Card>
@@ -249,7 +241,7 @@ export default async function RevenueDetailPage({
       <Card className="border border-slate-200/60 shadow-sm rounded-3xl bg-white p-6">
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-            {lang === 'uz' ? 'Taqsimot diagrammasi' : 'Диаграмма распределения'}
+            {'Диаграмма распределения'}
           </h3>
           <div className="h-5 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
             <div style={{ width: `${ownPct}%` }} className="bg-emerald-500 h-full transition-all duration-500 flex items-center justify-center text-[10px] font-black text-white" />
@@ -258,11 +250,11 @@ export default async function RevenueDetailPage({
           <div className="flex justify-between text-xs sm:text-sm font-bold text-slate-500 pt-1">
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" /> 
-              {lang === 'uz' ? `O'zimizning moshinalar: ${ownPct}%` : `Свои машины: ${ownPct}%`}
+              {`Свои машины: ${ownPct}%`}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-full bg-blue-500 inline-block" /> 
-              {lang === 'uz' ? `Begona moshinalar: ${extPct}%` : `Сторонние машины: ${extPct}%`}
+              {`Сторонние машины: ${extPct}%`}
             </span>
           </div>
         </div>
@@ -278,7 +270,7 @@ export default async function RevenueDetailPage({
               <Truck className="h-4.5 w-4.5" />
             </div>
             <CardTitle className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
-              {lang === 'uz' ? 'Svoj mashinalardan daromad' : 'Поступления: Свои машины'} ({ownOrdersList.length})
+              {'Поступления: Свои машины'} ({ownOrdersList.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -287,7 +279,7 @@ export default async function RevenueDetailPage({
                 <TableRow>
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>{dict.date || 'Дата'}</TableHead>
-                  <TableHead>{lang === 'uz' ? 'Haydovchi / Manzil' : 'Водитель / Адрес'}</TableHead>
+                  <TableHead>{'Водитель / Адрес'}</TableHead>
                   <TableHead className="text-right">{dict.amount || 'Сумма'}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -310,7 +302,7 @@ export default async function RevenueDetailPage({
                 {ownOrdersList.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-12 text-slate-400 font-medium">
-                      {lang === 'uz' ? 'Bu davrda buyurtmalar mavjud emas' : 'Нет заказов за этот период'}
+                      {'Нет заказов за этот период'}
                     </TableCell>
                   </TableRow>
                 )}
@@ -326,7 +318,7 @@ export default async function RevenueDetailPage({
               <Truck className="h-4.5 w-4.5" />
             </div>
             <CardTitle className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
-              {lang === 'uz' ? 'Begona mashinalardan daromad' : 'Поступления: Сторонние машины'} ({externalOrdersList.length})
+              {'Поступления: Сторонние машины'} ({externalOrdersList.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -335,7 +327,7 @@ export default async function RevenueDetailPage({
                 <TableRow>
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>{dict.date || 'Дата'}</TableHead>
-                  <TableHead>{lang === 'uz' ? 'Haydovchi / Izoh' : 'Водитель / Заметка'}</TableHead>
+                  <TableHead>{'Водитель / Заметка'}</TableHead>
                   <TableHead className="text-right">{dict.amount || 'Сумма'}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -360,7 +352,7 @@ export default async function RevenueDetailPage({
                 {externalOrdersList.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-12 text-slate-400 font-medium">
-                      {lang === 'uz' ? 'Bu davrda kirimlar mavjud emas' : 'Нет поступлений за этот период'}
+                      {'Нет поступлений за этот период'}
                     </TableCell>
                   </TableRow>
                 )}

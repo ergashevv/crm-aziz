@@ -14,8 +14,9 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 export function WarehouseTransactionForm({ dict, drivers = [] }: { dict: any, drivers?: any[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const type = 'outbound';
-  const [volumeM3, setVolumeM3] = useState('');
+  const [type, setType] = useState<'inbound' | 'outbound'>('outbound');
+  const [containerSizeM3, setContainerSizeM3] = useState('');
+  const [containerCount, setContainerCount] = useState('1');
   const [note, setNote] = useState('');
   const [driverId, setDriverId] = useState('');
   const [driverAmount, setDriverAmount] = useState('');
@@ -27,9 +28,15 @@ export function WarehouseTransactionForm({ dict, drivers = [] }: { dict: any, dr
     e.preventDefault();
     setLoading(true);
     try {
+      const size = parseInt(containerSizeM3) || 0;
+      const count = parseInt(containerCount) || 1;
+      const totalVolume = size * count;
+
       await addWarehouseTransaction({
         type,
-        volumeM3: parseInt(volumeM3),
+        volumeM3: totalVolume,
+        containerSizeM3: size,
+        containerCount: count,
         note,
         driverId: driverId ? parseInt(driverId) : undefined,
         driverAmount: driverAmount ? parseInt(driverAmount) : undefined,
@@ -37,7 +44,8 @@ export function WarehouseTransactionForm({ dict, drivers = [] }: { dict: any, dr
       });
       setOpen(false);
       // reset
-      setVolumeM3('');
+      setContainerSizeM3('');
+      setContainerCount('1');
       setNote('');
       setDriverId('');
       setDriverAmount('');
@@ -59,23 +67,52 @@ export function WarehouseTransactionForm({ dict, drivers = [] }: { dict: any, dr
           <DialogTitle>{dict.log_waste || 'Добавить новую запись'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
-          
-
-
           <div className="space-y-3">
-            <Label htmlFor="volumeM3">Объем (m³)</Label>
-            <div className="flex gap-3">
-              {OUTBOUND_OPTIONS.map(opt => (
-                <Button
-                  key={opt}
-                  type="button"
-                  variant={volumeM3 === String(opt) ? "default" : "outline"}
-                  onClick={() => setVolumeM3(String(opt))}
-                  className="flex-1"
-                >
-                  {opt} m³
-                </Button>
-              ))}
+            <Label>Тип транзакции</Label>
+            <RadioGroup 
+              value={type} 
+              onValueChange={(val: any) => setType(val)} 
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="inbound" id="inbound" />
+                <Label htmlFor="inbound" className="cursor-pointer">Приход (Входящие)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="outbound" id="outbound" />
+                <Label htmlFor="outbound" className="cursor-pointer">Расход (Исходящие)</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Label>Размер (m³)</Label>
+              <div className="flex flex-wrap gap-2">
+                {[8, 20, 27, 30].map(opt => (
+                  <Button
+                    key={opt}
+                    type="button"
+                    variant={containerSizeM3 === String(opt) ? "default" : "outline"}
+                    onClick={() => setContainerSizeM3(String(opt))}
+                    className="flex-1 min-w-[60px]"
+                  >
+                    {opt} m³
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <Label htmlFor="containerCount">Количество (шт)</Label>
+              <Input
+                id="containerCount"
+                type="number"
+                min="1"
+                value={containerCount}
+                onChange={e => setContainerCount(e.target.value)}
+                placeholder="Напр. 1"
+              />
             </div>
           </div>
 
@@ -122,7 +159,7 @@ export function WarehouseTransactionForm({ dict, drivers = [] }: { dict: any, dr
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading || !volumeM3}>
+          <Button type="submit" className="w-full" disabled={loading || !formData.volumeM3}>
             {loading ? '...' : (dict.create || 'Сохранить')}
           </Button>
         </form>

@@ -1,5 +1,5 @@
 import { db } from './db';
-import { clients, drivers, orders, expenses, fuelLogs, warehouseTransactions, users, sessions, dispatchers, safeTransactions, utilizationLogs } from './schema';
+import { clients, drivers, orders, expenses, fuelLogs, warehouseTransactions, users, sessions, dispatchers, safeTransactions, utilizationLogs, gasStationInbounds } from './schema';
 
 type OrderStatus = 'new' | 'assigned' | 'in_progress' | 'container_placed' | 'picked_up' | 'completed';
 
@@ -18,6 +18,7 @@ function atTimeOnDay(day: Date, hours: number, minutes = 0): Date {
 
 async function seed() {
   console.log('Clearing all tables...');
+  await db.delete(gasStationInbounds);
   await db.delete(sessions);
   await db.delete(expenses);
   await db.delete(fuelLogs);
@@ -217,6 +218,8 @@ async function seed() {
           await db.insert(warehouseTransactions).values({
             type: 'inbound',
             volumeM3: containerSizeM3,
+            containerSizeM3: containerSizeM3,
+            containerCount: 1,
             note: `Автоматический приход с заказа #${order.id}`,
             orderId: order.id,
             operatorId: opUser.id,
@@ -319,6 +322,8 @@ async function seed() {
       await db.insert(warehouseTransactions).values({
         type: 'outbound',
         volumeM3: 30,
+        containerSizeM3: 30,
+        containerCount: 1,
         note: 'Вывоз на свалку (Утилизация)',
         operatorId: opUser.id,
         recordedAt: expenseDate

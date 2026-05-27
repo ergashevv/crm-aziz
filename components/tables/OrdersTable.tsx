@@ -96,7 +96,7 @@ export function OrdersTable({
                 <span className="text-sm text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">#{order.id}</span>
               </div>
               {operator && (
-                <div className="text-[10px] text-slate-400 font-semibold mt-1.5 truncate max-w-[85px] flex items-center gap-1" title={`${lang === 'uz' ? 'Operator' : 'Оператор'}: ${operator.name}`}>
+                <div className="text-[10px] text-slate-400 font-semibold mt-1.5 truncate max-w-[85px] flex items-center gap-1" title={`${'Оператор'}: ${operator.name}`}>
                   <span className="h-1.5 w-1.5 rounded-full bg-slate-300"></span>
                   {operator.name}
                 </div>
@@ -106,7 +106,7 @@ export function OrdersTable({
               {order.isExternalVehicle ? (
                 <div className="flex items-center gap-1.5">
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 border border-orange-200">
-                    {lang === 'uz' ? 'Begona' : 'Сторонняя'}
+                    {'Сторонняя'}
                   </span>
                   <span className="font-semibold text-slate-800 text-sm">{order.externalDriverName || 'Сторонняя машина'}</span>
                 </div>
@@ -153,7 +153,7 @@ export function OrdersTable({
               <div className="flex flex-col gap-2">
                 {order.paymentType !== 'cash' ? (
                   <span className={`inline-flex items-center w-fit text-[11px] font-bold border rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700 border-emerald-200`}>
-                    {lang === 'uz' ? 'To\'langan (Beznal)' : 'Оплачено (Безнал)'}
+                    {'Оплачено (Безнал)'}
                   </span>
                 ) : (
                   <>
@@ -177,7 +177,7 @@ export function OrdersTable({
         {paginatedOrders.length === 0 && (
           <TableRow>
             <TableCell colSpan={9} className="text-center py-8 text-slate-500">
-              {lang === 'uz' ? "Buyurtmalar topilmadi." : "Заказы не найдены."}
+              {"Заказы не найдены."}
             </TableCell>
           </TableRow>
         )}

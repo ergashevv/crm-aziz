@@ -39,7 +39,7 @@ export function MobileSidebar({ lang = 'ru', userRole }: { lang?: string, userRo
     { label: dict.orders, icon: ClipboardList, href: "/orders" },
     { label: dict.clients, icon: Users, href: "/clients" },
     { label: dict.drivers, icon: Car, href: "/drivers" },
-    { label: lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры', icon: Phone, href: "/dispatchers" },
+    { label: 'Диспетчеры', icon: Phone, href: "/dispatchers" },
     { label: dict.warehouse, icon: Warehouse, href: "/warehouse" },
     { label: dict.safe, icon: Wallet, href: "/safe" },
   ];

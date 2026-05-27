@@ -63,7 +63,7 @@ export function ClientsTable({ clients, dict, lang }: { clients: any[], dict: an
         {sortedData.length === 0 && (
           <TableRow>
             <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-              {lang === 'uz' ? "Mijozlar topilmadi." : "Клиенты не найдены."}
+              {"Клиенты не найдены."}
             </TableCell>
           </TableRow>
         )}

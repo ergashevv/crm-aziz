@@ -75,7 +75,7 @@ export default async function OrdersPage({
   const exportOrdersData = allOrders.map(({ order, client, driver }) => ({
     id: `#${order.id}`,
     client: order.isExternalVehicle 
-      ? (lang === 'uz' ? `Begona: ${order.externalDriverName || ''}` : `Сторонняя: ${order.externalDriverName || ''}`) 
+      ? (`Сторонняя: ${order.externalDriverName || ''}`) 
       : (client?.name || '-'),
     address: order.address,
     date: format(new Date(order.scheduledAt), 'dd.MM.yyyy'),
@@ -107,9 +107,7 @@ export default async function OrdersPage({
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.orders}</h1>
             <p className="text-slate-500 mt-1.5 font-medium flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-              {lang === 'uz'
-                ? `Ko'rsatilmoqda: ${allOrders.length} ta${status === 'active' ? ' faol' : ''} · jami faol: ${activeCount}`
-                : `Показано: ${allOrders.length}${status === 'active' ? ' активных' : ''} · всего активных: ${activeCount}`}
+              {`Показано: ${allOrders.length}${status === 'active' ? ' активных' : ''} · всего активных: ${activeCount}`}
             </p>
           </div>
         </div>
@@ -118,7 +116,7 @@ export default async function OrdersPage({
             data={exportOrdersData} 
             columns={exportColumns} 
             filename="orders_report" 
-            title={lang === 'uz' ? "Buyurtmalar Ro'yxati" : "Список заказов"} 
+            title={"Список заказов"} 
             dict={dict} 
           />
           <OrderForm dict={dict} clients={clients} drivers={drivers} dispatchers={dispatchers} activeOrders={activeOrders} />
@@ -131,10 +129,10 @@ export default async function OrdersPage({
         <div className="overflow-x-auto pb-2 -mb-2 scrollbar-hide">
           <StatusTabs 
             options={[
-              { value: 'active', label: lang === 'uz' ? 'Faol (tugallanmagan)' : 'Активные' },
-              { value: 'pending_confirmation', label: lang === 'uz' ? 'Tasdiqlash kutilmoqda' : 'Ожидает подтверждения' },
-              { value: 'overdue_containers', label: lang === 'uz' ? 'Muddati o\'tgan konteynerlar' : 'Просроченные контейнеры' },
-              { value: 'all', label: lang === 'uz' ? 'Barchasi' : 'Все' },
+              { value: 'active', label: 'Активные' },
+              { value: 'pending_confirmation', label: 'Ожидает подтверждения' },
+              { value: 'overdue_containers', label: 'Просроченные контейнеры' },
+              { value: 'all', label: 'Все' },
               { value: 'new', label: dict.new },
               { value: 'assigned', label: dict.assigned },
               { value: 'in_progress', label: dict.in_progress },
@@ -151,7 +149,7 @@ export default async function OrdersPage({
             <SearchAndFilter
               dict={dict}
               hideFilter={true}
-              placeholder={lang === 'uz' ? "ID, Manzil, Mijoz yoki Haydovchi bo'yicha qidiruv..." : "Поиск по ID, Адресу, Клиенту или Водителю..."}
+              placeholder={"Поиск по ID, Адресу, Клиенту или Водителю..."}
             />
           </div>
           <div className="w-full md:w-auto">

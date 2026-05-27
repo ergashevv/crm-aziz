@@ -19,6 +19,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import {
   Warehouse as LucideWarehouse,
   User as LucideUser,
@@ -84,6 +87,59 @@ const Smartphone = LucideSmartphone as React.ComponentType<{ color?: string; siz
 const Clock = LucideClock as React.ComponentType<{ color?: string; size?: number; style?: object }>;
 const MapPin = LucideMapPin as React.ComponentType<{ color?: string; size?: number; style?: object }>;
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+async function registerForPushNotificationsAsync(locale: Locale) {
+  let token;
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
+  if (Device.isDevice) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      console.warn('Failed to get push token for push notification!');
+      return null;
+    }
+    try {
+      const projectId =
+        Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+      if (!projectId) {
+        console.warn('Project ID not found in app.json');
+      }
+      token = (
+        await Notifications.getExpoPushTokenAsync({
+          projectId,
+        })
+      ).data;
+      console.log('Expo Push Token:', token);
+    } catch (e) {
+      console.error(e);
+    }
+  } else {
+    console.warn('Must use physical device for Push Notifications');
+  }
+
+  return token;
+}
+
 const WORKFLOW_RANK: Record<string, number> = {
   new: 0,
   assigned: 1,
@@ -128,9 +184,9 @@ function formatAddressDisplay(address: string, locale: string): string {
   if (!address) return '';
   const lower = address.toLowerCase();
   if (lower.startsWith('http://') || lower.startsWith('https://')) {
-    if (lower.includes('yandex')) return locale === 'uz' ? 'Yandex xarita havolasi (URL)' : 'Ссылка Яндекс Карты (URL)';
-    if (lower.includes('google')) return locale === 'uz' ? 'Google xarita havolasi (URL)' : 'Ссылка Google Карты (URL)';
-    return locale === 'uz' ? 'Xarita havolasi (URL)' : 'Ссылка на карту (URL)';
+    if (lower.includes('yandex')) return 'Ссылка Яндекс Карты (URL)';
+    if (lower.includes('google')) return 'Ссылка Google Карты (URL)';
+    return 'Ссылка на карту (URL)';
   }
   return address;
 }
@@ -283,7 +339,7 @@ function AppInner() {
 
   const [serverIp, setServerIp] = useState('crm-aziz.vercel.app');
   const [port, setPort] = useState('');
-  const [locale, setLocale] = useState<Locale>('uz');
+  const locale: Locale = 'ru';
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -394,7 +450,7 @@ function AppInner() {
         if (savedSessionVersion !== SESSION_VERSION) {
           await clearSession();
           if (savedDriver !== null) {
-            showAlert(t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpired'), t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpiredMessage'));
+            showAlert(t(locale, 'sessionExpired'), t(locale, 'sessionExpiredMessage'));
           }
           return;
         }
@@ -410,7 +466,7 @@ function AppInner() {
           const valid = await validateDriverSession(parsed.id, apiBase);
           if (valid === false) {
             await clearSession();
-            showAlert(t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpired'), t(savedLocale === 'ru' ? 'ru' : 'uz', 'sessionExpiredMessage'));
+            showAlert(t(locale, 'sessionExpired'), t(locale, 'sessionExpiredMessage'));
             return;
           }
           setDriver(parsed);
@@ -423,12 +479,7 @@ function AppInner() {
     loadPersistedData();
   }, [clearSession, validateDriverSession, showAlert]);
 
-  const toggleLocale = async () => {
-    const next: Locale = locale === 'uz' ? 'ru' : 'uz';
-    setLocale(next);
-    await AsyncStorage.setItem('@locale', next);
-    Vibration.vibrate(20);
-  };
+
 
   useEffect(() => {
     let anim: Animated.CompositeAnimation | null = null;
@@ -461,6 +512,18 @@ function AppInner() {
     },
     [driver, getApiUrl]
   );
+
+  const savePushToken = useCallback(async (driverId: number, token: string, apiUrl: string) => {
+    try {
+      await fetch(`${apiUrl}/driver/push-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId, expoPushToken: token }),
+      });
+    } catch (error) {
+      console.error('Failed to save push token:', error);
+    }
+  }, []);
 
   const isActiveTransit = orders.some(o => o.status === 'in_progress' || o.status === 'picked_up');
 
@@ -540,6 +603,24 @@ function AppInner() {
       }
     };
   }, [isLoggedIn, driver, locale, showAlert, postLocation]);
+
+  useEffect(() => {
+    if (isLoggedIn && driver) {
+      const setupPush = async () => {
+        const token = await registerForPushNotificationsAsync(locale);
+        if (token) {
+          await savePushToken(driver.id, token, getApiUrl());
+        }
+      };
+      setupPush();
+      
+      const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+        // Handle notification tap
+        console.log("Notification tapped:", response);
+      });
+      return () => subscription.remove();
+    }
+  }, [isLoggedIn, driver, locale, getApiUrl, savePushToken]);
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -1132,7 +1213,7 @@ function AppInner() {
         <TouchableOpacity style={styles.heroNavBtn} onPress={() => openNavigation(order)} activeOpacity={0.8}>
           <Navigation size={16} color="#fff" />
           <Text style={styles.heroNavBtnText}>
-            {locale === 'uz' ? 'Navigatsiya' : 'Навигация'}
+            Навигация
           </Text>
         </TouchableOpacity>
         <View style={styles.heroTimeRow}>
@@ -1212,9 +1293,7 @@ function AppInner() {
         <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.loginTopBar}>
-            <TouchableOpacity style={styles.langBtn} onPress={toggleLocale}>
-              <Text style={styles.langBtnText}>{locale === 'uz' ? 'RU' : 'UZ'}</Text>
-            </TouchableOpacity>
+            <View style={styles.langBtnPlaceholder} />
             <TouchableOpacity style={styles.settingsBtn} onPress={() => setShowSettings(!showSettings)}>
               <Settings color="#94a3b8" size={24} />
             </TouchableOpacity>
@@ -1323,9 +1402,7 @@ function AppInner() {
           <Text style={styles.plateText}>{driver!.vehiclePlate}</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerMiniBtn} onPress={toggleLocale}>
-            <Text style={styles.headerMiniBtnText}>{locale === 'uz' ? 'RU' : 'UZ'}</Text>
-          </TouchableOpacity>
+
           <TouchableOpacity style={styles.actionIconBtn} onPress={() => { Vibration.vibrate(30); fetchOrders(true); }}>
             <RefreshCw size={20} color="#4f46e5" />
           </TouchableOpacity>
@@ -1566,7 +1643,7 @@ function AppInner() {
                   <TouchableOpacity style={styles.navBtn} onPress={() => openNavigation(order)} activeOpacity={0.8}>
                     <Navigation size={16} color="#fff" />
                     <Text style={styles.navBtnText}>
-                      {locale === 'uz' ? 'Navigatsiya (xaritada ochish)' : 'Навигация (открыть карту)'}
+                      Навигация (открыть карту)
                     </Text>
                   </TouchableOpacity>
                   {order.containerNumber ? (
@@ -1647,7 +1724,7 @@ function AppInner() {
             <View style={{ padding: 20, alignItems: 'center', backgroundColor: '#f8fafc', width: '100%', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
               <Navigation size={32} color="#4f46e5" style={{ marginBottom: 12 }} />
               <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1e293b' }}>
-                {locale === 'uz' ? 'Xaritani tanlang' : 'Выберите карту'}
+                Выберите карту
               </Text>
             </View>
             <View style={{ width: '100%', padding: 16, gap: 12 }}>
@@ -1660,7 +1737,7 @@ function AppInner() {
                 <Text style={styles.alertBtnText}>Google Maps</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.alertBtn, styles.alertBtnSecondary, { marginTop: 4 }]} onPress={() => setNavModalOrder(null)}>
-                <Text style={styles.alertBtnTextSecondary}>{locale === 'uz' ? 'Bekor qilish' : 'Отмена'}</Text>
+                <Text style={styles.alertBtnTextSecondary}>Отмена</Text>
               </TouchableOpacity>
             </View>
           </View>

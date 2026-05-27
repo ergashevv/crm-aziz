@@ -105,7 +105,7 @@ export default async function ClientsPage({
             data={exportClientsData} 
             columns={exportColumns} 
             filename="clients_report" 
-            title={lang === 'uz' ? "Mijozlar Ro'yxati" : "Список клиентов"} 
+            title={"Список клиентов"} 
             dict={dict} 
           />
           <ClientForm dict={dict} />
@@ -117,7 +117,7 @@ export default async function ClientsPage({
           <SearchAndFilter 
             dict={dict} 
             hideFilter={true} 
-            placeholder={lang === 'uz' ? "Ism, telefon, manzil yoki ID bo'yicha qidiruv..." : "Поиск по имени, телефону, адресу или ID..."} 
+            placeholder={"Поиск по имени, телефону, адресу или ID..."} 
           />
         </div>
         <div className="w-full md:w-auto">

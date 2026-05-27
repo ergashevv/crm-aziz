@@ -17,6 +17,7 @@ import {
   Sliders,
   Phone,
   Recycle,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDictionary } from "@/lib/dictionaries";
@@ -39,13 +40,14 @@ export function Sidebar({
     { label: dict.orders,                        icon: ClipboardList,    href: "/orders",      color: "text-indigo-400" },
     { label: dict.clients,                       icon: Users,            href: "/clients",     color: "text-violet-400" },
     { label: dict.drivers,                       icon: Car,              href: "/drivers",     color: "text-amber-400" },
-    { label: lang === 'uz' ? 'Dispetcherlar' : 'Диспетчеры', icon: Phone, href: "/dispatchers", color: "text-teal-400" },
+    { label: 'Диспетчеры', icon: Phone, href: "/dispatchers", color: "text-teal-400" },
     { label: dict.warehouse,                     icon: Warehouse,        href: "/warehouse",   color: "text-rose-400" },
     { label: dict.safe,                          icon: Wallet,           href: "/safe",        color: "text-green-400" },
+    { label: 'Уведомления', icon: Bell,     href: "/notifications", color: "text-pink-400" },
   ];
 
   if (userRole === 'admin') {
-    routes.push({ label: dict.operators_menu || (lang === 'uz' ? 'Operatorlar' : 'Операторы'), icon: UserCog, href: "/operators", color: "text-teal-400" });
+    routes.push({ label: dict.operators_menu || ('Операторы'), icon: UserCog, href: "/operators", color: "text-teal-400" });
   }
 
   return (
@@ -62,7 +64,7 @@ export function Sidebar({
           {!isCollapsed && (
             <div>
               <h1 className="text-[17px] font-black tracking-tight text-white leading-none">Adminka</h1>
-              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{lang === 'uz' ? 'CRM tizimi' : 'CRM система'}</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{'CRM система'}</p>
             </div>
           )}
         </Link>

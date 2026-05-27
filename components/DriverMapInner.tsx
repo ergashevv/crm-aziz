@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Phone, Car, MapPin, RefreshCw, Radio, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { ru, uz } from 'date-fns/locale';
+import { ru } from 'date-fns/locale';
 
 interface Driver {
   id: number;
@@ -278,7 +278,7 @@ export default function DriverMapInner({ lang, dict }: { lang: string; dict: any
       const d = new Date(dateStr);
       return formatDistanceToNow(d, { 
         addSuffix: true, 
-        locale: lang === 'uz' ? uz : ru 
+        locale: ru 
       });
     } catch (e) {
       return '';
@@ -315,7 +315,7 @@ export default function DriverMapInner({ lang, dict }: { lang: string; dict: any
                 className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-all shadow-sm active:scale-95 duration-100"
               >
                 <Radio className="h-3.5 w-3.5" />
-                {lang === 'uz' ? 'GPS Simulyatsiya qilish' : 'Симулировать GPS'}
+                {'Симулировать GPS'}
               </button>
             </div>
           )}
@@ -355,8 +355,8 @@ export default function DriverMapInner({ lang, dict }: { lang: string; dict: any
 
                     <Badge variant={driver.isTracking ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0.5 leading-none">
                       {driver.isTracking 
-                        ? (lang === 'uz' ? 'Yo\'lda' : 'В пути') 
-                        : (lang === 'uz' ? 'Kutmoqda' : 'В базе')
+                        ? ('В пути') 
+                        : ('В базе')
                       }
                     </Badge>
                   </div>

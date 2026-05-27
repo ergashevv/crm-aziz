@@ -263,7 +263,7 @@ export default async function DashboardPage({
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{dict.dashboard}</h1>
-            <p className="text-slate-500 mt-1 font-medium">{lang === 'uz' ? "Asosiy ko'rsatkichlar monitoringi" : "Мониторинг основных показателей"}</p>
+            <p className="text-slate-500 mt-1 font-medium">{"Мониторинг основных показателей"}</p>
           </div>
         </div>
         <DashboardDatePicker />
@@ -271,7 +271,7 @@ export default async function DashboardPage({
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard 
-          title={lang === 'uz' ? 'Aylanma' : 'Оборот'} 
+          title={'Оборот'} 
           value={currentMetrics.revenue} 
           prevValue={prevMetrics.revenue}
           unit="RUB" 
@@ -290,7 +290,7 @@ export default async function DashboardPage({
           icon={<DollarSign className="w-12 h-12" />}
           href={`/dashboard/expenses?from=${resolvedFromParam}&to=${resolvedToParam}`}
           percentageOfTotal={currentMetrics.revenue > 0 ? Math.round((currentMetrics.expenses / currentMetrics.revenue) * 100) : undefined}
-          percentageLabel={lang === 'uz' ? 'aylanmadan' : 'от оборота'}
+          percentageLabel={'от оборота'}
         />
         <MetricCard 
           title={dict.net_profit || 'Чистая прибыль'} 
@@ -302,7 +302,7 @@ export default async function DashboardPage({
           icon={<HandCoins className="w-12 h-12" />}
           href={`/finance?tab=income&startDate=${resolvedFromParam}&endDate=${resolvedToParam}`}
           percentageOfTotal={currentMetrics.revenue > 0 ? Math.round((currentMetrics.profit / currentMetrics.revenue) * 100) : undefined}
-          percentageLabel={lang === 'uz' ? 'aylanmadan' : 'от оборота'}
+          percentageLabel={'от оборота'}
         />
         <MetricCard 
           title={dict.safe || 'Сейф'} 
@@ -331,20 +331,18 @@ export default async function DashboardPage({
         <Card className="border border-slate-200/60 shadow-sm rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 px-6 py-5">
             <CardTitle className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              📊 {lang === 'uz' ? 'Tushum taqsimoti tahlili' : 'Анализ распределения выручки'}
+              📊 {'Анализ распределения выручки'}
             </CardTitle>
             <p className="text-slate-400 text-xs mt-0.5">
-              {lang === 'uz' 
-                ? `Jami tushgan pulni qaysi sohalarga va necha foizi sarflanganligi (Jami tushum: ${currentMetrics.revenue.toLocaleString()} RUB)`
-                : `Какая часть выручки пошла на прибыль, а какая — на расходы (Всего получено: ${currentMetrics.revenue.toLocaleString()} RUB)`}
+              {`Какая часть выручки пошла на прибыль, а какая — на расходы (Всего получено: ${currentMetrics.revenue.toLocaleString()} RUB)`}
             </p>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             {/* Split Progress Bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
-                <span>{lang === 'uz' ? 'Sof foyda' : 'Чистая прибыль'}: {Math.max(0, Math.round((currentMetrics.profit / currentMetrics.revenue) * 100))}%</span>
-                <span>{lang === 'uz' ? 'Xarajatlar' : 'Расходы'}: {Math.round((currentMetrics.expenses / currentMetrics.revenue) * 100)}%</span>
+                <span>{'Чистая прибыль'}: {Math.max(0, Math.round((currentMetrics.profit / currentMetrics.revenue) * 100))}%</span>
+                <span>{'Расходы'}: {Math.round((currentMetrics.expenses / currentMetrics.revenue) * 100)}%</span>
               </div>
               <div className="h-4.5 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
                 <div 
@@ -361,7 +359,7 @@ export default async function DashboardPage({
             {/* Expenses Category Breakdowns as % of Revenue */}
             <div className="space-y-4">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                {lang === 'uz' ? 'Xarajat toifalari kesimida (Tushumga nisbatan %)' : 'Расходы по категориям (% от выручки)'}
+                {'Расходы по категориям (% от выручки)'}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
@@ -404,14 +402,14 @@ export default async function DashboardPage({
           <CardTitle>{dict.recent_orders}</CardTitle>
           <div className="flex gap-4">
             <Link href="/orders?status=active" className="text-sm font-medium text-blue-600 hover:underline">
-              {lang === 'uz' ? 'Faollar' : 'Активные'} ({activeOrders})
+              {'Активные'} ({activeOrders})
             </Link>
             <Link href="/orders?status=pending_confirmation" className="text-sm font-medium text-amber-600 hover:underline">
-              {lang === 'uz' ? 'Tasdiqlash kutilmoqda' : 'Ждут подтверждения'} ({pendingConfirmation})
+              {'Ждут подтверждения'} ({pendingConfirmation})
             </Link>
             {overdueContainers > 0 && (
               <Link href="/orders?status=overdue_containers" className="text-sm font-medium text-rose-600 hover:underline">
-                {lang === 'uz' ? "Muddati o'tganlar" : 'Просрочены'} ({overdueContainers})
+                {'Просрочены'} ({overdueContainers})
               </Link>
             )}
           </div>

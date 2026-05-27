@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Send, BellRing, Users, User, AlertCircle, CheckCircle2 } from "lucide-react";
 import { sendCustomPushNotification } from "@/app/actions/notifications";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 export function NotificationForm({ drivers, lang }: { drivers: any[]; lang: string }) {
   const [target, setTarget] = useState<"all" | "specific">("all");
@@ -106,18 +107,16 @@ export function NotificationForm({ drivers, lang }: { drivers: any[]; lang: stri
           {target === "specific" && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
               <label className="text-sm font-semibold text-slate-700">{t.selectDriver}</label>
-              <select
-                value={driverId}
-                onChange={(e) => setDriverId(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all outline-none"
-              >
-                <option value="">-- {t.selectDriver} --</option>
-                {drivers.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} {d.vehiclePlate ? `(${d.vehiclePlate})` : ''}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect
+                options={drivers.map(d => ({
+                  value: String(d.id),
+                  label: d.name,
+                  sub: d.vehiclePlate || undefined
+                }))}
+                value={String(driverId)}
+                onChange={(val) => setDriverId(val ? Number(val) : "")}
+                placeholder={`-- ${t.selectDriver} --`}
+              />
             </div>
           )}
 

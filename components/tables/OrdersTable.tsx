@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, SortableTableHead, TableHeader, TableRow }
 import { TableRowLink } from '@/components/TableRowLink';
 import { OrderForm } from '@/components/forms/OrderForm';
 import { ConfirmPaymentButton } from '@/components/ConfirmPaymentButton';
+import { CompleteOrderButton } from '@/components/CompleteOrderButton';
 import { Phone } from 'lucide-react';
 import { useSortableTable } from '@/hooks/use-sortable-table';
 
@@ -15,7 +16,7 @@ const getStatusClasses = (status: string) => {
     case 'assigned': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
     case 'in_progress': return 'bg-amber-50 text-amber-700 border-amber-200';
     case 'container_placed': return 'bg-orange-50 text-orange-700 border-orange-200';
-    case 'picked_up': return 'bg-teal-50 text-teal-700 border-teal-200';
+    case 'picked_up': return 'bg-purple-50 text-purple-700 border-purple-200';
     case 'completed': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     default: return 'bg-slate-50 text-slate-700 border-slate-200';
   }
@@ -145,9 +146,14 @@ export function OrdersTable({
               )}
             </TableCell>
             <TableCell className="py-4">
-              <span className={`inline-flex items-center text-[11px] font-black uppercase tracking-wider border rounded-full px-2.5 py-1 ${getStatusClasses(order.status)}`}>
-                {dict[order.status] || order.status.replace('_', ' ')}
-              </span>
+              <div className="flex flex-col gap-2 items-start">
+                <span className={`inline-flex items-center text-[11px] font-black uppercase tracking-wider border rounded-full px-2.5 py-1 ${getStatusClasses(order.status)}`}>
+                  {dict[order.status] || order.status.replace('_', ' ')}
+                </span>
+                {order.status === 'picked_up' && (
+                  <CompleteOrderButton orderId={order.id} />
+                )}
+              </div>
             </TableCell>
             <TableCell className="py-4">
               <div className="flex flex-col gap-2">

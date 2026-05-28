@@ -12,6 +12,7 @@ import { ArrowLeft, MapPin, User, Truck, CreditCard, ExternalLink, Phone, Packag
 import { notFound } from 'next/navigation';
 import { OrderStatusUpdater } from '@/components/OrderStatusUpdater';
 import { PaymentStatusUpdater } from '@/components/PaymentStatusUpdater';
+import { OrderPhotoViewer } from '@/components/OrderPhotoViewer';
 
 
 
@@ -208,6 +209,13 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-1">{dict.operator_note}</p>
               <p className="font-semibold text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-100">{order.operatorNote || dict.no_notes}</p>
             </div>
+            
+            {order.photoUrl && (
+              <div className="pt-4 border-t border-slate-100">
+                <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Фото с места</p>
+                <OrderPhotoViewer photoUrl={order.photoUrl} />
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { drivers } from "@/lib/schema";
 import { NotificationForm } from "./NotificationForm";
-import { isNotNull, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +14,6 @@ export default async function NotificationsPage() {
       vehiclePlate: drivers.vehiclePlate,
     })
     .from(drivers)
-    .where(isNotNull(drivers.expoPushToken))
     .orderBy(desc(drivers.id));
 
   const lang = 'ru'; // Or get it from cookies/settings if dynamic

@@ -11,7 +11,20 @@ export async function updateOrderStatus(orderId: number, status: any) {
   if (!order) return;
 
   const previousStatus = order.status;
-  await db.update(orders).set({ status }).where(eq(orders.id, orderId));
+  
+  const updateData: any = { status };
+  
+  if (status === 'completed' && previousStatus !== 'completed') {
+    updateData.paymentStatus = 'entered';
+    updateData.isClosed = true;
+    
+    const user = await getCurrentUser();
+    if (user) {
+      updateData.operatorId = user.id;
+    }
+  }
+
+  await db.update(orders).set(updateData).where(eq(orders.id, orderId));
 
   if (status === 'completed' && previousStatus !== 'completed') {
     const user = await getCurrentUser();

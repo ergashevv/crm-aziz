@@ -30,10 +30,10 @@ export function ConfirmPaymentButton({ orderId, currentStatus }: { orderId: numb
       onClick={handleConfirm} 
       disabled={loading}
       className="h-6 px-2.5 gap-1 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-200 hover:border-emerald-500 shadow-sm transition-all duration-200 group"
-      title="Подтвердить оплату"
+      title="Внести в кассу"
     >
       <CheckCircle2 className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
-      <span className="text-[10px] font-bold uppercase tracking-wider">{loading ? '...' : 'Подтвердить'}</span>
+      <span className="text-[10px] font-bold uppercase tracking-wider">{loading ? '...' : 'Внести в кассу'}</span>
     </Button>
   );
 }

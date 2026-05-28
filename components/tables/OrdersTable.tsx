@@ -7,6 +7,7 @@ import { TableRowLink } from '@/components/TableRowLink';
 import { OrderForm } from '@/components/forms/OrderForm';
 import { ConfirmPaymentButton } from '@/components/ConfirmPaymentButton';
 import { CompleteOrderButton } from '@/components/CompleteOrderButton';
+import { OrderPhotoViewer } from '@/components/OrderPhotoViewer';
 import { Phone } from 'lucide-react';
 import { useSortableTable } from '@/hooks/use-sortable-table';
 
@@ -152,6 +153,9 @@ export function OrdersTable({
                 </span>
                 {order.status === 'picked_up' && (
                   <CompleteOrderButton orderId={order.id} />
+                )}
+                {order.photoUrl && (
+                  <OrderPhotoViewer photoUrl={order.photoUrl} />
                 )}
               </div>
             </TableCell>

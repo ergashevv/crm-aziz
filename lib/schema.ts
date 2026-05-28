@@ -79,8 +79,10 @@ export const orders = pgTable('orders', {
   operatorId: integer('operator_id').references(() => users.id),
   isExternalVehicle: boolean('is_external_vehicle').default(false).notNull(),
   externalDriverName: text('external_driver_name'),
+  photoUrl: text('photo_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  lastNotifiedAt: timestamp('last_notified_at'),
 });
 
 export const fuelLogs = pgTable('fuel_logs', {

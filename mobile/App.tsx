@@ -15,7 +15,10 @@ import {
   Animated,
   Linking,
   Pressable,
+  Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -92,6 +95,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -237,10 +242,17 @@ type Order = {
   operatorNote?: string;
 };
 
+function toMoscowDate(d: Date | string | number): Date {
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return new Date();
+  const moscowMs = date.getTime() + (3 * 60 * 60 * 1000);
+  return new Date(moscowMs);
+}
+
 function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
+  const moscow = toMoscowDate(d);
+  moscow.setUTCHours(0, 0, 0, 0);
+  return new Date(moscow.getTime() - (3 * 60 * 60 * 1000));
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -358,6 +370,7 @@ function AppInner() {
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
   /** Stays on current job until completed — accepting another order does not switch hero card */
   const [pinnedFocusId, setPinnedFocusId] = useState<number | null>(null);
+  const [expandedHistoryDates, setExpandedHistoryDates] = useState<Set<string>>(new Set());
 
   const knownOrderIds = useRef<Set<number>>(new Set());
   const initialFetchDone = useRef(false);
@@ -394,11 +407,13 @@ function AppInner() {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      const hours = String(d.getHours()).padStart(2, '0');
-      const minutes = String(d.getMinutes()).padStart(2, '0');
+      
+      const mDate = toMoscowDate(d);
+      const day = String(mDate.getUTCDate()).padStart(2, '0');
+      const month = String(mDate.getUTCMonth() + 1).padStart(2, '0');
+      const year = mDate.getUTCFullYear();
+      const hours = String(mDate.getUTCHours()).padStart(2, '0');
+      const minutes = String(mDate.getUTCMinutes()).padStart(2, '0');
       return `${day}.${month}.${year} ${hours}:${minutes}`;
     } catch {
       return dateStr;
@@ -406,8 +421,9 @@ function AppInner() {
   }, []);
 
   const formatDateShort = useCallback((d: Date) => {
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const mDate = toMoscowDate(d);
+    const day = String(mDate.getUTCDate()).padStart(2, '0');
+    const month = String(mDate.getUTCMonth() + 1).padStart(2, '0');
     return `${day}.${month}`;
   }, []);
 
@@ -440,12 +456,10 @@ function AppInner() {
         const savedIp = await AsyncStorage.getItem('@server_ip');
         const savedPort = await AsyncStorage.getItem('@server_port');
         const savedDriver = await AsyncStorage.getItem('@driver_data');
-        const savedLocale = await AsyncStorage.getItem('@locale');
         const savedSessionVersion = await AsyncStorage.getItem('@session_version');
 
         if (savedIp !== null) setServerIp(savedIp);
         if (savedPort !== null) setPort(savedPort);
-        if (savedLocale === 'ru' || savedLocale === 'uz') setLocale(savedLocale);
 
         if (savedSessionVersion !== SESSION_VERSION) {
           await clearSession();
@@ -557,7 +571,6 @@ function AppInner() {
               locationSubscription.current = null;
             }
             setIsTrackingGps(true);
-            Vibration.vibrate([0, 150, 100, 150]);
             return;
           }
         } catch (e) {
@@ -570,7 +583,6 @@ function AppInner() {
             const started = await startBackgroundLocationTracking();
             if (started && active) {
               setIsTrackingGps(true);
-              Vibration.vibrate([0, 150, 100, 150]);
               return;
             }
           } catch (e) {}
@@ -581,7 +593,6 @@ function AppInner() {
 
       if (!locationSubscription.current && active) {
         setIsTrackingGps(true);
-        Vibration.vibrate([0, 150, 100, 150]);
         try {
           locationSubscription.current = await Location.watchPositionAsync(
             { accuracy: Location.Accuracy.Balanced, timeInterval: 10000 },
@@ -645,7 +656,7 @@ function AppInner() {
       initialFetchDone.current = false;
       await AsyncStorage.setItem('@driver_data', JSON.stringify(data));
       await AsyncStorage.setItem('@session_version', SESSION_VERSION);
-      Vibration.vibrate([0, 80, 40, 80]);
+      
 
       const perms = await requestFullLocationAccess();
       if (!perms.foreground) {
@@ -741,7 +752,7 @@ function AppInner() {
       if (selectedOrder?.id === orderId) {
         setSelectedOrder(prev => (prev ? { ...prev, status: newStatus } : null));
       }
-      Vibration.vibrate(100);
+      
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t(locale, 'statusUpdateError');
       showAlert(t(locale, 'loginError'), msg);
@@ -757,16 +768,71 @@ function AppInner() {
       showAlert(t(locale, 'lockedAction'), t(locale, 'finishCurrentFirst'));
       return;
     }
+
+    Alert.alert(
+      "Фото-отчет",
+      "Пожалуйста, прикрепите фото (например, чек или установленный контейнер) для завершения заказа.",
+      [
+        {
+          text: "Сделать фото",
+          onPress: () => promptPhotoCapture(orderId, payType)
+        },
+        {
+          text: "Пропустить",
+          style: "cancel",
+          onPress: () => completeOrderWithPhoto(orderId, payType, null)
+        }
+      ]
+    );
+  };
+
+  const promptPhotoCapture = async (orderId: number, payType: string) => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      showAlert("Ошибка", "Нет доступа к камере");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      try {
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 1024 } }],
+          { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        if (manipResult.base64) {
+          const base64Img = `data:image/jpeg;base64,${manipResult.base64}`;
+          completeOrderWithPhoto(orderId, payType, base64Img);
+        } else {
+          completeOrderWithPhoto(orderId, payType, null);
+        }
+      } catch (err) {
+        console.error('Image compression failed:', err);
+        completeOrderWithPhoto(orderId, payType, null);
+      }
+    }
+  };
+
+  const completeOrderWithPhoto = async (orderId: number, payType: string, photoBase64: string | null) => {
     setUpdatingOrderId(orderId);
     try {
+      const payload: any = {
+        status: 'completed',
+        paymentType: payType,
+        paymentStatus: 'received',
+      };
+      if (photoBase64) {
+        payload.photoUrl = photoBase64;
+      }
+      
       const response = await fetch(`${getApiUrl()}/driver/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'completed',
-          paymentType: payType,
-          paymentStatus: 'received',
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error(t(locale, 'completeError'));
@@ -781,7 +847,7 @@ function AppInner() {
 
       setSelectedOrder(null);
       if (pinnedFocusId === orderId) setPinnedFocusId(null);
-      Vibration.vibrate([0, 200, 100, 200]);
+      
       showAlert(t(locale, 'orderCompletedTitle'), t(locale, 'orderCompletedMessage'));
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t(locale, 'completeError');
@@ -889,7 +955,7 @@ function AppInner() {
   }, [scrollCalendarToDay]);
 
   const goToCalendarToday = useCallback(() => {
-    Vibration.vibrate(20);
+    
     const today = startOfDay(new Date());
     setSelectedCalendarDate(today);
     scrollCalendarToToday();
@@ -902,7 +968,7 @@ function AppInner() {
       const min = calendarDays[0];
       const max = calendarDays[calendarDays.length - 1];
       const clamped = startOfDay(next < min ? min : next > max ? max : next);
-      Vibration.vibrate(20);
+      
       setSelectedCalendarDate(clamped);
       scrollCalendarToDay(clamped);
     },
@@ -965,15 +1031,39 @@ function AppInner() {
 
   const otherActiveOrders = useMemo(
     () => sortQueueOrders(orders, focusOrder?.id ?? null),
-    [orders, focusOrder?.id]
+    [orders, focusOrder]
   );
+
   const historyOrders = useMemo(
-    () => orders.filter(o => o.status === 'completed').sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()),
+    () => orders.filter(o => o.status === 'completed'),
     [orders]
   );
 
+  const todayEarned = useMemo(() => {
+    return historyOrders
+      .filter(o => isSameDay(toMoscowDate(new Date(o.scheduledAt)), startOfDay(new Date())))
+      .reduce((sum, o) => sum + (Number(o.paymentAmount) || 0), 0);
+  }, [historyOrders]);
+
+  const groupedHistory = useMemo(() => {
+    const groups: { dateStr: string; dateObj: Date; orders: Order[]; totalAmount: number }[] = [];
+    const sorted = [...historyOrders].sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+    sorted.forEach(o => {
+      const d = toMoscowDate(new Date(o.scheduledAt));
+      const dateStr = formatCalendarDayTitle(locale, d);
+      let g = groups.find(x => x.dateStr === dateStr);
+      if (!g) {
+        g = { dateStr, dateObj: startOfDay(new Date(o.scheduledAt)), orders: [], totalAmount: 0 };
+        groups.push(g);
+      }
+      g.orders.push(o);
+      g.totalAmount += Number(o.paymentAmount) || 0;
+    });
+    return groups;
+  }, [historyOrders, locale]);
+
   const openOrder = (order: Order) => {
-    Vibration.vibrate(40);
+    
     setShowOrderDetails(false);
     setSelectedOrder(order);
   };
@@ -999,7 +1089,7 @@ function AppInner() {
     if (pinnedFocusId == null) {
       setPinnedFocusId(order.id);
     }
-    Vibration.vibrate([0, 80]);
+    
     handleUpdateStatus(order.id, next);
   };
 
@@ -1024,11 +1114,7 @@ function AppInner() {
     );
   };
 
-  const PAYMENT_OPTIONS = [
-    { key: 'btnPayCash' as const, type: 'cash' as const, color: '#059669', Icon: Banknote },
-    { key: 'btnPayCard' as const, type: 'card' as const, color: '#2563eb', Icon: CreditCard },
-    { key: 'btnPayOnline' as const, type: 'online' as const, color: '#7c3aed', Icon: Smartphone },
-  ];
+  // Payment options are defined by the operator. Driver just confirms.
 
   const renderPrimaryButton = (order: Order, large = false) => {
     const btnKey = getPrimaryButtonKey(order.status);
@@ -1072,20 +1158,15 @@ function AppInner() {
       return (
         <View style={large ? styles.heroPayBlock : styles.compactPayRow}>
           <Text style={styles.payHint}>{t(locale, 'waitingPayment')}</Text>
-          <View style={styles.paymentRow}>
-            {PAYMENT_OPTIONS.map(({ key, type, color, Icon }) => (
-              <TouchableOpacity
-                key={key}
-                style={[styles.payChip, { backgroundColor: color }, isUpdating && styles.btnDisabled]}
-                disabled={isUpdating}
-                onPress={() => handleCompleteOrder(order.id, type)}
-                activeOpacity={0.85}
-              >
-                <Icon size={22} color="#fff" />
-                <Text style={styles.payChipText}>{t(locale, key)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={[large ? styles.heroBtn : styles.quickActionBtn, { backgroundColor: '#059669', flexDirection: 'row', gap: 8, justifyContent: 'center' }, isUpdating && styles.btnDisabled]}
+            disabled={isUpdating}
+            onPress={() => handleCompleteOrder(order.id, order.paymentType)}
+            activeOpacity={0.85}
+          >
+            <Banknote size={20} color="#fff" />
+            <Text style={large ? styles.heroBtnText : styles.quickActionText}>Получил наличные</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -1164,7 +1245,9 @@ function AppInner() {
               <Text style={styles.orderMeta}>{order.clientName}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f1f5f9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
                 <PaymentTypeIcon type={order.paymentType} size={14} color="#475569" />
-                <Text style={{ fontSize: 12, color: '#475569', fontWeight: '500' }}>{getPaymentLabel(locale, order.paymentType)}</Text>
+                <Text style={{ fontSize: 12, color: '#475569', fontWeight: '500' }}>
+                  {getPaymentLabel(locale, order.paymentType)}: {(order.paymentAmount || 0).toLocaleString()} {t(locale, 'currency')}
+                </Text>
               </View>
             </View>
           </View>
@@ -1293,7 +1376,6 @@ function AppInner() {
         <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.loginTopBar}>
-            <View style={styles.langBtnPlaceholder} />
             <TouchableOpacity style={styles.settingsBtn} onPress={() => setShowSettings(!showSettings)}>
               <Settings color="#94a3b8" size={24} />
             </TouchableOpacity>
@@ -1385,10 +1467,13 @@ function AppInner() {
     );
   }
 
+  const todayActiveCount = activeOrders.filter(o => isSameDay(new Date(o.scheduledAt), new Date())).length;
+  const futureActiveCount = activeOrders.filter(o => !isSameDay(new Date(o.scheduledAt), new Date())).length;
+
   const bottomTabs = [
-    { id: 'home' as const, label: t(locale, 'tabToday'), Icon: Home, count: activeOrders.length },
-    { id: 'calendar' as const, label: t(locale, 'calendar'), Icon: Calendar, count: 0 },
-    { id: 'history' as const, label: t(locale, 'history'), Icon: CheckCircle, count: historyOrders.length },
+    { id: 'home' as const, label: t(locale, 'tabToday'), Icon: Home, count: todayActiveCount },
+    { id: 'calendar' as const, label: t(locale, 'calendar'), Icon: Calendar, count: futureActiveCount },
+    { id: 'history' as const, label: t(locale, 'history'), Icon: CheckCircle, count: 0 },
   ];
 
 
@@ -1403,13 +1488,13 @@ function AppInner() {
         </View>
         <View style={styles.headerActions}>
 
-          <TouchableOpacity style={styles.actionIconBtn} onPress={() => { Vibration.vibrate(30); fetchOrders(true); }}>
+          <TouchableOpacity style={styles.actionIconBtn} onPress={() => {  fetchOrders(true); }}>
             <RefreshCw size={20} color="#4f46e5" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerMiniBtn}
             onPress={async () => {
-              Vibration.vibrate([0, 100]);
+              
               await clearSession();
             }}
           >
@@ -1439,13 +1524,18 @@ function AppInner() {
 
       <ScrollView
         style={styles.mainScroll}
-        contentContainerStyle={styles.ordersListContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchOrders(false)} />}
       >
         {loading ? (
           <ActivityIndicator size="large" color="#4f46e5" style={{ marginTop: 48 }} />
         ) : activeTab === 'home' ? (
-          <>
+          <View style={{ flex: 1 }}>
+            <View style={{ backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 14, color: '#64748b', fontWeight: '600' }}>Заработано сегодня:</Text>
+              <Text style={{ fontSize: 18, color: '#10b981', fontWeight: '800' }}>{todayEarned.toLocaleString()} {t(locale, 'currency')}</Text>
+            </View>
+            <View style={{ paddingHorizontal: 20 }}>
             {focusOrder ? (
               renderHeroCard(focusOrder)
             ) : (
@@ -1461,7 +1551,8 @@ function AppInner() {
                 {otherActiveOrders.map((o, i) => renderCompactCard(o, i + 2))}
               </>
             )}
-          </>
+            </View>
+          </View>
         ) : activeTab === 'calendar' ? (
           <View style={styles.calendarPanel}>
             <View style={styles.calendarToolbar}>
@@ -1492,7 +1583,7 @@ function AppInner() {
                 const count = dayOrders.length;
                 const hasActive = dayOrders.some(o => o.status !== 'completed' && o.status !== 'new');
                 const hasNew = dayOrders.some(o => o.status === 'new');
-                const dayNum = day.getDate();
+                const dayNum = toMoscowDate(day).getUTCDate();
                 return (
                   <TouchableOpacity
                     key={day.toISOString()}
@@ -1503,7 +1594,7 @@ function AppInner() {
                       selected && styles.calendarDaySelected,
                     ]}
                     onPress={() => {
-                      Vibration.vibrate(20);
+                      
                       const d = startOfDay(day);
                       setSelectedCalendarDate(d);
                       scrollCalendarToDay(d);
@@ -1532,45 +1623,22 @@ function AppInner() {
               })}
             </ScrollView>
 
-            <View style={styles.selectedDayCard}>
-              <View style={styles.selectedDayHeader}>
-                <Calendar size={20} color="#4f46e5" />
-                <View style={styles.selectedDayHeaderText}>
-                  <Text style={styles.selectedDayTitle}>{formatCalendarDayTitle(locale, selectedCalendarDate)}</Text>
-                  <Text style={styles.selectedDaySub}>{t(locale, 'calendarSchedule')}</Text>
+            <View style={{ paddingHorizontal: 20, marginTop: 24, paddingBottom: 20 }}>
+              <Text style={styles.sectionHeading}>
+                {formatCalendarDayTitle(locale, selectedCalendarDate)}
+              </Text>
+              {ordersForCalendarDay.length === 0 ? (
+                <View style={styles.calendarEmpty}>
+                  <Clock size={40} color="#cbd5e1" />
+                  <Text style={styles.emptyTitle}>{t(locale, 'noOrdersOnDate')}</Text>
+                  <Text style={styles.emptySub}>{formatCalendarDayTitle(locale, selectedCalendarDate)}</Text>
                 </View>
-              </View>
-              {calendarDayStats.total > 0 && (
-                <View style={styles.selectedDayStats}>
-                  <View style={styles.statChip}>
-                    <Text style={styles.statChipLabel}>{t(locale, 'calendarActiveCount')}</Text>
-                    <Text style={styles.statChipValue}>{calendarDayStats.active}</Text>
-                  </View>
-                  <View style={[styles.statChip, styles.statChipDone]}>
-                    <Text style={styles.statChipLabel}>{t(locale, 'calendarDoneCount')}</Text>
-                    <Text style={styles.statChipValue}>{calendarDayStats.done}</Text>
-                  </View>
-                  <View style={styles.statChip}>
-                    <Text style={styles.statChipLabel}>{t(locale, 'calendarDayOrders')}</Text>
-                    <Text style={styles.statChipValue}>{calendarDayStats.total}</Text>
-                  </View>
+              ) : (
+                <View>
+                  {ordersForCalendarDay.map(o => renderCompactCard(o))}
                 </View>
               )}
             </View>
-
-            {ordersForCalendarDay.length === 0 ? (
-              <View style={styles.calendarEmpty}>
-                <Clock size={40} color="#cbd5e1" />
-                <Text style={styles.emptyTitle}>{t(locale, 'noOrdersOnDate')}</Text>
-                <Text style={styles.emptySub}>{formatCalendarDayTitle(locale, selectedCalendarDate)}</Text>
-              </View>
-            ) : (
-              <View style={styles.timelineList}>
-                {ordersForCalendarDay.map((o, i) =>
-                  renderCalendarTimelineOrder(o, i === ordersForCalendarDay.length - 1)
-                )}
-              </View>
-            )}
           </View>
         ) : historyOrders.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -1578,7 +1646,43 @@ function AppInner() {
             <Text style={styles.emptyTitle}>{t(locale, 'noOrders')}</Text>
           </View>
         ) : (
-          historyOrders.map(o => renderCompactCard(o))
+          <View style={{ paddingBottom: 20, paddingTop: 12 }}>
+            {groupedHistory.map(group => {
+              const isExpanded = expandedHistoryDates.has(group.dateStr);
+              return (
+                <View key={group.dateStr} style={{ marginBottom: 12, marginHorizontal: 20 }}>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: 16, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setExpandedHistoryDates(prev => {
+                        const next = new Set(prev);
+                        if (next.has(group.dateStr)) next.delete(group.dateStr);
+                        else next.add(group.dateStr);
+                        return next;
+                      });
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <Calendar size={20} color="#4f46e5" />
+                      <View>
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: '#1e293b', textTransform: 'capitalize' }}>{group.dateStr}</Text>
+                        <Text style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{group.orders.length} заказов</Text>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#10b981' }}>{group.totalAmount.toLocaleString()} {t(locale, 'currency')}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  {isExpanded && (
+                    <View style={{ marginTop: 12 }}>
+                      {group.orders.map(o => renderCompactCard(o))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
 
@@ -1589,7 +1693,7 @@ function AppInner() {
             key={id}
             style={styles.bottomNavItem}
             onPress={() => {
-              Vibration.vibrate(20);
+              
               if (id === 'calendar') {
                 goToCalendarToday();
               }
@@ -1598,7 +1702,7 @@ function AppInner() {
           >
             <Icon size={22} color={activeTab === id ? '#4f46e5' : '#94a3b8'} />
             <Text style={[styles.bottomNavLabel, activeTab === id && styles.bottomNavLabelActive]}>{label}</Text>
-            {count > 0 && id !== 'calendar' ? (
+            {count > 0 ? (
               <View style={styles.bottomNavBadge}>
                 <Text style={styles.bottomNavBadgeText}>{count > 9 ? '9+' : count}</Text>
               </View>
@@ -1616,7 +1720,7 @@ function AppInner() {
             <Pressable style={styles.modalOverlay} onPress={() => setSelectedOrder(null)}>
               <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
                 <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={() => { Vibration.vibrate(20); setSelectedOrder(null); }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <TouchableOpacity onPress={() => {  setSelectedOrder(null); }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                     <X size={26} color="#1e293b" />
                   </TouchableOpacity>
                   <Text style={styles.modalOrderId}>#{order.id}</Text>
@@ -1691,7 +1795,7 @@ function AppInner() {
                     <TouchableOpacity
                       style={styles.altActionLink}
                       disabled={isUpdating}
-                      onPress={() => { Vibration.vibrate(40); handleUpdateStatus(order.id, 'picked_up'); }}
+                      onPress={() => {  handleUpdateStatus(order.id, 'picked_up'); }}
                     >
                       <Text style={styles.altActionLinkText}>{t(locale, 'pickUpNow')}</Text>
                     </TouchableOpacity>
@@ -1720,7 +1824,7 @@ function AppInner() {
 
       <Modal animationType="fade" transparent visible={!!navModalOrder} onRequestClose={() => setNavModalOrder(null)}>
         <Pressable style={styles.alertOverlay} onPress={() => setNavModalOrder(null)}>
-          <View style={[styles.alertBox, { padding: 0, overflow: 'hidden' }]}>
+          <View style={[styles.alertBox, { padding: 0, overflow: 'hidden' }]} onStartShouldSetResponder={() => true}>
             <View style={{ padding: 20, alignItems: 'center', backgroundColor: '#f8fafc', width: '100%', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
               <Navigation size={32} color="#4f46e5" style={{ marginBottom: 12 }} />
               <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1e293b' }}>

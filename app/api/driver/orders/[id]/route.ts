@@ -15,7 +15,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { status, paymentType, paymentStatus } = body;
+    const { status, paymentType, paymentStatus, photoUrl } = body;
 
     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
     if (!order) {
@@ -27,6 +27,7 @@ export async function PUT(
     const updateData: any = {};
     if (status) updateData.status = status;
     if (paymentType) updateData.paymentType = paymentType;
+    if (photoUrl) updateData.photoUrl = photoUrl;
     if (paymentStatus) {
       if (paymentStatus === 'entered') {
         return NextResponse.json({ error: 'Drivers cannot confirm payment receipt' }, { status: 400 });
@@ -89,7 +90,28 @@ export async function PUT(
           });
         }
       }
+
+      // Insert inbound warehouse transaction if internal vehicle
+      if (!order.isExternalVehicle) {
+        const warehouseTransactions = (await import('@/lib/schema')).warehouseTransactions;
+        const [existingTx] = await db.select().from(warehouseTransactions).where(
+          eq(warehouseTransactions.orderId, orderId)
+        );
+        if (!existingTx) {
+          await db.insert(warehouseTransactions).values({
+            type: 'inbound',
+            volumeM3: order.containerSizeM3,
+            containerSizeM3: order.containerSizeM3,
+            containerCount: 1, // Defaulting to 1 for orders as order schema doesn't have count
+            note: `Автоматический приход с заказа #${orderId} (через моб.приложение)`,
+            orderId: orderId,
+            operatorId: undefined,
+          });
+        }
+      }
     }
+
+    revalidateTag('warehouse');
 
     revalidateTag('expenses');
     revalidateTag('orders');

@@ -140,31 +140,37 @@ const WEEKDAYS_SHORT: Record<Locale, string[]> = {
 };
 
 export function getWeekdayShort(locale: Locale, date: Date): string {
-  return WEEKDAYS_SHORT[locale][date.getDay()] ?? '';
+  const mDate = new Date(date.getTime() + 3 * 3600 * 1000);
+  return WEEKDAYS_SHORT[locale][mDate.getUTCDay()] ?? '';
 }
 
 export function getWeekdayLong(locale: Locale, date: Date): string {
-  return WEEKDAYS[locale][date.getDay()] ?? '';
+  const mDate = new Date(date.getTime() + 3 * 3600 * 1000);
+  return WEEKDAYS[locale][mDate.getUTCDay()] ?? '';
 }
 
 export function formatMonthYear(locale: Locale, date: Date): string {
-  const month = MONTHS[locale][date.getMonth()] ?? '';
-  return `${month.charAt(0).toUpperCase() + month.slice(1)} ${date.getFullYear()}`;
+  const mDate = new Date(date.getTime() + 3 * 3600 * 1000);
+  const month = MONTHS[locale][mDate.getUTCMonth()] ?? '';
+  return `${month.charAt(0).toUpperCase() + month.slice(1)} ${mDate.getUTCFullYear()}`;
 }
 
 export function formatCalendarDayTitle(locale: Locale, date: Date): string {
-  const day = date.getDate();
-  const month = MONTHS[locale][date.getMonth()] ?? '';
-  const year = date.getFullYear();
+  const mDate = new Date(date.getTime() + 3 * 3600 * 1000);
+  const day = mDate.getUTCDate();
+  const month = MONTHS[locale][mDate.getUTCMonth()] ?? '';
+  const year = mDate.getUTCFullYear();
   const weekday = getWeekdayLong(locale, date);
   return `${weekday}, ${day} ${month} ${year}`;
 }
 
 export function formatTimeOnly(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const h = String(d.getHours()).padStart(2, '0');
-  const m = String(d.getMinutes()).padStart(2, '0');
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  const moscowMs = date.getTime() + (3 * 60 * 60 * 1000);
+  const mDate = new Date(moscowMs);
+  const h = String(mDate.getUTCHours()).padStart(2, '0');
+  const m = String(mDate.getUTCMinutes()).padStart(2, '0');
   return `${h}:${m}`;
 }
 

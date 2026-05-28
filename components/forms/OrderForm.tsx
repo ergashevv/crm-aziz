@@ -39,7 +39,6 @@ const RENTAL_PRESETS = ['2 часа', '24 часа', '1 день', '1 недел
 
 const PAYMENT_TYPES = [
   { val: 'cash',   icon: Banknote,   label: 'Нал.' },
-  { val: 'online', icon: Smartphone, label: 'Онлайн' },
   { val: 'card',   icon: CreditCard, label: 'Безнал' },
 ];
 
@@ -330,7 +329,7 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
                 </div>
                 <div>
                   <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Тип оплаты *</Label>
-                  <div className="grid grid-cols-3 gap-1.5 h-9">
+                  <div className="grid grid-cols-2 gap-1.5 h-9">
                     {PAYMENT_TYPES.map(({ val, icon: Icon, label }) => (
                       <button key={val} type="button" onClick={() => set('paymentType', val)}
                         className={`h-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold border transition-all ${
@@ -548,7 +547,7 @@ export function OrderForm({ dict, order, clients, drivers, dispatchers, activeOr
                 </div>
                 <div>
                   <Label className="text-[11px] font-semibold text-slate-400 mb-1 block">Тип оплаты *</Label>
-                  <div className="grid grid-cols-3 gap-1.5 h-9">
+                  <div className="grid grid-cols-2 gap-1.5 h-9">
                     {PAYMENT_TYPES.map(({ val, icon: Icon, label }) => (
                       <button key={val} type="button" onClick={() => set('paymentType', val)}
                         className={`h-full flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold border transition-all ${
